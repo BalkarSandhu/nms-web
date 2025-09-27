@@ -35,9 +35,9 @@ import {
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Dadhwal",
+    email: "",
+    avatar: "",
   },
   navMain: [
     {
@@ -45,6 +45,11 @@ const data = {
       url: "#",
       icon: IconDashboard,
     },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: IconReport
+    }
   
   ]
  

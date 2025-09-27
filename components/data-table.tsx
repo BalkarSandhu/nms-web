@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import {
   closestCenter,
   DndContext,
@@ -56,6 +56,7 @@ import { z } from "zod"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
+import { DeviceInfoDialog } from "@/components/device-info-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { AddDeviceDialog } from "./addDeviceDialog"
@@ -118,8 +119,18 @@ export const schema = z.object({
   lastCheck: z.string(),
   limit: z.string(),
   reviewer: z.string(),
-  last_ping: z.string()
+  last_ping: z.string(),
+  location_id:z.int()
 })
+
+interface DeviceInfo {
+  device_id: number
+  hostname:string
+  ip:string
+  protocol:string
+  display:string
+  status:boolean
+}
 
 
 // Create a separate component for the drag handle
@@ -141,6 +152,7 @@ function DragHandle({ id }: { id: number }) {
     </Button>
   )
 }
+
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
@@ -177,9 +189,22 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     accessorKey: "header",
     header: "Device Type",
-    cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />
-    },
+      cell: ({ row }) => {
+        // Show device type as clickable, open dialog on click
+        const [dialogOpen, setDialogOpen] = useState(false);
+        return (
+          <>
+            <Button variant="link" className="text-foreground w-fit px-0 text-left" onClick={() => setDialogOpen(true)}>
+              {row.original.device_type}
+            </Button>
+            <DeviceInfoDialog
+              deviceId={row.original.device_id}
+              open={dialogOpen}
+              onOpenChange={setDialogOpen}
+            />
+          </>
+        );
+      },
     enableHiding: false,
   },
   {
@@ -218,6 +243,20 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         />
       </form>
     ),
+  },
+  {
+    accessorKey: "location",
+    header: "Location",
+    cell: ({ row }) => {
+      const locationName = row.original.location_id === 1 ? "Lodna" : 
+                          row.original.location_id === 2 ? "Kusunda" : 
+                          "Unknown"
+      return (
+        <Badge variant="outline" className="text-muted-foreground px-1.5">
+          {locationName}
+        </Badge>
+      )
+    },
   },
   {
     accessorKey: "status",
@@ -268,13 +307,38 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.device_id,
   })
+  const [stats, setStats] = useState<DeviceInfo | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(()=>{
+    async function DeviceInfo(){
+      try{
+        const response =await fetch ('/api/deviceInfo')
+        if(!response.ok){
+          throw new Error ('Failed to Fetch Devices')
+        }
+        const data =await response.json()
+        setStats(data)
+
+      }
+      catch(error){
+        console.error('Error fetching Statitics')
+        toast.error('Failed to load devices statitics')
+      }
+      finally{
+        setLoading(false)
+      }
+    }
+    DeviceInfo()
+  },[])
 
   return (
     <TableRow
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      onClick={() => setSelectedDeviceId(row.original.device_id)}
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 cursor-pointer hover:bg-muted/50"
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
@@ -307,6 +371,7 @@ export function DataTable({
     pageSize: 10,
   })
   const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [selectedDeviceId, setSelectedDeviceId] = React.useState<number | null>(null)
 
   const sortableId = React.useId()
   const sensors = useSensors(
@@ -605,8 +670,12 @@ export function DataTable({
         }}
       />
     )}
+
+    
   </Tabs>
 )
+
+
 }
 
 const chartData = [
