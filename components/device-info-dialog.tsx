@@ -56,26 +56,45 @@ export function DeviceInfoDialog({ deviceId, open, onOpenChange }: DeviceInfoDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Device Information</DialogTitle>
+          <DialogTitle>Device Details</DialogTitle>
         </DialogHeader>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
         ) : deviceInfo ? (
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <span className="font-medium">Device ID:</span>
-              <span className="col-span-3">{deviceInfo.device_id}</span>
-              <span className="font-medium">Name:</span>
-              <span className="col-span-3">{deviceInfo.hostname}</span>
-              <span className="font-medium">Status:</span>
-              <span className="col-span-3">{deviceInfo.status}</span>
-              <span className="font-medium">IP:</span>
-              <span className="col-span-3">{deviceInfo.ip}</span>
+          <div className="py-4">
+            {/* <div className="mb-2 font-semibold">Device Details</div> */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-800 rounded-2xl">
+                <tbody>
+                  <tr>
+                    <td className="font-medium p-2 border border-gray-800">Device ID</td>
+                    <td className="p-2 border border-gray-800">{deviceInfo.device_id}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-medium p-2 border border-gray-800">Hostname</td>
+                    <td className="p-2 border border-gray-800">{deviceInfo.hostname}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-medium p-2 border border-gray-800">Status</td>
+                    <td className="p-2 border border-gray-800">{deviceInfo.status ? "Active" : "Inactive"}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-medium p-2 border border-gray-800">IP</td>
+                    <td className="p-2 border border-gray-800">{deviceInfo.ip}</td>
+                  </tr>
+                  <tr>
+                    <td className="font-medium p-2 border border-gray-800">Protocol</td>
+                    <td className="p-2 border border-gray-800">{deviceInfo.protocol}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="py-4 text-muted-foreground">No device info found.</div>
+        )}
       </DialogContent>
     </Dialog>
   )

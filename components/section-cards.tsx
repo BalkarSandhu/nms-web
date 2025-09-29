@@ -34,7 +34,7 @@ export function SectionCards() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch('/api/statistics')
+        const response = await fetch('http://192.168.29.35/api/v1/devices')
         if (!response.ok) {
           throw new Error('Failed to fetch statistics')
         }

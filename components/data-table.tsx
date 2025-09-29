@@ -33,6 +33,7 @@ import {
   IconLayoutColumns,
   IconLoader,
   IconPlus,
+  IconTrash,
   IconTrendingUp,
 } from "@tabler/icons-react"
 import {
@@ -132,6 +133,22 @@ interface DeviceInfo {
   status:boolean
 }
 
+async function handleDelete(device_id: number) {
+  try {
+    const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${device_id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete device');
+    }
+    toast.success(`Device ${device_id} deleted successfully`);
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : 'Failed to delete device');
+  }
+}
 
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
@@ -279,26 +296,16 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   
   {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+    cell: ({ row }) => (
+      
           <Button
             variant="ghost"
             className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
             size="icon"
+            onClick={() => handleDelete(row.original.device_id)}
           >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
+            <IconTrash />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     ),
   },
 ]

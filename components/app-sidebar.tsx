@@ -49,10 +49,14 @@ const data = {
       title: "Reports",
       url: "/reports",
       icon: IconReport
+    },
+    {
+      title: "Network",
+      url: "/network",
+      icon: IconDatabase
     }
-  
   ]
- 
+
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
