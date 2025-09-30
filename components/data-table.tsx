@@ -116,12 +116,12 @@ export const schema = z.object({
   device_type: z.string(),
   hostname:z.string(),
   type: z.string(),
-  status: z.boolean,
+  status: z.boolean(),
   lastCheck: z.string(),
   limit: z.string(),
   reviewer: z.string(),
   last_ping: z.string(),
-  location_id:z.int()
+  location_id:z.number()
 })
 
 interface DeviceInfo {
@@ -310,7 +310,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
 ]
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+function DraggableRow({ row, setSelectedDeviceId }: { row: Row<z.infer<typeof schema>>, setSelectedDeviceId: (id: number) => void }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.device_id,
   })
@@ -361,11 +361,11 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 }
 
 export function DataTable({
-  data: initialData,
+  data: initialData = [],
 }: {
-  data: z.infer<typeof schema>[]
+  data?: z.infer<typeof schema>[]
 }) {
-  const [data, setData] = React.useState(() => initialData)
+  const [data, setData] = React.useState(() => initialData || [])
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -388,7 +388,7 @@ export function DataTable({
   )
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ device_id }) => device_id) || [],
+    () => data?.map(({ device_id }) => device_id).filter(Boolean) || [],
     [data]
   )
   const [selectedDeviceType, setSelectedDeviceType] = useState<string | null>(null)
@@ -402,7 +402,7 @@ export function DataTable({
       columnFilters,
       pagination,
     },
-    getRowId: (row) => row.device_id.toString(),
+    // getRowId: (row) => row?.device_id?.toString() ?? String(Math.random()),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -552,7 +552,7 @@ export function DataTable({
                   strategy={verticalListSortingStrategy}
                 >
                   {table.getRowModel().rows.map((row) => (
-                    <DraggableRow key={row.id} row={row} />
+                    <DraggableRow key={row.id} row={row} setSelectedDeviceId={setSelectedDeviceId} />
                   ))}
                 </SortableContext>
               ) : (
@@ -719,7 +719,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
         <DrawerHeader className="gap-1">
           <DrawerTitle>{item.device_type}</DrawerTitle>
           <DrawerDescription>
-            Showing total visitors for the last 6 months
+            {/* Showing total visitors for the last 6 months */}
           </DrawerDescription>
         </DrawerHeader>
         <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
@@ -772,9 +772,9 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                   <IconTrendingUp className="size-4" />
                 </div>
                 <div className="text-muted-foreground">
-                  Showing total visitors for the last 6 months. This is just
+                  {/* Showing total visitors for the last 6 months. This is just
                   some random text to test the layout. It spans multiple lines
-                  and should wrap around.
+                  and should wrap around. */}
                 </div>
               </div>
               <Separator />
@@ -808,13 +808,13 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                       Focus Documents
                     </SelectItem>
                     <SelectItem value="Narrative">Narrative</SelectItem>
-                    <SelectItem value="Cover Page">  Page</SelectItem>
+                    <SelectItem value="Cover Page">Cover Page</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="status">Status</Label>
-                <Select defaultValue={item.status}>
+                <Select defaultValue={String(item.status)}>
                   <SelectTrigger id="status" className="w-full">
                     <SelectValue placeholder="Select a status" />
                   </SelectTrigger>

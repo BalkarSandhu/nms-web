@@ -34,7 +34,7 @@ export function AddDeviceDialog({
 }: AddDeviceDialogProps) {
   const [selectedLocation, setSelectedLocation] = useState("")
   const [camera_ip, setCamera_ip] = useState("")
-  const [check_interval,setCheck_interval]=useState("300")
+  const [check_interval,setCheck_interval]=useState(300)
   const [name, setName] = useState("")
   const [lat, setLat] = useState("")
   const [long, setLong] = useState("")
@@ -71,7 +71,7 @@ export function AddDeviceDialog({
 
     
     const locationMap: Record<string, number> = {
-      "ABC": 0,
+      "ABC": 2,
       "DEF": 1
     }
     
@@ -112,7 +112,7 @@ export function AddDeviceDialog({
       setName("")
       setSelectedProtocol("")
       setSelectedDeviceType("")
-      setCheck_interval("300")
+      setCheck_interval(300)
 
       onOpenChange?.(false)
     } catch (error) {
@@ -161,6 +161,15 @@ export function AddDeviceDialog({
                 <option value="ABC">ABC</option>
                 <option value="DEF">DEF</option>
               </select>
+
+              <Label htmlFor="Camera_IP" className="text-right">Camera IP</Label>
+                <Input
+                  id="camera_ip"
+                  value={camera_ip}
+                  onChange={(e) => setCamera_ip(e.target.value)}
+                  placeholder="Enter Camera IP"
+                  className="col-span-3"
+                />
 
               {/* <Label htmlFor="PreviousNode" className="text-right">
                 Previous Node
@@ -213,17 +222,11 @@ export function AddDeviceDialog({
                 className="col-span-3"
               />
             </div>
+
             
             {(selectedDeviceType === "Camera" || selectedDeviceType === "NVR") && (
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="Camera_IP" className="text-right">Camera IP</Label>
-                <Input
-                  id="camera_ip"
-                  value={camera_ip}
-                  onChange={(e) => setCamera_ip(e.target.value)}
-                  placeholder="Enter Camera IP"
-                  className="col-span-3"
-                />
+                
 
                 <Label htmlFor="Check_interval" className="text-right">Check Interval</Label>
                 <Input

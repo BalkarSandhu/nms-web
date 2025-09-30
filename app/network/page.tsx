@@ -51,12 +51,7 @@ export default function NetworkPage() {
 
   return (
     <div className="w-full h-screen">
-      <div className="p-4 bg-white border-b shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-800">Network Topology</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Visualize your network location hierarchy
-        </p>
-      </div>
+      
       <TreeGraph locations={locations} />
     </div>
   );

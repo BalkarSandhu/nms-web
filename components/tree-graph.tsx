@@ -7,21 +7,20 @@ interface Location {
   previous_node: number | null;
 }
 
+
 interface NodeProps {
   location: Location;
   x: number;
   y: number;
-  isSelected: boolean;
+  isSelected: boolean;  
   onClick: (location: Location) => void;
   level: number;
 }
 
+
 const TreeNode: React.FC<NodeProps> = ({ location, x, y, isSelected, onClick, level }) => {
   const getNodeColor = () => {
-    // if (level === 0) return 'from-purple-500 to-pink-500';
-    // if (level === 1) return 'from-blue-500 to-cyan-500';
-    // if (level === 2) return 'from-green-500 to-emerald-500';
-    return 'from-green-500 to-red-300';
+    return 'from-green-400 to-emerald-600';
   };
 
   return (
@@ -33,8 +32,8 @@ const TreeNode: React.FC<NodeProps> = ({ location, x, y, isSelected, onClick, le
       onClick={() => onClick(location)}
     >
       <div className={`
-        bg-gradient-to-br ${getNodeColor()} rounded-xl shadow-2xl p-4 min-w-32 text-center
-        border-2 ${isSelected ? 'border-white ring-4 ring-blue-300' : 'border-white/50'}
+        bg-gradient-to-br ${getNodeColor()} rounded-xl shadow-2xl p-3 min-w-26 text-center
+        border-2 ${isSelected ? 'border-white ring-4 ring-emerald-300' : 'border-white/50'}
         backdrop-blur-sm
       `}>
         <div className="font-bold text-white text-sm drop-shadow-lg">
@@ -77,69 +76,147 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
 
     const nodes: any[] = [];
     const paths: any[] = [];
+    
+    const HORIZONTAL_SPACING = 120;
+    const VERTICAL_SPACING = 130;
+    const BRANCH_OFFSET = 60; 
+    const START_Y = 100;
 
-    nodes.push({ location: root, x: 750, y: 100, level: 0 });
-
-    const processLevel = (parentNodes: any[], level: number) => {
-      const nextLevelNodes: any[] = [];
+    
+    const calculateTreeLayout = (node: Location, level: number, position: number): any => {
+      const children = findChildren(node.location_id);
       
-      parentNodes.forEach((parentNode) => {
-        const children = findChildren(parentNode.location.location_id);
-        
-        if (children.length === 0) return;
+      if (children.length === 0) {
+        return { node, level, position, width: 1 };
+      }
 
-        const spacing = 150;
-        const groupSize = level === 1 ? 2 : 3; // Group 2-3 children per branch
-        const groups = [];
-        
-        // Split children into groups
-        for (let i = 0; i < children.length; i += groupSize) {
-          groups.push(children.slice(i, i + groupSize));
-        }
-
-        const totalGroups = groups.length;
-        const groupSpacing = 250;
-        const totalWidth = (totalGroups - 1) * groupSpacing;
-        const startGroupX = parentNode.x - totalWidth / 2;
-
-        groups.forEach((group, groupIndex) => {
-          const groupCenterX = startGroupX + (groupIndex * groupSpacing);
-          const branchPointY = parentNode.y + 80;
-          const childY = parentNode.y + 180;
-
-          // Create curved path from parent to branch point
-          paths.push({
-            d: `M ${parentNode.x} ${parentNode.y + 30} 
-                Q ${parentNode.x} ${parentNode.y + 60} ${groupCenterX} ${branchPointY}`,
-            color: `hsl(${(groupIndex * 60) % 360}, 70%, 60%)`
-          });
-
-          const groupWidth = (group.length - 1) * spacing;
-          const groupStartX = groupCenterX - groupWidth / 2;
-
-          group.forEach((child, childIndex) => {
-            const childX = groupStartX + (childIndex * spacing);
-            const childNode = { location: child, x: childX, y: childY, level };
-            
-            nodes.push(childNode);
-            nextLevelNodes.push(childNode);
-
-            // Create curved path from branch point to child
-            paths.push({
-              d: `M ${groupCenterX} ${branchPointY} 
-                  Q ${groupCenterX} ${branchPointY + 50} ${childX} ${childY - 30}`,
-              color: `hsl(${(groupIndex * 60) % 360}, 70%, 60%)`
-            });
-          });
-        });
+      let totalWidth = 0;
+      const childLayouts = children.map((child, index) => {
+        const childLayout = calculateTreeLayout(child, level + 1, totalWidth);
+        totalWidth += childLayout.width;
+        return childLayout;
       });
 
-      if (nextLevelNodes.length > 0) {
-        processLevel(nextLevelNodes, level + 1);
+      return { node, level, position, width: totalWidth, children: childLayouts };
+    };
+
+    const layout = calculateTreeLayout(root, 0, 0);
+    const totalWidth = layout.width * HORIZONTAL_SPACING;
+    const START_X = (1500 - totalWidth) / 2 + totalWidth / 2;
+
+    // Position nodes based on layout
+    const positionNodes = (layout: any, parentX: number, parentY: number) => {
+      const currentY = START_Y + layout.level * VERTICAL_SPACING;
+      const currentX = parentX;
+
+      if (layout.level === 0) {
+        nodes.push({ 
+          location: layout.node, 
+          x: START_X, 
+          y: currentY, 
+          level: layout.level 
+        });
+        
+        if (layout.children) {
+          const childrenWidth = layout.width * HORIZONTAL_SPACING;
+          let childX = START_X - childrenWidth / 2 + HORIZONTAL_SPACING / 2;
+          
+          // Calculate branch point
+          const branchY = currentY + BRANCH_OFFSET;
+          
+          // Vertical line from parent to branch point
+          paths.push({
+            type: 'vertical',
+            x1: START_X,
+            y1: currentY + 30,
+            x2: START_X,
+            y2: branchY
+          });
+          
+          // Horizontal line connecting all children
+          const firstChildX = childX + (layout.children[0].width * HORIZONTAL_SPACING) / 2 - HORIZONTAL_SPACING / 2;
+          const lastChildX = childX + (layout.children.reduce((sum: number, c: any) => sum + c.width, 0) * HORIZONTAL_SPACING) - HORIZONTAL_SPACING / 2 - (layout.children[layout.children.length - 1].width * HORIZONTAL_SPACING) / 2 + HORIZONTAL_SPACING / 2;
+          
+          paths.push({
+            type: 'horizontal',
+            x1: firstChildX,
+            y1: branchY,
+            x2: lastChildX,
+            y2: branchY
+          });
+          
+          layout.children.forEach((childLayout: any) => {
+            const childCenterX = childX + (childLayout.width * HORIZONTAL_SPACING) / 2 - HORIZONTAL_SPACING / 2;
+            
+            // Vertical line from horizontal branch to child
+            paths.push({
+              type: 'vertical',
+              x1: childCenterX,
+              y1: branchY,
+              x2: childCenterX,
+              y2: currentY + VERTICAL_SPACING - 30
+            });
+            
+            positionNodes(childLayout, childCenterX, currentY);
+            childX += childLayout.width * HORIZONTAL_SPACING;
+          });
+        }
+      } else {
+        nodes.push({ 
+          location: layout.node, 
+          x: currentX, 
+          y: currentY, 
+          level: layout.level 
+        });
+        
+        if (layout.children) {
+          const childrenWidth = layout.width * HORIZONTAL_SPACING;
+          let childX = currentX - childrenWidth / 2 + HORIZONTAL_SPACING / 2;
+          
+          // Calculate branch point
+          const branchY = currentY + BRANCH_OFFSET;
+          
+          // Vertical line from parent to branch point
+          paths.push({
+            type: 'vertical',
+            x1: currentX,
+            y1: currentY + 30,
+            x2: currentX,
+            y2: branchY
+          });
+          
+          // Horizontal line connecting all children
+          const firstChildX = childX + (layout.children[0].width * HORIZONTAL_SPACING) / 2 - HORIZONTAL_SPACING / 2;
+          const lastChildX = childX + (layout.children.reduce((sum: number, c: any) => sum + c.width, 0) * HORIZONTAL_SPACING) - HORIZONTAL_SPACING / 2 - (layout.children[layout.children.length - 1].width * HORIZONTAL_SPACING) / 2 + HORIZONTAL_SPACING / 2;
+          
+          paths.push({
+            type: 'horizontal',
+            x1: firstChildX,
+            y1: branchY,
+            x2: lastChildX,
+            y2: branchY
+          });
+          
+          layout.children.forEach((childLayout: any) => {
+            const childCenterX = childX + (childLayout.width * HORIZONTAL_SPACING) / 2 - HORIZONTAL_SPACING / 2;
+            
+            // Vertical line from horizontal branch to child
+            paths.push({
+              type: 'vertical',
+              x1: childCenterX,
+              y1: branchY,
+              x2: childCenterX,
+              y2: currentY + VERTICAL_SPACING - 30
+            });
+            
+            positionNodes(childLayout, childCenterX, currentY);
+            childX += childLayout.width * HORIZONTAL_SPACING;
+          });
+        }
       }
     };
 
-    processLevel([{ location: root, x: 750, y: 100, level: 0 }], 1);
+    positionNodes(layout, START_X, START_Y);
 
     return { nodes, paths };
   };
@@ -151,18 +228,11 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-br from-slate-900 to-slate-900 overflow-auto">
-      {/* Animated background circles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* <div className="absolute top-20 left-20 w-72 h-72 rounded-full blur-3xl animate-pulse"></div> */}
-        {/* <div className="absolute bottom-20 right-20 w-96 h-96rounded-full blur-3xl animate-pulse delay-1000"></div> */}
-        {/* <div className="absolute top-1/2 left-1/2 w-64 h-64rounded-full blur-3xl animate-pulse delay-500"></div> */}
-      </div>
-
+    <div className="relative w-full h-screen bg-gradient-to-br from-slate-900 to-slate-800 overflow-auto">
       <svg className="absolute inset-0 w-full h-full" style={{ minHeight: '600px', minWidth: '1500px' }}>
         <defs>
           <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -173,21 +243,25 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
         {paths.map((path, index) => (
           <g key={index}>
             {/* Glow effect */}
-            <path
-              d={path.d}
-              stroke={path.color}
-              strokeWidth="6"
-              fill="none"
+            <line
+              x1={path.x1}
+              y1={path.y1}
+              x2={path.x2}
+              y2={path.y2}
+              stroke="#10b981"
+              strokeWidth="4"
               opacity="0.3"
               filter="url(#glow)"
             />
-            {/* Main path */}
-            <path
-              d={path.d}
-              stroke={path.color}
-              strokeWidth="3"
-              fill="none"
-              opacity="0.8"
+            {/* Main line */}
+            <line
+              x1={path.x1}
+              y1={path.y1}
+              x2={path.x2}
+              y2={path.y2}
+              stroke="#34d399"
+              strokeWidth="2"
+              opacity="0.6"
               strokeLinecap="round"
             />
           </g>
@@ -208,7 +282,7 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
 
       {selectedNode && (
         <div className="absolute top-4 right-4 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-30 overflow-hidden">
-          <div className="p-5 bg-gradient-to-r  flex justify-between items-center">
+          <div className="p-5 bg-gradient-to-r from-green-500 to-emerald-600 flex justify-between items-center">
             <h3 className="font-bold text-white text-lg drop-shadow-lg">{selectedNode.name}</h3>
             <button
               onClick={() => setSelectedNode(null)}
@@ -241,7 +315,7 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
       )}
 
       <div className="absolute bottom-6 left-6 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-4 text-white border border-white/20">
-        <div className="font-bold mb-2 text-lg">🌐 Network Topology</div>
+        <div className="font-bold mb-2 text-lg"></div>
         <div className="text-sm space-y-1 opacity-90">
           <div>Total Locations: <span className="font-bold">{locations.length}</span></div>
           <div className="text-xs mt-2 opacity-75">Click nodes to explore</div>
@@ -251,4 +325,44 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
   );
 };
 
-export default TreeGraph;
+export default function App() {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetch('/data.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load data');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setLocations(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-900">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-900">
+        <div className="text-red-400 text-xl">Error: {error}</div>
+      </div>
+    );
+  }
+
+  return <TreeGraph locations={locations} />;
+}
