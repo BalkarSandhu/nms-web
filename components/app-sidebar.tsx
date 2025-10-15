@@ -17,6 +17,8 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconMapPin,
+  
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -32,6 +34,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { title } from "process"
 
 const data = {
   user: {
@@ -54,7 +57,18 @@ const data = {
       title: "Network",
       url: "/network",
       icon: IconDatabase
+    },
+    {
+      title: "Locations",
+      url: "/Locations",
+      icon: IconMapPin
+    },
+    {
+      title: "Devices",
+      url: "/devices",
+      icon: IconListDetails
     }
+
   ]
 
 }

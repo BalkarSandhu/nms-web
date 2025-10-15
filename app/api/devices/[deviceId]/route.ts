@@ -5,7 +5,7 @@ export async function GET(
   { params }: { params: { deviceId: string } }
 ) {
   try {
-    const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${params.deviceId}`)
+    const response = await fetch(``)
     if (!response.ok) {
       throw new Error('Failed to fetch device info')
     }

@@ -112,30 +112,23 @@ import {
 } from "@/components/ui/tabs"
 
 export const schema = z.object({
-  device_id: z.number(),
+  id: z.number(),
   device_type: z.string(),
   hostname:z.string(),
   type: z.string(),
-  status: z.boolean(),
-  lastCheck: z.string(),
-  limit: z.string(),
-  reviewer: z.string(),
-  last_ping: z.string(),
-  location_id:z.number()
+  status: z.boolean().nullable(),
+  lastCheck: z.string().nullable(),
+  limit: z.string().nullable(),
+  reviewer: z.string().nullable(),
+  last_ping: z.string().nullable(),
+  location_id:z.number().nullable()
 })
 
-interface DeviceInfo {
-  device_id: number
-  hostname:string
-  ip:string
-  protocol:string
-  display:string
-  status:boolean
-}
+type DeviceInfo = any
 
-async function handleDelete(device_id: number) {
+async function handleDelete(id: number) {
   try {
-    const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${device_id}`, {
+    const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
@@ -144,7 +137,7 @@ async function handleDelete(device_id: number) {
     if (!response.ok) {
       throw new Error('Failed to delete device');
     }
-    toast.success(`Device ${device_id} deleted successfully`);
+    toast.success(`Device ${id} deleted successfully`);
   } catch (error) {
     toast.error(error instanceof Error ? error.message : 'Failed to delete device');
   }
@@ -175,7 +168,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.device_id} />,
+    cell: ({ row }) => <DragHandle id={row.original.id} />,
   },
   {
     id: "select",
@@ -215,7 +208,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
               {row.original.device_type}
             </Button>
             <DeviceInfoDialog
-              deviceId={row.original.device_id}
+              id={row.original.id}
               open={dialogOpen}
               onOpenChange={setDialogOpen}
             />
@@ -249,13 +242,13 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           })
         }}
       >
-        <Label htmlFor={`${row.original.device_id}-lastCheck`} className="sr-only">
+        <Label htmlFor={`${row.original.id}-lastCheck`} className="sr-only">
           Last Check
         </Label>
         <Input
           className="w-2xs"
-          defaultValue={row.original.last_ping}
-          id={`${row.original.device_id}-lastCheck`}
+          defaultValue={row.original.last_ping ?? ""}
+          id={`${row.original.id}-lastCheck`}
           
         />
       </form>
@@ -302,7 +295,14 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
             variant="ghost"
             className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
             size="icon"
-            onClick={() => handleDelete(row.original.device_id)}
+            onClick={(e) => {
+              // prevent the row's onClick from firing (which opens the device info)
+              e.stopPropagation()
+              // ask for confirmation before deleting
+              if (confirm('Are you sure you want to delete this device?')) {
+                void handleDelete(row.original.id)
+              }
+            }}
           >
             <IconTrash />
           </Button>
@@ -310,41 +310,21 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
 ]
 
-function DraggableRow({ row, setSelectedDeviceId }: { row: Row<z.infer<typeof schema>>, setSelectedDeviceId: (id: number) => void }) {
+function DraggableRow({ row, setSelectedDeviceId, onRowClick }: { row: Row<z.infer<typeof schema>>, setSelectedDeviceId: (id: number) => void, onRowClick?: (id: number) => void }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.device_id,
+    id: row.original.id,
   })
-  const [stats, setStats] = useState<DeviceInfo | null>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(()=>{
-    async function DeviceInfo(){
-      try{
-        const response =await fetch ('/api/deviceInfo')
-        if(!response.ok){
-          throw new Error ('Failed to Fetch Devices')
-        }
-        const data =await response.json()
-        setStats(data)
-
-      }
-      catch(error){
-        console.error('Error fetching Statitics')
-        toast.error('Failed to load devices statitics')
-      }
-      finally{
-        setLoading(false)
-      }
-    }
-    DeviceInfo()
-  },[])
+  // no per-row effect here; main click handler will fetch details
 
   return (
     <TableRow
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      onClick={() => setSelectedDeviceId(row.original.device_id)}
+      onClick={() => {
+        setSelectedDeviceId(row.original.id)
+        onRowClick?.(row.original.id)
+      }}
       className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80 cursor-pointer hover:bg-muted/50"
       style={{
         transform: CSS.Transform.toString(transform),
@@ -366,6 +346,8 @@ export function DataTable({
   data?: z.infer<typeof schema>[]
 }) {
   const [data, setData] = React.useState(() => initialData || [])
+  const [deviceDetails, setDeviceDetails] = React.useState<DeviceInfo | null>(null)
+  const [deviceDialogOpen, setDeviceDialogOpen] = React.useState(false)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -388,7 +370,7 @@ export function DataTable({
   )
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ device_id }) => device_id).filter(Boolean) || [],
+    () => data?.map(({ id }) => id).filter(Boolean) || [],
     [data]
   )
   const [selectedDeviceType, setSelectedDeviceType] = useState<string | null>(null)
@@ -402,7 +384,7 @@ export function DataTable({
       columnFilters,
       pagination,
     },
-    // getRowId: (row) => row?.device_id?.toString() ?? String(Math.random()),
+    // getRowId: (row) => row?.id?.toString() ?? String(Math.random()),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
@@ -425,6 +407,22 @@ export function DataTable({
         const newIndex = dataIds.indexOf(over.id)
         return arrayMove(data, oldIndex, newIndex)
       })
+    }
+  }
+
+  async function handleRowClick(id: number) {
+    setSelectedDeviceId(id)
+    setDeviceDialogOpen(true)
+    try {
+      const res = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`)
+      if (!res.ok) throw new Error(`Failed to fetch device ${id}: ${res.status}`)
+        const d = await res.json()
+        // store the raw response so dialog shows the data exactly as returned
+        setDeviceDetails(d)
+    } catch (err) {
+      console.error('Error fetching device details', err)
+      toast.error(err instanceof Error ? err.message : String(err))
+      setDeviceDetails(null)
     }
   }
 
@@ -552,7 +550,7 @@ export function DataTable({
                   strategy={verticalListSortingStrategy}
                 >
                   {table.getRowModel().rows.map((row) => (
-                    <DraggableRow key={row.id} row={row} setSelectedDeviceId={setSelectedDeviceId} />
+                    <DraggableRow key={row.id} row={row} setSelectedDeviceId={setSelectedDeviceId} onRowClick={handleRowClick} />
                   ))}
                 </SortableContext>
               ) : (
@@ -677,6 +675,20 @@ export function DataTable({
         }}
       />
     )}
+
+    {/* Device details dialog populated from API on row click */}
+    <DeviceInfoDialog
+      id={selectedDeviceId}
+      device={deviceDetails}
+      open={deviceDialogOpen}
+      onOpenChange={(open) => {
+        setDeviceDialogOpen(open)
+        if (!open) {
+          setDeviceDetails(null)
+          setSelectedDeviceId(null)
+        }
+      }}
+    />
 
     
   </Tabs>
@@ -829,7 +841,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
                 <Label htmlFor="target">Last Check</Label>
-                <Input id="target" defaultValue={item.lastCheck} />
+                <Input id="target" defaultValue={item.lastCheck ?? ""} />
               </div>
             </div>
             

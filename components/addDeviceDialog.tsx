@@ -18,8 +18,8 @@ import { createNewDevice, Device } from "@/components/add-device"
 import { AddDeviceTypeDialog } from "./addDeviceTypeDialog"
 
 interface AddDeviceDialogProps {
-  data: Device[]
-  setData: React.Dispatch<React.SetStateAction<Device[]>>
+    data: any[]
+  setData: React.Dispatch<React.SetStateAction<any[]>>
   deviceType: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -34,7 +34,7 @@ export function AddDeviceDialog({
 }: AddDeviceDialogProps) {
   const [selectedLocation, setSelectedLocation] = useState("")
   const [camera_ip, setCamera_ip] = useState("")
-  const [check_interval,setCheck_interval]=useState(300)
+  const [check_interval,setCheck_interval]=useState<string | number>("300")
   const [name, setName] = useState("")
   const [lat, setLat] = useState("")
   const [long, setLong] = useState("")
@@ -80,14 +80,14 @@ export function AddDeviceDialog({
       "NVR": 1
     }
 
-    const devicePayload = {
+      const devicePayload = {
       hostname: name,
       display: name,
       ip: camera_ip,
       protocol: selectedProtocol,
       location_id: locationMap[selectedLocation] ?? 0,
       device_type_id: deviceTypeMap[selectedDeviceType] ?? 0,
-      check_interval: check_interval
+      check_interval: Number(check_interval) || 0
     }
 
     try {
