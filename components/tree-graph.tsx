@@ -325,44 +325,4 @@ const TreeGraph: React.FC<TreeGraphProps> = ({ locations }) => {
   );
 };
 
-export default function App() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  React.useEffect(() => {
-    fetch('/data.json')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to load data');
-        }
-        return response.json();
-      })
-      .then(data => {
-        setLocations(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
-        <div className="text-red-400 text-xl">Error: {error}</div>
-      </div>
-    );
-  }
-
-  return <TreeGraph locations={locations} />;
-}
+export default TreeGraph;

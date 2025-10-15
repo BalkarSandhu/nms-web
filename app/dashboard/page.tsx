@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 // import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/common"
+import { DeviceInfoDialog } from "@/components/device-info-dialog"
+import { Button } from "@/components/ui/button"
+import { IconTrash } from "@tabler/icons-react"
+import { toast } from "sonner"
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -14,6 +18,8 @@ export default function Page() {
   const [devices, setDevices] = useState<any[]>([]) // mapped devices for DataTable
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null)
+  const [deviceDialogOpen, setDeviceDialogOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -55,6 +61,23 @@ export default function Page() {
     }
   }, [])
 
+  async function handleDelete(id: number) {
+    if (!confirm(`Delete device ${id}?`)) return
+    try {
+      const res = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!res.ok) throw new Error(`Failed to delete device: ${res.status}`)
+      setDevices((prev) => prev.filter((d) => d.id !== id))
+      toast.success(`Device ${id} deleted`)
+      if (selectedDeviceId === id) setDeviceDialogOpen(false)
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Failed to delete')
+    }
+  }
+
   return (
     <SidebarProvider
       style={
@@ -77,7 +100,66 @@ export default function Page() {
                 ) : error ? (
                   <div className="py-6 text-center text-red-500">Error: {error}</div>
                 ) : (
-                  <DataTable data={devices} />
+                  <>
+                    <DataTable
+                      data={devices}
+                      columns={[
+                        {
+                          key: 'display',
+                          label: 'Device Id',
+                          render: (r: any) => (
+                            <Button
+                              variant="link"
+                              className="p-0"
+                              onClick={() => {
+                                setSelectedDeviceId(r.id)
+                                setDeviceDialogOpen(true)
+                              }}
+                            >
+                              {r.id}
+                            </Button>
+                          ),
+                        },
+                        { key: 'hostname', label: 'Hostname', render: (r: any) => r.hostname },
+                        { key: 'type', label: 'Type', render: (r: any) => r.type },
+                        {
+                          key: 'status',
+                          label: 'Status',
+                          render: (r: any) =>
+                            r.status === true ? 'Online' : r.status === false ? 'Offline' : 'Unknown',
+                        },
+                        { key: 'last_ping', label: 'Last Ping', render: (r: any) => r.last_ping || '-' },
+                        {
+                          key: 'actions',
+                          label: 'Action',
+                          render: (r: any) => (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void handleDelete(r.id)
+                                }}
+                                aria-label={`Delete device ${r.id}`}
+                              >
+                                <IconTrash />
+                              </Button>
+                            </div>
+                          ),
+                        },
+                      ]}
+                    />
+
+                    <DeviceInfoDialog
+                      id={selectedDeviceId}
+                      open={deviceDialogOpen}
+                      onOpenChange={(open) => {
+                        setDeviceDialogOpen(open)
+                        if (!open) setSelectedDeviceId(null)
+                      }}
+                    />
+                  </>
                 )}
               </div>
               <div className="px-4 lg:px-6">

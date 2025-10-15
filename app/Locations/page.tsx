@@ -1,5 +1,5 @@
 "use client"
-
+import { NextResponse } from "next/server"
 import { useEffect, useState } from "react"
 import {
   Table,
@@ -19,21 +19,35 @@ export default function LocationsPage() {
     let mounted = true
     async function fetchLocations() {
       try {
-        const res = await fetch("http://192.168.29.35:8000/api/v1/locations")
-        if (!res.ok) throw new Error(`Failed to fetch locations: ${res.status}`)
-        const data = await res.json()
-        if (!mounted) return
-        setLocations(Array.isArray(data) ? data : data.locations || [])
-      } catch (err) {
-        console.error(err)
-        setError(err instanceof Error ? err.message : String(err))
+        const response = await fetch('http://192.168.29.35:8000/api/v1/locations', {
+          method: 'GET',
+          
+          credentials: 'omit'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!mounted) return;
+        setLocations(Array.isArray(data) ? data : data.locations || []);
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        if (!mounted) return;
+        setError('Failed to fetch locations');
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
-
     fetchLocations()
-    return () => { mounted = false }
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
   return (
