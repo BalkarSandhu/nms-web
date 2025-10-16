@@ -67,6 +67,11 @@ const data = {
       title: "Devices",
       url: "/devices",
       icon: IconListDetails
+    },
+    {
+      title:"Geographical View",
+      url:"/geo",
+      icon:IconMapPin
     }
 
   ]
