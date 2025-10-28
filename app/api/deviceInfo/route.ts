@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 export async function GET(){
     try{
-        const response= await fetch("",{
+        const response= await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}`,{
         headers:{
             'Content-Type' :' application/json'
         },

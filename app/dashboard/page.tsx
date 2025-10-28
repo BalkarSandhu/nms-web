@@ -1,5 +1,9 @@
 "use client"
-
+/**
+ * To use process.env variables in a Next.js app, you must prefix them with NEXT_PUBLIC_ in your .env file.
+ * Example: NEXT_PUBLIC_NEXT_PUBLIC_NMS_API_SOURCE="https://your-api-url"
+ * Then, access them in your code as: process.env.NEXT_PUBLIC_NEXT_PUBLIC_NMS_API_SOURCE
+ */
 import { useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DataTable } from "@/components/common"
@@ -50,7 +54,7 @@ export default function Page() {
     async function fetchData() {
       try {
         const [devicesRes, mappingRes] = await Promise.all([
-          fetch('http://192.168.29.35:8000/api/v1/devices'),
+          fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices`),
           fetch('/api/locations/mapping')
         ])
 
@@ -97,7 +101,7 @@ export default function Page() {
 
   async function handleDelete(id: number) {
     try {
-      const res = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -113,17 +117,7 @@ export default function Page() {
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
+    <>
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -287,8 +281,6 @@ export default function Page() {
             </div>
           </div>
         </div>
-      </SidebarInset>
-
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -309,6 +301,6 @@ export default function Page() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SidebarProvider>
+    </>
   )
 }

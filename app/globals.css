@@ -44,6 +44,12 @@
 }
 
 :root {
+  --azul: hex(#246EB9);
+  --green: hex(#4CB944);
+  --base: hex(#000000);
+  --red:hex(#D52941);
+  --contrast:hex(#FDFFFC);
+  --dark:hex(#242529);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -79,6 +85,12 @@
 }
 
 .dark {
+  --azul: hex(#246EB9);
+  --green: hex(#4CB944);
+  --base: hex(#FDFFFC);
+  --red:hex(#D52941);
+  --contrast:hex(#000000);
+  --dark:hex(#242529);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

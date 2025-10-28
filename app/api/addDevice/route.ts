@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       port
     };
 
-    const response = await fetch('http://192.168.29.35:8000/api/v1/devices', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

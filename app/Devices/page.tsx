@@ -19,7 +19,7 @@ export default function DevicesPage() {
     let mounted = true
     async function fetchDevices() {
       try {
-        const res = await fetch("http://192.168.29.35:8000/api/v1/devices")
+        const res = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices`)
         if (!res.ok) throw new Error(`Failed to fetch Devices: ${res.status}`)
         const data = await res.json()
         if (!mounted) return

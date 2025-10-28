@@ -23,7 +23,7 @@ export function DeviceInfoDialog({ id, device, open, onOpenChange }: DeviceInfoD
 
       setLoading(true)
       try {
-        const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices/${id}`)
         if (!response.ok) {
           throw new Error('Failed to fetch device info')
         }

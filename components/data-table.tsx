@@ -128,7 +128,7 @@ type DeviceInfo = any
 
 async function handleDelete(id: number) {
   try {
-    const response = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'
@@ -414,7 +414,7 @@ export function DataTable({
     setSelectedDeviceId(id)
     setDeviceDialogOpen(true)
     try {
-      const res = await fetch(`http://192.168.29.35:8000/api/v1/devices/${id}`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices/${id}`)
       if (!res.ok) throw new Error(`Failed to fetch device ${id}: ${res.status}`)
         const d = await res.json()
         // store the raw response so dialog shows the data exactly as returned

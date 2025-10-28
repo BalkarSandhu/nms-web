@@ -85,7 +85,7 @@ export default function LocationsPage() {
 
   async function handleDelete(id: number) {
     try {
-      const res = await fetch(`http://192.168.29.35:8000/api/v1/locations/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/locations/${id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -117,7 +117,7 @@ export default function LocationsPage() {
         lng: payload.lng ? parseFloat(payload.lng) : payload.lng
       }
 
-      const res = await fetch(`http://192.168.29.35:8000/api/v1/locations/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/locations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(normalizedPayload),

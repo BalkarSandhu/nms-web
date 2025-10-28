@@ -5,7 +5,7 @@ export async function GET(
   { params }: { params: { deviceId: string } }
 ) {
   try {
-    const response = await fetch(``)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_NMS_API_SOURCE}/api/v1/devices/${params.deviceId}`)
     if (!response.ok) {
       throw new Error('Failed to fetch device info')
     }
