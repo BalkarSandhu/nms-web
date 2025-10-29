@@ -1,11 +1,5 @@
 "use client"
-/**
- * To use process.env variables in a Next.js app, you must prefix them with NEXT_PUBLIC_ in your .env file.
- * Example: NEXT_PUBLIC_NEXT_PUBLIC_NMS_API_SOURCE="https://your-api-url"
- * Then, access them in your code as: process.env.NEXT_PUBLIC_NEXT_PUBLIC_NMS_API_SOURCE
- */
 import { useEffect, useState } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
 import { DataTable } from "@/components/common"
 import { DeviceInfoDialog } from "@/components/device-info-dialog"
 import {AddDeviceDialog} from "@/components/addDeviceDialog"
@@ -13,11 +7,7 @@ import { Button } from "@/components/ui/button"
 import { IconTrash, IconPlus } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { SectionCards } from "@/components/section-cards"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+
 import {
   Card,
   CardContent,
