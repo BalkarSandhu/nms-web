@@ -125,6 +125,18 @@
   }
 }
 
+/* MapLibre popup styling - remove default padding */
+.maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.maplibregl-popup-tip {
+  display: none !important;
+}
+
 @layer base {
   :root {
     --sidebar: oklch(0.985 0 0);

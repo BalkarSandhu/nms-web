@@ -77,6 +77,7 @@ export const MapViewer = ({
   enableZoom = true,
   enablePan = true,
   onPointClick,
+  onFilterSet,
   className = '',
   bounds = {
     minLongitude: 68.1766,
@@ -90,11 +91,21 @@ export const MapViewer = ({
 }: MapViewerProps) => {
   const mapRef = useRef<MapRef>(null);
   const [currentZoom, setCurrentZoom] = useState(zoom);
+  const [hoveredPoint, setHoveredPoint] = useState<MapDataPoint | null>(null);
+  const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
   const [colors, setColors] = useState<{ red: string; azul: string; green: string }>({
     red: '#D52941',
     azul: '#246EB9',
     green: '#4CB944',
   });
+
+  // Handle filter updates from popup
+  useEffect(() => {
+    if (popupFilter && onFilterSet) {
+      onFilterSet(popupFilter);
+      setPopupFilter(null); // Reset after handling
+    }
+  }, [popupFilter, onFilterSet]);
 
   // Extract CSS custom properties for colors
   useEffect(() => {
@@ -672,6 +683,8 @@ export const MapViewer = ({
                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
               }}
               title={point.name}
+              onMouseEnter={() => point.popupData && setHoveredPoint(point)}
+              onMouseLeave={() => setHoveredPoint(null)}
             >
               {showLabels && currentZoom > 15 && (
                 <div 
@@ -684,6 +697,25 @@ export const MapViewer = ({
             </div>
           </Marker>
         ))}
+
+        {/* Hover popup */}
+        {hoveredPoint && hoveredPoint.popupData && (
+          <Popup
+            longitude={hoveredPoint.coordinates[0]}
+            latitude={hoveredPoint.coordinates[1]}
+            anchor="bottom"
+            onClose={() => setHoveredPoint(null)}
+            closeButton={false}
+            closeOnClick={false}
+            className="map-popup p-0!"
+            offset={15}
+          >
+            <PopOverContent 
+              EventData={hoveredPoint.popupData} 
+              setFilter={setPopupFilter}
+            />
+          </Popup>
+        )}
       </Map>
     </div>
   );

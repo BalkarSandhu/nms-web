@@ -1,5 +1,6 @@
 import { MapViewer } from './Map-Viewer';
 import type { MapDataPoint, MapConnection } from './Map-Viewer';
+import type { FilterLink } from './hover-over-popup';
 
 /**
  * Example usage of MapViewer with sample Indian cities data
@@ -8,6 +9,13 @@ import type { MapDataPoint, MapConnection } from './Map-Viewer';
  * by passing data and connections as props.
  */
 export const MapViewerExample = () => {
+  // Handler for filter updates from popup
+  const handleFilterSet = (filter: FilterLink) => {
+    console.log('Filter set from popup:', filter);
+    // In a real application, this would update the filter state in the parent component
+    // which would then trigger data refetch or filtering
+  };
+
   // Sample data with three categories - Indian cities
   const sampleData: MapDataPoint[] = [
     // Red category points (High intensity)
@@ -17,6 +25,18 @@ export const MapViewerExample = () => {
       coordinates: [72.8777, 19.0760],
       value: 100,
       category: 'red',
+      popupData: {
+        indicatorColour: 'red',
+        headerLeft: { field: 'city', value: 'Mumbai' },
+        headerRight: { field: 'state', value: 'Maharashtra' },
+        sideLabel: { field: 'zone', value: 'West' },
+        data: [
+          { field: 'Population', value: '20M', colour: 'white' },
+          { field: 'Status', value: 'Critical', colour: 'red' },
+          { field: 'Connections', value: '150', colour: 'blue' },
+          { field: 'Response Time', value: '45ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '20M',
         status: 'Critical',
@@ -28,6 +48,18 @@ export const MapViewerExample = () => {
       coordinates: [77.1025, 28.7041],
       value: 95,
       category: 'red',
+      popupData: {
+        indicatorColour: 'red',
+        headerLeft: { field: 'city', value: 'Delhi' },
+        headerRight: { field: 'state', value: 'Delhi' },
+        sideLabel: { field: 'zone', value: 'North' },
+        data: [
+          { field: 'Population', value: '16.8M', colour: 'white' },
+          { field: 'Status', value: 'Alert', colour: 'red' },
+          { field: 'Connections', value: '200', colour: 'blue' },
+          { field: 'Response Time', value: '38ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '16.8M',
         status: 'Alert',
@@ -39,6 +71,18 @@ export const MapViewerExample = () => {
       coordinates: [88.3639, 22.5726],
       value: 85,
       category: 'red',
+      popupData: {
+        indicatorColour: 'red',
+        headerLeft: { field: 'city', value: 'Kolkata' },
+        headerRight: { field: 'state', value: 'West Bengal' },
+        sideLabel: { field: 'zone', value: 'East' },
+        data: [
+          { field: 'Population', value: '14.8M', colour: 'white' },
+          { field: 'Status', value: 'Critical', colour: 'red' },
+          { field: 'Connections', value: '95', colour: 'blue' },
+          { field: 'Response Time', value: '52ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '14.8M',
         status: 'Critical',
@@ -52,6 +96,18 @@ export const MapViewerExample = () => {
       coordinates: [80.2707, 13.0827],
       value: 70,
       category: 'azul',
+      popupData: {
+        indicatorColour: 'blue',
+        headerLeft: { field: 'city', value: 'Chennai' },
+        headerRight: { field: 'state', value: 'Tamil Nadu' },
+        sideLabel: { field: 'zone', value: 'South' },
+        data: [
+          { field: 'Population', value: '7.1M', colour: 'white' },
+          { field: 'Status', value: 'Normal', colour: 'blue' },
+          { field: 'Connections', value: '78', colour: 'blue' },
+          { field: 'Response Time', value: '42ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '7.1M',
         status: 'Normal',
@@ -63,6 +119,18 @@ export const MapViewerExample = () => {
       coordinates: [77.5946, 12.9716],
       value: 75,
       category: 'azul',
+      popupData: {
+        indicatorColour: 'blue',
+        headerLeft: { field: 'city', value: 'Bangalore' },
+        headerRight: { field: 'state', value: 'Karnataka' },
+        sideLabel: { field: 'zone', value: 'South' },
+        data: [
+          { field: 'Population', value: '8.4M', colour: 'white' },
+          { field: 'Status', value: 'Normal', colour: 'blue' },
+          { field: 'Connections', value: '120', colour: 'blue' },
+          { field: 'Response Time', value: '35ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '8.4M',
         status: 'Normal',
@@ -74,6 +142,18 @@ export const MapViewerExample = () => {
       coordinates: [78.4867, 17.3850],
       value: 68,
       category: 'azul',
+      popupData: {
+        indicatorColour: 'blue',
+        headerLeft: { field: 'city', value: 'Hyderabad' },
+        headerRight: { field: 'state', value: 'Telangana' },
+        sideLabel: { field: 'zone', value: 'South' },
+        data: [
+          { field: 'Population', value: '6.9M', colour: 'white' },
+          { field: 'Status', value: 'Monitored', colour: 'blue' },
+          { field: 'Connections', value: '85', colour: 'blue' },
+          { field: 'Response Time', value: '40ms', colour: 'green' },
+        ]
+      },
       additionalData: {
         population: '6.9M',
         status: 'Monitored',
@@ -191,6 +271,7 @@ export const MapViewerExample = () => {
         enableZoom={true}
         enablePan={true}
         onPointClick={handlePointClick}
+        onFilterSet={handleFilterSet}
         className="rounded-lg"
         bounds={{
           minLongitude: 68.1766,

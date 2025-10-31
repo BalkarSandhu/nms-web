@@ -21,14 +21,10 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		</div>;
 	}
 
-	const { devices, locations, workers, loading }: ApiContextType = context;
+	const { devices, locations, workers }: ApiContextType = context;
 
-	// Show loading state
-	if (loading) {
-		return <div className="flex items-center justify-center h-screen">
-			<p className="text-(--contrast)">Loading dashboard data...</p>
-		</div>;
-	}
+	// Note: Removed blocking loading check to allow UI to render immediately
+	// Data will populate as API calls complete in parallel
 
 	// Calculate metrics from actual data
 	// Device status is a boolean, so we categorize based on other criteria

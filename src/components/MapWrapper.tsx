@@ -4,13 +4,7 @@ import { useState, useCallback, useRef, useMemo, useEffect, forwardRef, useImper
 import Map, { Source, Layer, MapRef, ViewState } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
-// import { // toast } from 'sonner';
-// import DrawControl from './draw-control';
-// import type { FeatureCollection, Feature, Polygon, GeoJsonProperties, Geometry } from 'geojson';
 
-
-// import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-// import './map-styles.css';
 
 interface MapWrapperProps {
     children?: React.ReactNode;
@@ -22,10 +16,10 @@ interface MapWrapperProps {
     showDrawingTools?: boolean;
     mapStyle?: string;
     mapFlavor?: string;
-    interactiveLayerIds?: string[];    
-    onClick?:(e: maplibregl.MapLayerMouseEvent) => void;
-    onMouseMove?:(e: maplibregl.MapLayerMouseEvent) => void;
-    onMouseLeave?:(e: maplibregl.MapLayerMouseEvent) => void;
+    interactiveLayerIds?: string[];
+    onClick?: (e: maplibregl.MapLayerMouseEvent) => void;
+    onMouseMove?: (e: maplibregl.MapLayerMouseEvent) => void;
+    onMouseLeave?: (e: maplibregl.MapLayerMouseEvent) => void;
     maxBounds?: [[number, number], [number, number]];
     username?: string;
     selectedPolygonId?: number | null;
@@ -148,7 +142,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
     initialViewState = {
         longitude: 85.220218,
         latitude: 23.693452,
-        
+
         zoom: 10
     },
     showDrawingTools = false,
@@ -167,23 +161,21 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
     selectedPolygonId: externalSelectedPolygonId = null,
     onPolygonSelected
 }, ref) => {
-    const [features, setFeatures] = useState<Record<string, any>>({});
-    const [drawMode, setDrawMode] = useState<string>('draw_polygon');
     const mapRef = useRef<MapRef>(null);
-    const drawControlRef = useRef<any>(null);
-    
+
+
     // Expose the mapRef to parent components
     // Simply forward the entire mapRef so parent can access it directly
     useImperativeHandle(ref, () => mapRef.current as MapRef, [mapRef.current]);
-    
+
     // State for saved polygons from the database
     // const [savedPolygons, setSavedPolygons] = useState<SavedGeofence[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    
+    // const [isLoading, setIsLoading] = useState<boolean>(false);
+
     // Use either external or internal polygon selection state
     const [internalSelectedPolygonId, setInternalSelectedPolygonId] = useState<number | null>(null);
     const selectedPolygonId = externalSelectedPolygonId !== undefined ? externalSelectedPolygonId : internalSelectedPolygonId;
-    
+
     // Function to handle polygon selection that respects both internal and external state
     const handlePolygonSelection = (id: number | null) => {
         setInternalSelectedPolygonId(id);
@@ -200,10 +192,10 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
 
     const mapConfig = useMemo(() => {
         const baseLayers = layers("protomaps", namedFlavor(mapFlavor), { lang: "en" });
-        
+
         // Add custom vegetation styling for dark mode
         const customLayers = [...baseLayers];
-        
+
         if (mapFlavor === "dark") {
             // Find and modify vegetation/forest layers to be visible in dark green
             const vegetationLayers: any[] = [
@@ -212,7 +204,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
                     type: "fill",
                     source: "protomaps",
                     "source-layer": "landuse",
-                    filter: ["any", 
+                    filter: ["any",
                         ["==", ["get", "pmap:kind"], "forest"],
                         ["==", ["get", "pmap:kind"], "wood"],
                         ["==", ["get", "pmap:kind"], "nature_reserve"],
@@ -225,7 +217,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
                     }
                 },
                 {
-                    id: "grass-dark-override", 
+                    id: "grass-dark-override",
                     type: "fill",
                     source: "protomaps",
                     "source-layer": "landuse",
@@ -241,7 +233,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
                 },
                 {
                     id: "scrub-dark-override",
-                    type: "fill", 
+                    type: "fill",
                     source: "protomaps",
                     "source-layer": "landuse",
                     filter: ["any",
@@ -254,11 +246,11 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
                     }
                 }
             ];
-            
+
             // Add the vegetation override layers
             customLayers.push(...vegetationLayers);
         }
-        
+
         return {
             version: 8 as const,
             glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
@@ -274,40 +266,15 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
         };
     }, [mapFlavor]);
 
-    // Accepts features as object[], extracts id if present
-    const onUpdate = useCallback((e: { features: object[] }) => {
-        setFeatures(currFeatures => {
-            const newFeatures = { ...currFeatures };
-            for (const f of e.features) {
-                // Try to extract id from feature
-                const id = (f as any).id;
-                if (id) {
-                    newFeatures[id] = f;
-                }
-            }
-            return newFeatures;
-        });
-    }, []);
-
-    const onDelete = useCallback((e: { features: object[] }) => {
-        setFeatures(currFeatures => {
-            const newFeatures = { ...currFeatures };
-            for (const f of e.features) {
-                const id = (f as any).id;
-                if (id) {
-                    delete newFeatures[id];
-                }
-            }
-            return newFeatures;
-        });
-    }, []);
 
 
-    
-    
 
 
-    
+
+
+
+
+
     // Function to handle map clicks, particularly for polygon selection
     const handleMapClick = useCallback((event: maplibregl.MapLayerMouseEvent) => {
         // First, check if this is a click on a saved polygon
@@ -320,7 +287,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
                 return; // Don't propagate the click if we handled it
             }
         }
-        
+
         // Otherwise, pass the click to the parent component if it provided a handler
         if (onClick) {
             onClick(event);
@@ -333,15 +300,15 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
 
     return (
         <div className="relative w-full h-full">
-            {isLoading && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-zinc-900 p-4 rounded-md shadow-lg flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
-                        <span className="text-zinc-200 text-sm">Loading...</span>
-                    </div>
+
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="bg-zinc-900 p-4 rounded-md shadow-lg flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500"></div>
+                    <span className="text-zinc-200 text-sm">Loading...</span>
                 </div>
-            )}
-            
+            </div>
+
+
             <Map
                 ref={mapRef}
                 id="map"
