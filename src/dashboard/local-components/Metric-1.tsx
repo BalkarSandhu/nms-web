@@ -61,39 +61,39 @@ export default function Metric1({
                     color: contrastColor
                 }
             },
-            legend: {
-                orient: 'vertical',
-                right: '0%',
-                top: '20%',
-                textStyle: {
-                    color: contrastColor,
-                    fontSize: 8
-                },
-                itemWidth: 5,
-                itemHeight: 12,
-                itemGap: 8,
-                formatter: (name: string) => {
-                    const item = [
-                        { name: labels.low || "Low", value: data.low },
-                        { name: labels.medium || "Medium", value: data.medium },
-                        { name: labels.high || "High", value: data.high }
-                    ].find(d => d.name === name);
-                    return item ? `${name}: ${item.value}` : name;
-                }
-            },
+            // legend: {
+            //     orient: 'vertical',
+            //     right: '0%',
+            //     top: '20%',
+            //     textStyle: {
+            //         color: contrastColor,
+            //         fontSize: 8
+            //     },
+            //     itemWidth: 5,
+            //     itemHeight: 12,
+            //     itemGap: 8,
+            //     formatter: (name: string) => {
+            //         const item = [
+            //             { name: labels.low || "Low", value: data.low },
+            //             { name: labels.medium || "Medium", value: data.medium },
+            //             { name: labels.high || "High", value: data.high }
+            //         ].find(d => d.name === name);
+            //         return item ? `${name}: ${item.value}` : name;
+            //     }
+            // },
             series: [
                 {
                     name: 'Metrics',
                     type: 'pie',
-                    radius: ['80%', '100%'],
-                    center: ['25%', '60%'],
+                    radius: ['140%', '170%'],
+                    center: ['50%', '85%'],
                     startAngle: 180,
                     endAngle: 360,
                     avoidLabelOverlap: true,
                     itemStyle: {
                         borderRadius: 4,
                         borderColor: baseColor,
-                        borderWidth: 1
+                        borderWidth:1
                     },
                     label: {
                         show: false
@@ -163,6 +163,20 @@ export default function Metric1({
                 ref={chartRef} 
                 className={`flex flex-1 items-center justify-center w-full h-full min-h-0 ${chartClassName}`}
             />
+            <div id="LegendContainer" className=" w-full flex justify-center gap-4">
+                <div className="flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-full bg-(--green)"></span>
+                    <span className="text-(--contrast) text-[10px]">{labels.low || "Online"}: {data.low}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-full bg-(--azul)" ></span>
+                    <span className="text-(--contrast) text-[10px]">{labels.medium || "Supervised"}: {data.medium}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-full bg-(--red)"></span>
+                    <span className="text-(--contrast) text-[10px]">{labels.high || "Offline"}: {data.high}</span>
+                </div>
+            </div>
         </BaseCard>
     );
 }

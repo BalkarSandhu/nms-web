@@ -4,7 +4,7 @@ import Metric3 from "./Metric-3";
 import MetricMapSwitcher from "./Metric-Map-Switcher";
 import { MapViewerExample } from "./Map-Viewer-Example";
 
-import "@/index.css"
+import "@/index.css";
 
 
 export type MetricsProps = {
@@ -25,7 +25,7 @@ export default function Metrics({ metricState, setMetricState, metricsData }: Me
                     <Metric3 />
                 </div>
             ) : (
-                <div className="w-full bg-(--dark) rounded-[10px] h-full min-h-[500px]">
+                <div className="w-full bg-(--dark) rounded-[20px] h-full min-h-[300px] w-max-[80vw] overflow-hidden">
                     <MapViewerExample />
                 </div>
             )
