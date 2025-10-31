@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.2",
     "lucide-react": "^0.548.0",
     "nodemon": "^3.1.10",
     "react": "^19.1.1",

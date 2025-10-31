@@ -36,9 +36,9 @@ export type BaseCardProps = {
 
 export default function BaseCard({ title, menuGroups, children, className = "" }: BaseCardProps): ReactNode {
     return (
-        <div className={`w-full h-full bg-(--dark)
-                        rounded-[10px] p-2 flex flex-col gap-2 ${className}`}>
-            <div className="w-full h-[25px] flex flex-row justify-between items-center">
+        <div className={`w-full h-full max-h-[165px] bg-(--dark)
+                        rounded-[10px] p-2 flex flex-col gap-2 overflow-hidden ${className}`}>
+            <div className="w-full h-[25px] flex flex-row justify-between items-center shrink-0">
                 <span className="text-(--contrast) text-sm align-left font-semibold">{title}</span>
 
                 <DropdownMenu>

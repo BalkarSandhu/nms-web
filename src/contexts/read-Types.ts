@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const readDeviceSchema = z.object({
     check_interval: z.number(),
     consecutive_failures: z.number().int().nonnegative(),
-    created_at: z.string().datetime(),
+    created_at: z.string(),//.datetime(),
     device_type_id: z.number().int().positive(),
     disabled: z.boolean(),
     display: z.string(),
@@ -12,7 +12,7 @@ export const readDeviceSchema = z.object({
     id: z.number().int().positive(),
     imei: z.string(),
     ip: z.string(),
-    last_ping: z.string().datetime(),
+    last_ping: z.string(),//.datetime(),
     last_ping_time_taken: z.number().nonnegative(),
     location_id: z.number().int().positive(),
     port: z.number().int().min(1).max(65535),
@@ -23,11 +23,19 @@ export const readDeviceSchema = z.object({
     status: z.boolean(),
     status_reason: z.string(),
     timeout: z.number(),
-    updated_at: z.string().datetime(),
-    worker_id: z.string(),
+    updated_at: z.string(),//.datetime(),
+    attributes: z.record(z.string(), z.any()).optional(),
 });
 
 export type readDeviceType = z.infer<typeof readDeviceSchema>;
+
+// Zod Schema for Device Response (wrapper with count and devices array)
+export const readDeviceResponseSchema = z.object({
+    count: z.number().int().nonnegative(),
+    devices: z.array(readDeviceSchema),
+});
+
+export type readDeviceResponseType = z.infer<typeof readDeviceResponseSchema>;
 
 // Zod Schema for Location Read
 export const readLocationSchema = z.object({
