@@ -4,6 +4,8 @@ import "@/index.css";
 import { useEffect, useRef } from "react";
 import * as echarts from "echarts";
 
+import { MenuGroupType } from "./Base-Card";
+
 export interface MetricData {
     low: number;
     medium: number;
@@ -23,7 +25,7 @@ export interface Metric1Props {
     className?: string;
     chartClassName?: string;
     showLabels?: boolean;
-    menuGroups?: any[]; // Match BaseCard's menu structure
+    menuGroups?: MenuGroupType[]; // Match BaseCard's menu structure
 }
 
 export default function Metric1({ 
@@ -36,6 +38,28 @@ export default function Metric1({
     menuGroups
 }: Metric1Props) {
     const chartRef = useRef<HTMLDivElement>(null);
+
+    const resolvedMenuGroups = menuGroups ?? [
+        {
+            items: [
+                {
+                    type: "item" as const,
+                    label: "Refresh metrics",
+                    onClick: () => console.log("Refresh metrics"),
+                },
+                {
+                    type: "item" as const,
+                    label: "Export CSV",
+                    onClick: () => console.log("Export CSV"),
+                },
+                {
+                    type: "item" as const,
+                    label: "View details",
+                    onClick: () => console.log("View metric details"),
+                },
+            ],
+        },
+    ];
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -61,26 +85,6 @@ export default function Metric1({
                     color: contrastColor
                 }
             },
-            // legend: {
-            //     orient: 'vertical',
-            //     right: '0%',
-            //     top: '20%',
-            //     textStyle: {
-            //         color: contrastColor,
-            //         fontSize: 8
-            //     },
-            //     itemWidth: 5,
-            //     itemHeight: 12,
-            //     itemGap: 8,
-            //     formatter: (name: string) => {
-            //         const item = [
-            //             { name: labels.low || "Low", value: data.low },
-            //             { name: labels.medium || "Medium", value: data.medium },
-            //             { name: labels.high || "High", value: data.high }
-            //         ].find(d => d.name === name);
-            //         return item ? `${name}: ${item.value}` : name;
-            //     }
-            // },
             series: [
                 {
                     name: 'Metrics',
@@ -158,7 +162,7 @@ export default function Metric1({
     }, [data, labels, showLabels]);
 
     return (
-        <BaseCard title={title} menuGroups={menuGroups} className={className}>
+        <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             <div 
                 ref={chartRef} 
                 className={`flex flex-1 items-center justify-center w-full h-full min-h-0 ${chartClassName}`}

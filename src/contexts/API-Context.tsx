@@ -35,14 +35,19 @@ export const APIProvider = ({children}: {children: ReactNode}) => {
 const fetchData = async() => {
     // Set loading to true when explicitly refreshing
     setLoading(true);
-    
+    const headers = {
+        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_TOKEN}`
+    }
     // Set a timeout for all fetch operations
     const fetchWithTimeout = async (url: string, timeout = 5000) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
         
         try {
-            const response = await fetch(url, { signal: controller.signal });
+            const response = await fetch(url, { 
+                signal: controller.signal,
+                headers: headers
+            });
             clearTimeout(id);
             return await response.json();
         } catch (error) {
@@ -103,9 +108,6 @@ useEffect(()=> {
 }, []);
 
 const refresh = () => fetchData();
-
-
-
     return (
         <ApiContext.Provider value={{
             devices,

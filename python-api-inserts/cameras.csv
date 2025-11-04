@@ -1,0 +1,227 @@
+ip,name,type,location,lat,long,username,password,manufacturer,rtsp,location_type
+172.16.36.2,Block-II ICCC Control Room,DOME,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.2:322/ch01.264?dev=1,SL
+172.16.36.3,Block-II ICCC Control Room,DOME,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.3:322/ch01.264?dev=1,SL
+172.16.36.4,Block-II ICCC Control Room,BULLET,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.4:322/ch01.264?dev=1,SL
+172.16.36.5,Block-II ICCC Control Room,BULLET,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.5:322/ch01.264?dev=1,SL
+172.16.36.6,Block-II ICCC Control Room,BULLET,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.6:322/ch01.264?dev=1,SL
+172.16.36.7,Block-II ICCC Control Room,BULLET,Block-II ICCC Control Room,23.807385,86.213915,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.7:322/ch01.264?dev=1,SL
+172.16.36.8,,NVR,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.8:322/ch01.264?dev=1,#N/A
+172.16.36.9,KKC Main Railway Siding Tower,BULLET,KKC Main Railway Siding Tower,23.783558,86.214596,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.9:322/ch01.264?dev=1,CD
+172.16.36.10,KKC Main Railway Siding Tower,BULLET,KKC Main Railway Siding Tower,23.783558,86.214596,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.10:322/ch01.264?dev=1,CD
+172.16.36.11,KKC Main Railway Siding Tower,BULLET,KKC Main Railway Siding Tower,23.783558,86.214596,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.11:322/ch01.264?dev=1,CD
+172.16.36.12,KKC Main Railway Siding Tower,PTZ,KKC Main Railway Siding Tower,23.783558,86.214596,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.12:554/trackID=2,CD
+172.16.36.13,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.13:322/ch01.264?dev=1,#N/A
+172.16.36.14,KKC Main Railway Siding Pole 2,PTZ,KKC Main Railway Siding Pole 2,23.778386,86.219112,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.14:322/ch01.264?dev=1,CD
+172.16.36.15,KKC Main Railway Siding Pole 2,BULLET,KKC Main Railway Siding Pole 2,23.778386,86.219112,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.15:322/ch01.264?dev=1,CD
+172.16.36.16,KKC Main Railway Siding Pole 2,BULLET,KKC Main Railway Siding Pole 2,23.778386,86.219112,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.16:322/ch01.264?dev=1,CD
+172.16.36.17,KKC Main Railway Siding pole 1,BULLET,KKC Main Railway Siding pole 1,23.779693,86.217595,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.17:322/ch01.264?dev=1,CD
+172.16.36.18,KKC Main Railway Siding pole 1,BULLET,KKC Main Railway Siding pole 1,23.779693,86.217595,admin,Admin@1234,IDIS,rtsp://admin:Admin@1234@172.16.36.18:554/trackID=2,CD
+172.16.36.19,KKC Main Railway Siding pole 1,PTZ,KKC Main Railway Siding pole 1,23.779693,86.217595,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.19:322/ch01.264?dev=1,CD
+172.16.36.20,KKC Main WB,BULLET,KKC Main WB,23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.20:322/ch01.264?dev=1,WB
+172.16.36.21,KKC Main WB,BULLET,KKC Main WB,23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.21:322/ch01.264?dev=1,WB
+172.16.36.22,KKC Main WB,BULLET,KKC Main WB,23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.22:322/ch01.264?dev=1,WB
+172.16.36.23,KKC Main WB,DOME,KKC Main WB,23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.23:322/ch01.264?dev=1,WB
+172.16.36.24,KKC Main WB,NVR,KKC Main WB,23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.24:322/ch01.264?dev=1,WB
+172.16.36.25,Nudkhurkee A Road WB ,NVR,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.25:322/ch01.264?dev=1,RT
+172.16.36.26,Nudkhurkee A Road WB ,BULLET,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.26:322/ch01.264?dev=1,RT
+172.16.36.27,Nudkhurkee A Road WB ,BULLET,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.27:322/ch01.264?dev=1,RT
+172.16.36.28,Nudkhurkee A Road WB ,DOME,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.28:322/ch01.264?dev=1,RT
+172.16.36.29,Nudkhurkee A Road WB ,BULLET,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.29:322/ch01.264?dev=1,RT
+172.16.36.30,Nudkhurkee A Road WB ,BULLET,Nudkhurkee A Road WB ,23.780463,86.197698,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.30:322/ch01.264?dev=1,RT
+172.16.36.31,Nathkurkee B WB,DOME,Nathkurkee B WB,23.78209701,86.19640828,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.31:322/ch01.264?dev=1,WB
+172.16.36.32,Nathkurkee B WB,BULLET,Nathkurkee B WB,23.78209701,86.19640828,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.32:322/ch01.264?dev=1,WB
+172.16.36.33,Nathkurkee B WB,BULLET,Nathkurkee B WB,23.78209701,86.19640828,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.33:322/ch01.264?dev=1,WB
+172.16.36.34,Nathkurkee B WB,BULLET,Nathkurkee B WB,23.78209701,86.19640828,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.34:322/ch01.264?dev=1,WB
+172.16.36.35,Nathkurkee B WB,NVR,Nathkurkee B WB,23.78209701,86.19640828,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.35:322/ch01.264?dev=1,WB
+172.16.36.36,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.36:322/ch01.264?dev=1,#N/A
+172.16.36.37,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.37:322/ch01.264?dev=1,#N/A
+172.16.36.38,Ambay workshope New kkc main WB,BULLET,Ambay workshope New kkc main WB,23.782893,86.203841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.38:322/ch01.264?dev=1,RT
+172.16.36.39,Ambay workshope New kkc main WB,BULLET,Ambay workshope New kkc main WB,23.782893,86.203841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.39:322/ch01.264?dev=1,RT
+172.16.36.40,Ambay workshope New kkc main WB,BULLET,Ambay workshope New kkc main WB,23.782893,86.203841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.40:322/ch01.264?dev=1,RT
+172.16.36.41,Escape Route (To Jayramdih Basti),BULLET,Escape Route (To Jayramdih Basti),23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.41:322/ch01.264?dev=1,RT
+172.16.36.42,Escape Route (To Jayramdih Basti),BULLET,Escape Route (To Jayramdih Basti),23.786141,86.209066,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.42:322/ch01.264?dev=1,RT
+172.16.36.43,Benedih coal dump- 1,BULLET,Benedih coal dump- 1,23.782004,86.202841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.43:322/ch01.264?dev=1,CD
+172.16.36.44,Benedih coal dump- 1,BULLET,Benedih coal dump- 1,23.782004,86.202841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.44:322/ch01.264?dev=1,CD
+172.16.36.45,Benedih coal dump- 2,BULLET,Benedih coal dump- 2,23.782893,86.203841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.45:322/ch01.264?dev=1,CD
+172.16.36.46,Benedih coal dump- 2,BULLET,Benedih coal dump- 2,23.782893,86.203841,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.46:322/ch01.264?dev=1,CD
+172.16.36.47,Nudkhurkee feeder breaker Near crusher,PTZ,Nudkhurkee feeder breaker Near crusher,23.779628,86.193645,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.47:322/ch01.264?dev=1,RT
+172.16.36.48,jamunia Coal Dump Tower,PTZ ,jamunia Coal Dump Tower,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.48:322/ch01.264?dev=1,CD
+172.16.36.49,NKSY Coal Dump Tower-3 Near Temple,,NKSY Coal Dump Tower-3 Near Temple,23.783109,86.198333,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.49:322/ch01.264?dev=1,CD
+172.16.36.50,NKSY Coal Dump Tower-3 Near Temple,BULLET,NKSY Coal Dump Tower-3 Near Temple,23.783109,86.198333,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.50:322/ch01.264?dev=1,CD
+172.16.36.51,NKSY Coal Dump Tower-3 Near Temple,BULLET,NKSY Coal Dump Tower-3 Near Temple,23.783109,86.198333,admin,Bccl@2024,SPARSH,rtsp://admin:Bccl@2024@172.16.36.51:322/ch01.264?dev=1,CD
+172.16.36.52,NKSY Coal Dump Tower-3 Near Temple,PTZ,NKSY Coal Dump Tower-3 Near Temple,23.783109,86.198333,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.52:322/ch01.264?dev=1,CD
+172.16.36.53,NKSY Coal Dump Tower-3 Near Temple,BULLET,NKSY Coal Dump Tower-3 Near Temple,23.783109,86.198333,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.53:322/ch01.264?dev=1,CD
+172.16.36.54,Andha More Chauraha Escape route,PTZ,Andha More Chauraha Escape route,23.779792,86.197772,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.54:322/ch01.264?dev=1,RT
+172.16.36.55,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.55:322/ch01.264?dev=1,#N/A
+172.16.36.56,Andha More Chauraha Escape route,BULLET,Andha More Chauraha Escape route,23.779792,86.197772,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.56:322/ch01.264?dev=1,RT
+172.16.36.57,Andha More Chauraha Escape route,BULLET,Andha More Chauraha Escape route,23.779792,86.197772,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.57:322/ch01.264?dev=1,RT
+172.16.36.58,Nudkhurkee feeder breaker,BULLET,Nudkhurkee feeder breaker,23.779711,86.195213,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.58:322/ch01.264?dev=1,RT
+172.16.36.59,Nudkhurkee feeder breaker,BULLET,Nudkhurkee feeder breaker,23.779711,86.195213,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.59:322/ch01.264?dev=1,RT
+172.16.36.60,Nudkhurkee feeder breaker,BULLET,Nudkhurkee feeder breaker,23.779711,86.195213,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.60:322/ch01.264?dev=1,RT
+172.16.36.61,Nudkhurkee feeder breaker Near crusher,BULLET,Nudkhurkee feeder breaker Near crusher,23.779628,86.193645,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.61:322/ch01.264?dev=1,RT
+172.16.36.62,Matigarha Escape Route Near madhuban washery WB,,Matigarha Escape Route Near madhuban washery WB,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.62:322/ch01.264?dev=1,RT
+172.16.36.63,Matigarha Escape Route Near madhuban washery WB,,Matigarha Escape Route Near madhuban washery WB,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.63:322/ch01.264?dev=1,RT
+172.16.36.64,Nudkhurkee feeder breaker Near crusher,BULLET,Nudkhurkee feeder breaker Near crusher,23.779628,86.193645,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.64:322/ch01.264?dev=1,RT
+172.16.36.65,Matigarha Escape Route,BULLET,Matigarha Escape Route,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.65:322/ch01.264?dev=1,RT
+172.16.36.66,Matigarha Escape Route,BULLET,Matigarha Escape Route,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.66:322/ch01.264?dev=1,RT
+172.16.36.67,14 No Parking Area (HEMM) Tower,BULLET,14 No Parking Area (HEMM) Tower,23.779132,86.197101,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.67:322/ch01.264?dev=1,RT
+172.16.36.68,14 No Parking Area (HEMM) Tower,BULLET,14 No Parking Area (HEMM) Tower,23.779132,86.197101,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.68:322/ch01.264?dev=1,RT
+172.16.36.69,14 No Parking Area (HEMM) Tower,,14 No Parking Area (HEMM) Tower,23.779132,86.197101,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.69:322/ch01.264?dev=1,RT
+172.16.36.70,14 No Parking Area (HEMM) Tower,,14 No Parking Area (HEMM) Tower,23.779132,86.197101,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.70:322/ch01.264?dev=1,RT
+172.16.36.71,14 No Parking Area (HEMM) Tower,PTZ,14 No Parking Area (HEMM) Tower,23.779132,86.197101,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.71:322/ch01.264?dev=1,RT
+172.16.36.72,14 No Parking Area (HEMM) pole ,BULLET,14 No Parking Area (HEMM) pole ,23.779384,86.197787,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.72:322/ch01.264?dev=1,RT
+172.16.36.73,14 No Parking Area (HEMM) pole ,BULLET,14 No Parking Area (HEMM) pole ,23.779384,86.197787,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.73:322/ch01.264?dev=1,RT
+172.16.36.74,14 No Parking Area (HEMM) pole ,PTZ,14 No Parking Area (HEMM) pole ,23.779384,86.197787,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.74:322/ch01.264?dev=1,RT
+172.16.36.75,NKSY Coal Dump Tower-1 Near crusher,BULLET,NKSY Coal Dump Tower-1 Near crusher,23.781179,86.196944,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.75:322/ch01.264?dev=1,CD
+172.16.36.76,NKSY Coal Dump Tower-1 Near crusher,BULLET,NKSY Coal Dump Tower-1 Near crusher,23.781179,86.196944,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.76:322/ch01.264?dev=1,CD
+172.16.36.77,NKSY Coal Dump Tower-1 Near crusher,PTZ,NKSY Coal Dump Tower-1 Near crusher,23.781179,86.196944,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.77:322/ch01.264?dev=1,CD
+172.16.36.78,NKSY Coal Dump Tower-2 Near Benidih B WB,BULLET,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.78:322/ch01.264?dev=1,CD
+172.16.36.79,NKSY Coal Dump Tower-2 Near Benidih B WB,BULLET,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.79:322/ch01.264?dev=1,CD
+172.16.36.80,NKSY Coal Dump Tower-2 Near Benidih B WB,BULLET,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.80:322/ch01.264?dev=1,CD
+172.16.36.81,jamuniya coal dump view point ,BULLET,jamuniya coal dump view point ,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.81:322/ch01.264?dev=1,VP
+172.16.36.82,jamuniya coal dump view point ,BULLET,jamuniya coal dump view point ,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.82:322/ch01.264?dev=1,VP
+172.16.36.83,jamuniya coal dump view point ,BULLET,jamuniya coal dump view point ,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.83:322/ch01.264?dev=1,VP
+172.16.36.84,jamuniya coal dump view point ,BULLET,jamuniya coal dump view point ,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.84:322/ch01.264?dev=1,VP
+172.16.36.85,jamunia Coal Dump Near Park,BULLET,jamunia Coal Dump Near Park,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.85:322/ch01.264?dev=1,RT
+172.16.36.86,jamunia Coal Dump Near Park,BULLET,jamunia Coal Dump Near Park,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.86:322/ch01.264?dev=1,RT
+172.16.36.87,jamunia Coal Dump Near Park,BULLET,jamunia Coal Dump Near Park,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.87:322/ch01.264?dev=1,RT
+172.16.36.88,jamunia Coal Dump Near Park,BULLET,jamunia Coal Dump Near Park,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.88:322/ch01.264?dev=1,RT
+172.16.36.89,jamunia Coal Dump Tower,BULLET,jamunia Coal Dump Tower,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.89:322/ch01.264?dev=1,CD
+172.16.36.90,jamunia Coal Dump Tower,BULLET,jamunia Coal Dump Tower,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.90:322/ch01.264?dev=1,CD
+172.16.36.91,jamunia Coal Dump WB,BULLET,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.91:322/ch01.264?dev=1,WB
+172.16.36.92,jamunia Coal Dump WB,BULLET,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.92:322/ch01.264?dev=1,WB
+172.16.36.93,jamunia Coal Dump WB,BULLET,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.93:322/ch01.264?dev=1,WB
+172.16.36.94,jamunia Coal Dump WB,DOME,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.94:322/ch01.264?dev=1,WB
+172.16.36.95,jamunia Coal Dump Tower,BULLET,jamunia Coal Dump Tower,23.77869,86.182731,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.95:322/ch01.264?dev=1,CD
+172.16.36.96,jamunia Coal Dump Near Entry,BULLET,jamunia Coal Dump Near Entry,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.96:322/ch01.264?dev=1,CD
+172.16.36.97,jamunia Coal Dump Near Entry,BULLET,jamunia Coal Dump Near Entry,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.97:322/ch01.264?dev=1,CD
+172.16.36.98,jamunia Coal Dump Near Entry,BULLET,jamunia Coal Dump Near Entry,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.98:322/ch01.264?dev=1,CD
+172.16.36.99,jamunia Coal Dump Near Entry,BULLET,jamunia Coal Dump Near Entry,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.99:322/ch01.264?dev=1,CD
+172.16.36.100,Lal Bangla Chauraha Near ABOCP Project office,BULLET,Lal Bangla Chauraha Near ABOCP Project office,23.788091,86.186635,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.100:322/ch01.264?dev=1,RT
+172.16.36.101,Lal Bangla Chauraha Near ABOCP Project office,BULLET,Lal Bangla Chauraha Near ABOCP Project office,23.788091,86.186635,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.101:322/ch01.264?dev=1,RT
+172.16.36.102,Lal Bangla Chauraha Near ABOCP Project office,BULLET,Lal Bangla Chauraha Near ABOCP Project office,23.788091,86.186635,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.102:322/ch01.264?dev=1,RT
+172.16.36.103,Kessurgarh Railway Siding Tower-I,BULLET,Kessurgarh Railway Siding Tower-I,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.103:322/ch01.264?dev=1,CD
+172.16.36.104,Kessurgarh Railway Siding Tower-I,BULLET,Kessurgarh Railway Siding Tower-I,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.104:322/ch01.264?dev=1,CD
+172.16.36.105,Kessurgarh Railway Siding Tower-I,BULLET,Kessurgarh Railway Siding Tower-I,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.105:322/ch01.264?dev=1,CD
+172.16.36.106,Kessurgarh Railway Siding Tower-I,PTZ,Kessurgarh Railway Siding Tower-I,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.106:322/ch01.264?dev=1,CD
+172.16.36.107,Kessurgarh  WB,DOME,Kessurgarh  WB,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.107:322/ch01.264?dev=1,WB
+172.16.36.108,Kessurgarh  WB,BULLET,Kessurgarh  WB,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.108:322/ch01.264?dev=1,WB
+172.16.36.109,Kessurgarh  WB,BULLET,Kessurgarh  WB,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.109:322/ch01.264?dev=1,WB
+172.16.36.110,Kessurgarh  WB,BULLET,Kessurgarh  WB,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.110:322/ch01.264?dev=1,WB
+172.16.36.111,Kessurgarh  WB,NVR,Kessurgarh  WB,23.766456,86.197337,,Admin@1234,SPARSH,rtsp://:Admin@1234@172.16.36.111:322/ch01.264?dev=1,WB
+172.16.36.112,Kessurgarh Railway Siding Tower-II,BULLET,Kessurgarh Railway Siding Tower-II,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.112:322/ch01.264?dev=1,CD
+172.16.36.113,Kessurgarh Railway Siding Tower-II,BULLET,Kessurgarh Railway Siding Tower-II,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.113:322/ch01.264?dev=1,CD
+172.16.36.114,Kessurgarh Railway Siding Tower-II,BULLET,Kessurgarh Railway Siding Tower-II,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.114:322/ch01.264?dev=1,CD
+172.16.36.115,Kessurgarh Railway Siding Tower-II,PTZ,Kessurgarh Railway Siding Tower-II,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.115:322/ch01.264?dev=1,CD
+172.16.36.116,Kessurgarh Railway Siding check post,RESERVE,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.116:322/ch01.264?dev=1,CP
+172.16.36.117,Kessurgarh Railway Siding check post,RESERVE,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.117:322/ch01.264?dev=1,CP
+172.16.36.118,Kessurgarh Railway Siding check post,RESERVE,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.118:322/ch01.264?dev=1,CP
+172.16.36.119,Kessurgarh Railway Siding check post,RESERVE,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.119:322/ch01.264?dev=1,CP
+172.16.36.120,Kessurgarh Railway Siding check post,DOME,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.120:322/ch01.264?dev=1,CP
+172.16.36.121,Kessurgarh Railway Siding check post,BULLET,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.121:322/ch01.264?dev=1,CP
+172.16.36.122,Kessurgarh Railway Siding check post,BULLET,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.122:322/ch01.264?dev=1,CP
+172.16.36.123,Kessurgarh Railway Siding check post,BULLET,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.123:322/ch01.264?dev=1,CP
+172.16.36.124,Kessurgarh Railway Siding check post,BULLET,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.124:322/ch01.264?dev=1,CP
+172.16.36.125,Kessurgarh Railway Siding check post,SYSTEM,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.125:322/ch01.264?dev=1,CP
+172.16.36.126,Kessurgarh Railway Siding check post,NVR,Kessurgarh Railway Siding check post,23.766456,86.197337,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.126:322/ch01.264?dev=1,CP
+172.16.36.126,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.126:322/ch01.264?dev=1,ST
+172.16.36.127,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.127:322/ch01.264?dev=1,ST
+172.16.36.128,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.128:322/ch01.264?dev=1,ST
+172.16.36.129,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.129:322/ch01.264?dev=1,ST
+172.16.36.130,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.130:322/ch01.264?dev=1,ST
+172.16.36.131,jamunia Coal Dump WB,NVR,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.131:322/ch01.264?dev=1,WB
+172.16.36.132,jamunia Coal Dump WB,SYSTEM,jamunia Coal Dump WB,23.779419,86.181956,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.132:322/ch01.264?dev=1,WB
+172.16.36.133,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.133:322/ch01.264?dev=1,ST
+172.16.36.134,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.134:322/ch01.264?dev=1,ST
+172.16.36.135,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.135:322/ch01.264?dev=1,ST
+172.16.36.136,Block-II Regional store,BULLET,Block-II Regional store,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.136:322/ch01.264?dev=1,ST
+172.16.36.138,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.138:322/ch01.264?dev=1,#N/A
+172.16.36.139,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.139:322/ch01.264?dev=1,#N/A
+172.16.36.140,,,#N/A,#N/A,#N/A,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.140:322/ch01.264?dev=1,#N/A
+172.16.36.141,Magazine,BULLET,Magazine,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.141:322/ch01.264?dev=1,MG
+172.16.36.142,Magazine,BULLET,Magazine,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.142:322/ch01.264?dev=1,MG
+172.16.36.143,Magazine,BULLET,Magazine,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.143:322/ch01.264?dev=1,MG
+172.16.36.144,Magazine,BULLET,Magazine,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.144:322/ch01.264?dev=1,MG
+172.16.36.145,Magazine,NVR,Magazine,23.783962,86.192533,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.145:322/ch01.264?dev=1,MG
+172.16.36.146,KKC Main Railway Siding Entry exit,BULLET,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.146:322/ch01.264?dev=1,CP
+172.16.36.147,KKC Main Railway Siding Entry exit,BULLET,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.147:322/ch01.264?dev=1,CP
+172.16.36.148,KKC Main Railway Siding Entry exit,BULLET,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.148:322/ch01.264?dev=1,CP
+172.16.36.149,KKC Main Railway Siding Entry exit,BULLET,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.149:322/ch01.264?dev=1,CP
+172.16.36.150,KKC Main Railway Siding Entry exit,DOME,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.150:322/ch01.264?dev=1,CP
+172.16.36.151,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.152,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.153,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.154,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.155,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.156,KKC Main Railway Siding Entry exit,,KKC Main Railway Siding Entry exit,23.781264,86.215819,admin,,,,CP
+172.16.36.157,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.158,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.159,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.160,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.160:322/ch01.264?dev=1,SL
+172.16.36.161,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.161:322/ch01.264?dev=1,SL
+172.16.36.162,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.162:322/ch01.264?dev=1,SL
+172.16.36.163,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.163:322/ch01.264?dev=1,SL
+172.16.36.164,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.164:322/ch01.264?dev=1,SL
+172.16.36.165,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.165:322/ch01.264?dev=1,SL
+172.16.36.166,Block 2 Area office,BULLET,Block 2 Area office,23.79487,86.21483,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.166:322/ch01.264?dev=1,SL
+172.16.36.167,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.168,Madhuban Washery WB 1,BULLET,Madhuban Washery WB 1,23.786317,86.1899077,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.168:322/ch01.264?dev=1,WB
+172.16.36.169,Madhuban Washery WB 1,BULLET,Madhuban Washery WB 1,23.786317,86.1899077,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.169:322/ch01.264?dev=1,WB
+172.16.36.170,Madhuban Washery WB 1,BULLET,Madhuban Washery WB 1,23.786317,86.1899077,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.170:322/ch01.264?dev=1,WB
+172.16.36.171,Madhuban Washery WB 1,DOME,Madhuban Washery WB 1,23.786317,86.1899077,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.171:322/ch01.264?dev=1,WB
+172.16.36.172,Madhuban Washery WB 1,NVR,Madhuban Washery WB 1,23.786317,86.1899077,admin,,,,WB
+172.16.36.173,Madhuban Washery WB 2,BULLET,Madhuban Washery WB 2,23.786608,86.189385,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.173:322/ch01.264?dev=1,WB
+172.16.36.174,Madhuban Washery WB 2,BULLET,Madhuban Washery WB 2,23.786608,86.189385,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.174:322/ch01.264?dev=1,WB
+172.16.36.175,Madhuban Washery WB 2,BULLET,Madhuban Washery WB 2,23.786608,86.189385,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.175:322/ch01.264?dev=1,WB
+172.16.36.176,Madhuban Washery WB 2,DOME,Madhuban Washery WB 2,23.786608,86.189385,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.176:322/ch01.264?dev=1,WB
+172.16.36.177,Madhuban Washery WB 2,NVR,Madhuban Washery WB 2,23.786608,86.189385,admin,,,,WB
+172.16.36.178,Madhuban  Washery WB 3,BULLET,Madhuban  Washery WB 3,23.789837,86.189271,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.178:322/ch01.264?dev=1,WB
+172.16.36.179,Madhuban  Washery WB 3,BULLET,Madhuban  Washery WB 3,23.789837,86.189271,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.179:322/ch01.264?dev=1,WB
+172.16.36.180,Madhuban  Washery WB 3,BULLET,Madhuban  Washery WB 3,23.789837,86.189271,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.180:322/ch01.264?dev=1,WB
+172.16.36.181,Madhuban  Washery WB 3,DOME,Madhuban  Washery WB 3,23.789837,86.189271,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.181:322/ch01.264?dev=1,WB
+172.16.36.182,Madhuban  Washery WB 3,NVR,Madhuban  Washery WB 3,23.789837,86.189271,admin,,,,WB
+172.16.36.183,Madhuban Washery WB 4,BULLET,Madhuban Washery WB 4,23.782856,86.190591,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.183:322/ch01.264?dev=1,WB
+172.16.36.184,Madhuban Washery WB 4,BULLET,Madhuban Washery WB 4,23.782856,86.190591,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.184:322/ch01.264?dev=1,WB
+172.16.36.185,Madhuban Washery WB 4,BULLET,Madhuban Washery WB 4,23.782856,86.190591,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.185:322/ch01.264?dev=1,WB
+172.16.36.186,Madhuban Washery WB 4,DOME,Madhuban Washery WB 4,23.782856,86.190591,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.186:322/ch01.264?dev=1,WB
+172.16.36.187,Madhuban Washery WB 4,NVR,Madhuban Washery WB 4,23.782856,86.190591,admin,,,,WB
+172.16.36.188,Madhuban Washery WB 4,SYSTEM,Madhuban Washery WB 4,23.782856,86.190591,admin,,,,WB
+172.16.36.189,Madhuban Washery Sequrity Point,PTZ,Madhuban Washery Sequrity Point,23.788281,86.188646,admin,,,,SL
+172.16.36.190,Madhuban Washery Sequrity Point,BULLET,Madhuban Washery Sequrity Point,23.788281,86.188646,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.190:322/ch01.264?dev=1,SL
+172.16.36.191,Madhuban Washery Sequrity Point,BULLET,Madhuban Washery Sequrity Point,23.788281,86.188646,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.191:322/ch01.264?dev=1,SL
+172.16.36.192,Madhuban Washery Lal bangloo ,PTZ,Madhuban Washery Lal bangloo ,23.78825,86.188346,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.192:554/trackID=2,SL
+172.16.36.193,Madhuban Washery Lal bangloo ,BULLET,Madhuban Washery Lal bangloo ,23.78825,86.188346,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.193:554/trackID=2,SL
+172.16.36.194,Madhuban Washery Lal bangloo ,BULLET,Madhuban Washery Lal bangloo ,23.78825,86.188346,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.194:554/trackID=2,SL
+172.16.36.195,Madhuban Washery Lal bangloo ,BULLET,Madhuban Washery Lal bangloo ,23.78825,86.188346,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.195:554/trackID=2,SL
+172.16.36.196,Madhuban Washery Lal bangloo ,BULLET,Madhuban Washery Lal bangloo ,23.78825,86.188346,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.196:554/trackID=2,SL
+172.16.36.197,Jamunia View Point Near Shed (Container),PTZ,Jamunia View Point Near Shed (Container),23.77855,86.182702,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.197:554/trackID=2,RT
+172.16.36.198,Jamunia View Point Near Shed (Container),BULLET,Jamunia View Point Near Shed (Container),23.77855,86.182702,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.198:554/trackID=2,RT
+172.16.36.199,Jamunia View Point Near Shed (Container),BULLET,Jamunia View Point Near Shed (Container),23.77855,86.182702,admin,,,,RT
+172.16.36.200,Jamunia OCP Checkpost,BULLET,Jamunia OCP Checkpost,23.781583,86.194315,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.200:322/ch01.264?dev=1,CP
+172.16.36.201,Jamunia OCP Checkpost,BULLET,Jamunia OCP Checkpost,23.781583,86.194315,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.201:322/ch01.264?dev=1,CP
+172.16.36.202,Jamunia OCP Checkpost,BULLET,Jamunia OCP Checkpost,23.781583,86.194315,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.202:322/ch01.264?dev=1,CP
+172.16.36.203,Jamunia OCP Checkpost,DOME,Jamunia OCP Checkpost,23.781583,86.194315,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.203:322/ch01.264?dev=1,CP
+172.16.36.204,Jamunia OCP Checkpost,BULLET,Jamunia OCP Checkpost,23.781583,86.194315,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.204:322/ch01.264?dev=1,CP
+172.16.36.205,Jamunia OCP Checkpost,NVR,Jamunia OCP Checkpost,23.781583,86.194315,admin,,,,CP
+172.16.36.206,Jamunia OCP Checkpost,SYSTEM,Jamunia OCP Checkpost,23.781583,86.194315,admin,,,,CP
+172.16.36.207,Jamunia OCP Checkpost,RFID,Jamunia OCP Checkpost,23.781583,86.194315,admin,,,,CP
+172.16.36.208,Jamunia OCP Checkpost,RFID,Jamunia OCP Checkpost,23.781583,86.194315,admin,,,,CP
+172.16.36.209,Jamunia OCP Checkpost,CONTROLLER,Jamunia OCP Checkpost,23.781583,86.194315,admin,,,,CP
+172.16.36.210,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.211,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.212,Madhuban Washery NEW Railway Siding Tower,PTZ,Madhuban Washery NEW Railway Siding Tower,23.803545,86.187184,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.212:554/trackID=2,CD
+172.16.36.213,Madhuban Washery NEW Railway Siding Tower,BULLET,Madhuban Washery NEW Railway Siding Tower,23.803545,86.187184,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.213:322/ch01.264?dev=1,CD
+172.16.36.214,Madhuban Washery NEW Railway Siding Tower,BULLET,Madhuban Washery NEW Railway Siding Tower,23.803545,86.187184,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.214:554/trackID=2,CD
+172.16.36.215,Madhuban Washery Crusher (SILO) ,BULLET,Madhuban Washery Crusher (SILO) ,23.7881,86.1882,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.215:322/ch01.264?dev=1,RT
+172.16.36.216,Madhuban Washery Crusher (SILO) ,BULLET,Madhuban Washery Crusher (SILO) ,23.7881,86.1882,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.216:322/ch01.264?dev=1,RT
+172.16.36.217,Madhuban Washery Crusher (SILO) ,BULLET,Madhuban Washery Crusher (SILO) ,23.7881,86.1882,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.217:322/ch01.264?dev=1,RT
+172.16.36.218,Madhuban Washery Crusher (SILO) ,NVR,Madhuban Washery Crusher (SILO) ,23.7881,86.1882,admin,,,,RT
+172.16.36.219,Madhuban Washery WB 2,system ,Madhuban Washery WB 2,23.786608,86.189385,admin,,,,WB
+172.16.36.220,NKSY Coal Dump Tower-2 Near Benidih B WB,PTZ,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Bccl@2024,IDIS,rtsp://admin:Bccl@2024@172.16.36.220:554/trackID=2,CD
+172.16.36.221,NKSY Coal Dump Tower-2 Near Benidih B WB,BULLET,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.221:322/ch01.264?dev=1,CD
+172.16.36.222,NKSY Coal Dump Tower-2 Near Benidih B WB,BULLET,NKSY Coal Dump Tower-2 Near Benidih B WB,23.782057,86.196904,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.222:322/ch01.264?dev=1,CD
+172.16.36.223,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.224,,,#N/A,#N/A,#N/A,admin,,,,#N/A
+172.16.36.225,Basanti chowk Near Block II regional Store,BULLET,Basanti chowk Near Block II regional Store,23.789685,86.181818,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.225:322/ch01.264?dev=1,RT
+172.16.36.226,Basanti chowk Near Block II regional Store,BULLET,Basanti chowk Near Block II regional Store,23.789685,86.181818,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.226:322/ch01.264?dev=1,RT
+172.16.36.227,Basanti chowk Near Block II regional Store,BULLET,Basanti chowk Near Block II regional Store,23.789685,86.181818,admin,Admin@1234,SPARSH,rtsp://admin:Admin@1234@172.16.36.227:322/ch01.264?dev=1,RT
