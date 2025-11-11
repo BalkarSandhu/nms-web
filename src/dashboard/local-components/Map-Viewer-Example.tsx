@@ -272,7 +272,7 @@ export const MapViewerExample = () => {
         enablePan={true}
         onPointClick={handlePointClick}
         onFilterSet={handleFilterSet}
-        className="rounded-lg"
+        className=""
         bounds={{
           minLongitude: 68.1766,
           maxLongitude: 97.4025,

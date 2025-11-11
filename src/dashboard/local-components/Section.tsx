@@ -48,7 +48,7 @@ export default function Section ({title, menuGroups, children, metricsData }: Se
 
     const [metricState, setMetricState] = React.useState<boolean>(false);
 return (
-    <section className={`flex flex-col gap-2 w-full overflow-hidden transition-[height,min-height] duration-500 ease-in-out ${
+    <section className={`flex flex-col gap-1 w-full overflow-hidden transition-[height,min-height] duration-500 ease-in-out ${
         metricState 
             ? "h-[550px] min-h-[550px]" // Fixed height for map
             : "h-[210px] min-h-[210px] max-h-[210px]" // Fixed collapsed height with max constraint

@@ -25,7 +25,7 @@ export default function Metrics({ metricState, setMetricState, metricsData }: Me
                     <Metric3 />
                 </div>
             ) : (
-                <div className="w-full bg-(--dark) rounded-[20px] h-full min-h-[300px] w-max-[80vw] overflow-hidden">
+                <div className="w-full bg-(--dark) h-full rounded-[8px] min-h-[300px] w-max-[80vw] overflow-hidden">
                     <MapViewerExample />
                 </div>
             )

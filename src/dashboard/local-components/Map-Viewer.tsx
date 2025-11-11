@@ -420,7 +420,7 @@ export const MapViewer = ({
   });
 
   return (
-    <div className={`w-full h-full ${className}`}>
+    <div className={`w-full h-full rounded-[4px] overflow-auto ${className}`}>
       <Map
         ref={mapRef}
         style={{ width: '100%', height: '100%' }}
