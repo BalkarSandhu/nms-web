@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.js
+*.map
+*.json
+*.woff2
+trace
+.rscinfo
+*.d.ts
+.next/*
