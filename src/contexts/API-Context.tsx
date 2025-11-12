@@ -29,6 +29,11 @@ export const APIProvider = ({children}: {children: ReactNode}) => {
     // Start with false to render UI immediately - data will populate as it arrives
     const [loading, setLoading] = useState(false);
 
+    //-- API headers
+    const header = {
+        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_BEARER_TOKEN}`
+    }
+
 
 
 
@@ -36,7 +41,7 @@ const fetchData = async() => {
     // Set loading to true when explicitly refreshing
     setLoading(true);
     const headers = {
-        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_TOKEN}`
+        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_BEARER_TOKEN}`
     }
     // Set a timeout for all fetch operations
     const fetchWithTimeout = async (url: string, timeout = 5000) => {

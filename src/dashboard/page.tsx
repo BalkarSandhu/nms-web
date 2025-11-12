@@ -55,12 +55,26 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	};
 
 	return (
-		<div className="flex flex-col gap-2 p-2 bg-(--base) w-full min-h-full">
+		<div className="flex flex-col gap-2 p-2 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
 			<div
 				className={`transition-all duration-500 ease-in-out overflow-hidden ${isButtonClicked ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
 					}`}
 			>
-				<Filters />
+				<Filters
+					fromDate={"2024-01-01"}
+					toDate={"2024-12-31"}
+					onFromDateChange={() => {}}
+					onToDateChange={() => {}}
+					selectedLocationType="1"
+					onLocationTypeChange={() => {}}
+					selectedDeviceType="1"
+					onDeviceTypeChange={() => {}}
+					selectedWorker={1}
+					onWorkerChange={() => {}}
+					locations={[{ id: 1, name: "Location A" }, { id: 2, name: "Location B" }]}
+					devices={[{ id: 1, name: "Device X" }, { id: 2, name: "Device Y" }]}
+					workers={[{ id: 1, name: "Worker John" }, { id: 2, name: "Worker Jane" }]}
+				/>
 			</div>
 			<Section
 				title="Devices"

@@ -17,6 +17,7 @@ import "@/index.css";
 
 //--Custom components
 import SearchBar from './dashboard/local-components/Search-Items'
+import { NotificationPopUp } from './components/Notifications'
 
 //-- Contexts 
 import { APIProvider } from './contexts/API-Context'
@@ -28,7 +29,7 @@ import { Funnel, Moon, Bell } from 'lucide-react'
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
 import LoginPage from './login/page'
-
+import DevicesPage from './devices/page'
 
 
 
@@ -112,9 +113,13 @@ function App() {
                   hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
                       <Moon className="size-3.5 text-(--base)" />
                     </button>
-                    <button className="size-7  flex p-1 bg-(--contrast) border-2 border-(--base) \
-                  hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
-                      <Bell className="size-3.5 text-(--base)" />
+                    <button className="size-7 flex p-1 bg-(--contrast) border-2 border-(--base) \
+                    hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
+                      <NotificationPopUp Notifications={[
+                      { id: 1, priority: "low", message: "Device 192.168.1.1 is offline", type: "error" },
+                      { id: 2, priority: "medium", message: "Firmware update available for router", type: "info" },
+                      { id: 3, priority: "high", message: "High CPU usage detected", type: "warning" }
+                      ]}/>
                     </button>
                   </div>
 
@@ -126,6 +131,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/devices" element={<DevicesPage />} />
               </Routes>
             </SidebarInset>
           </SidebarProvider>
@@ -135,6 +141,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/devices" element={<DevicesPage />} />
         </Routes>
       )}
     </div>
