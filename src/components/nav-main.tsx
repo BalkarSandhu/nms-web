@@ -1,4 +1,5 @@
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import {
   Collapsible,
@@ -48,12 +49,15 @@ export function NavMain({
                 <SidebarMenuButton 
                   tooltip={item.title}
                   className={`hover:bg-(--azul) text-(--contrast) transition-colors duration-200 ${item.isActive ? 'bg-(--azul) font-semibold' : ''}`}
+                  asChild
                 >
-                  {item.icon && <item.icon className={item.isActive ? 'text-(--contrast)' : 'text-(--azul)'} />}
-                  <span>{item.title}</span>
-                  {item.items && (
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  )}
+                  <Link to={item.url}>
+                    {item.icon && <item.icon className={item.isActive ? 'text-(--contrast)' : 'text-(--azul)'} />}
+                    <span>{item.title}</span>
+                    {item.items && (
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    )}
+                  </Link>
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               {item.items && (
@@ -62,9 +66,9 @@ export function NavMain({
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton asChild className="hover:bg-(--azul) text-(--contrast) transition-colors duration-200">
-                          <a href={subItem.url}>
+                          <Link to={subItem.url}>
                             <span>{subItem.title}</span>
-                          </a>
+                          </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}

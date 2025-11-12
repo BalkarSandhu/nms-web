@@ -1,9 +1,17 @@
+import { useEffect } from 'react';
+
 //--local-components
 import Section from "./local-components/Section";
 import Filters from "./local-components/Filters";
 
-import { useAPIs } from "@/contexts/API-Context"
-import type { ApiContextType } from "@/contexts/API-Context"
+// import { useAPIs } from "@/contexts/API-Context"
+// import type { ApiContextType } from "@/contexts/API-Context"
+
+// Redux imports
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
+import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
+import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 
 type DashboardProps = {
 	isButtonClicked?: boolean;
@@ -12,16 +20,32 @@ type DashboardProps = {
 
 export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
-	const context = useAPIs();
+	const dispatch = useAppDispatch();
 
-	// Add null check for safety
-	if (!context) {
-		return <div className="flex items-center justify-center h-screen">
-			<p className="text-(--contrast)">API Context not available</p>
-		</div>;
-	}
+	// Get data from Redux store
+	const { devices: reduxDevices } = useAppSelector(state => state.devices);
+	const { locations: reduxLocations } = useAppSelector(state => state.locations);
+	const { workers: reduxWorkers, stats: workerStats } = useAppSelector(state => state.workers);
 
-	const { devices, locations, workers }: ApiContextType = context;
+	// Fetch all data when component mounts
+	useEffect(() => {
+		// Fetch devices and device types
+		dispatch(fetchAllDevices());
+		dispatch(fetchDeviceTypes());
+
+		// Fetch locations and location types
+		dispatch(fetchLocations());
+		dispatch(fetchLocationTypes());
+
+		// Fetch workers and worker stats (with default params)
+		dispatch(fetchWorkers({}));
+		dispatch(fetchWorkerStats());
+	}, [dispatch]);
+
+	// Use only Redux data for dashboard metrics
+	const activeDevices = reduxDevices;
+	const activeLocations = reduxLocations;
+	const activeWorkers = reduxWorkers;
 
 	// Note: Removed blocking loading check to allow UI to render immediately
 	// Data will populate as API calls complete in parallel
@@ -29,13 +53,13 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	// Calculate metrics from actual data
 	// Device status is a boolean, so we categorize based on other criteria
 	const deviceMetrics = {
-		low: devices.filter(d => d.status && d.consecutive_failures === 0).length, // healthy devices (online)
-		medium: devices.filter(d => d.status && d.consecutive_failures > 0).length, // online but with failures (supervised)
-		high: devices.filter(d => !d.status).length // offline devices
+		low: activeDevices.filter(d => d.status && d.consecutive_failures === 0).length, // healthy devices (online)
+		medium: activeDevices.filter(d => d.status && d.consecutive_failures > 0).length, // online but with failures (supervised)
+		high: activeDevices.filter(d => !d.status).length // offline devices
 	};
 
 	// Location metrics - group by location type or project
-	const locationsByType = locations.reduce((acc, loc) => {
+	const locationsByType = activeLocations.reduce((acc, loc) => {
 		acc[loc.location_type_id] = (acc[loc.location_type_id] || 0) + 1;
 		return acc;
 	}, {} as Record<number, number>);
@@ -46,12 +70,15 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		high: Object.values(locationsByType)[2] || 0
 	};
 
-	// Workers data structure needs to be defined in read-Types.ts
-	// Using placeholder calculation for now
-	const workerMetrics = {
-		low: Math.floor(workers.length * 0.1),
-		medium: Math.floor(workers.length * 0.2),
-		high: workers.length - Math.floor(workers.length * 0.1) - Math.floor(workers.length * 0.2)
+	// Workers data - use stats if available
+	const workerMetrics = workerStats ? {
+		low: workerStats.offline_workers,
+		medium: workerStats.pending_workers,
+		high: workerStats.active_workers
+	} : {
+		low: Math.floor(activeWorkers.length * 0.1),
+		medium: Math.floor(activeWorkers.length * 0.2),
+		high: activeWorkers.length - Math.floor(activeWorkers.length * 0.1) - Math.floor(activeWorkers.length * 0.2)
 	};
 
 	return (

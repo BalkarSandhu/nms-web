@@ -17,6 +17,16 @@ export type ApiContextType = {
 
 const ApiContext = createContext<ApiContextType | null>(null);
 
+// Helper function to get cookie value by name
+const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+};
+
 export const APIProvider = ({children}: {children: ReactNode}) => {
 
     //-- Data States
@@ -29,10 +39,6 @@ export const APIProvider = ({children}: {children: ReactNode}) => {
     // Start with false to render UI immediately - data will populate as it arrives
     const [loading, setLoading] = useState(false);
 
-    //-- API headers
-    const header = {
-        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_BEARER_TOKEN}`
-    }
 
 
 
@@ -40,8 +46,17 @@ export const APIProvider = ({children}: {children: ReactNode}) => {
 const fetchData = async() => {
     // Set loading to true when explicitly refreshing
     setLoading(true);
-    const headers = {
-        "Authorization": `Bearer ${import.meta.env.VITE_AUTH_BEARER_TOKEN}`
+    
+    // Get token from cookie
+    const token = getCookie('token');
+    
+    const headers: HeadersInit = {
+        "Content-Type": "application/json"
+    };
+    
+    // Add Authorization header if token exists
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
     }
     // Set a timeout for all fetch operations
     const fetchWithTimeout = async (url: string, timeout = 5000) => {

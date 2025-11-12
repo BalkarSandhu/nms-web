@@ -61,7 +61,7 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
                     placeholder = {placeholder}
                     value = {stateValue}
                     onChange = {(e) => stateAction ? stateAction(e.target.value) : null}
-                    className = " px-4 py-1 text-(--base)/90 rounded-2 w-full h-min-[20px] bg-(--contrast)/80 hover:bg-(--contrast)"
+                    className = " px-4 py-1 text-(--base)/90 rounded-[4px] w-full h-min-[20px] bg-(--contrast)/80 hover:bg-(--contrast)"
                 />
             }
             { type === "password" &&
@@ -71,7 +71,7 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
                     placeholder = {placeholder}
                     value = {stateValue}
                     onChange = {(e) => stateAction ? stateAction(e.target.value) : null}
-                    className = "bg-(--contrast)/80 px-4 py-1 text-(--base)/90 rounded-2 w-full h-min-[20px]"
+                    className = "bg-(--contrast)/80 px-4 py-1 text-(--base)/90 rounded-[4px] w-full h-min-[20px]"
                 />
             }
             { type === "combobox" &&  
@@ -86,15 +86,17 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
                   stateValue ? "text-(--contrast)" : "text-(--contrast)/50"
                 )}
               >
-                <span className="truncate text-sm text-(--base)/90">{label}</span>
+                <span className="truncate text-sm text-(--base)/90">
+                  {stateValue ? stateValue : label}
+                </span>
                 <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
               <Command className="bg-(--dark)/90 border-(--dark)">
-                <CommandInput placeholder="Search location type..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+                <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
                 <CommandList className="max-h-[200px]">
-                  <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No location type found.</CommandEmpty>
+                  <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
                   <CommandGroup className="p-1.5">
                     {comboboxOptions?.map((option) => (
                       <CommandItem

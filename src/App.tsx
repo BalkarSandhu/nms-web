@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
@@ -18,24 +18,72 @@ import "@/index.css";
 //--Custom components
 import SearchBar from './dashboard/local-components/Search-Items'
 import { NotificationPopUp } from './components/Notifications'
-
+import {LoadingPage} from './components/loading-screen'
 //-- Contexts 
 import { APIProvider } from './contexts/API-Context'
 
 //-- Icons
-import { Funnel, Moon, Bell } from 'lucide-react'
+import { Funnel, Moon } from 'lucide-react'
 
 //-- Pages
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
 import LoginPage from './login/page'
 import DevicesPage from './devices/page'
+import LocationsPage from './locations/page'
+import WorkersPage from './workers/page'
 
 
 
 function App() {
   const location = useLocation()
   const [isButtonClicked, setIsButtonClicked] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isInitialized, setIsInitialized] = useState<boolean | null>(null)
+
+  // Helper function to get cookie value by name
+  const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  };
+
+  // Check system initialization status
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = getCookie('token');
+      
+      // If user has a token, skip initialization check
+      if (token) {
+        setIsLoading(false);
+        setIsInitialized(true);
+        return;
+      }
+
+      // Check if system is initialized
+      try {
+        const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`);
+        
+        if (!response.ok) {
+          console.error("Failed to check auth status");
+          setIsLoading(false);
+          return;
+        }
+
+        const data: { initialized: boolean; message: string; user_count: number } = await response.json();
+        setIsInitialized(data.initialized);
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
   
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
@@ -63,13 +111,64 @@ function App() {
     if (path === '/devices') {
       return 'Devices';
     }
+    if (path === '/locations') {
+      return 'Locations';
+    }
+    if (path === '/workers') {
+      return 'Workers';
+    }
+    if (path === '/field-technicians') {
+      return 'Field Technicians';
+    }
     return 'Home'
   }
 
   const useLayout = shouldUseLayout()
+  const token = getCookie('token');
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return <LoadingPage />;
+  }
+
+  // Redirect logic based on token and initialization status
+  const getRedirectPath = () => {
+    const currentPath = location.pathname;
+    
+    // If user has token, they're logged in - allow access
+    if (token) {
+      // If they're on login/register, redirect to dashboard
+      if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
+        return '/dashboard';
+      }
+      return null; // No redirect needed
+    }
+
+    // No token - check if trying to access protected routes
+    if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
+      // Redirect based on initialization status
+      return isInitialized ? '/login' : '/register';
+    }
+
+    // On root path, redirect based on initialization
+    if (currentPath === '/') {
+      return isInitialized ? '/login' : '/register';
+    }
+
+    return null; // No redirect needed
+  };
+
+  const redirectPath = getRedirectPath();
+
+  if (redirectPath) {
+    window.location.href = redirectPath;
+    return <LoadingPage />;
+  }
 
   return (
     <div className="w-full h-full">
+
+
       {useLayout ? (
         <APIProvider>
           <SidebarProvider defaultOpen>
@@ -132,6 +231,9 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/devices" element={<DevicesPage />} />
+                <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/workers" element={<WorkersPage />} />
+                <Route path="/field-technicians" element={<WorkersPage />} />
               </Routes>
             </SidebarInset>
           </SidebarProvider>
@@ -142,6 +244,9 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/devices" element={<DevicesPage />} />
+          <Route path="/locations" element={<LocationsPage />} />
+          <Route path="/workers" element={<WorkersPage />} />
+          <Route path="/field-technicians" element={<WorkersPage />} />
         </Routes>
       )}
     </div>

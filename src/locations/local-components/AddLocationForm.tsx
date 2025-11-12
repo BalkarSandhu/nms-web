@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Form, InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
+import { addLocation } from './add-location-form';
 
 
 
@@ -20,16 +21,18 @@ export const AddLocationForm = () => {
         e.preventDefault();
         setStatus({ message: "Submitting...", type: "info" });
         
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
         if (!name || !locationType || !area) {
             setStatus({ message: "Name, Location Type, and Area are required.", type: "error" });
             return;
         }
 
-        console.log({ name, locationType, parentLocation, area });
-        setStatus({ message: "Location added successfully!", type: "success" });
+        try {
+            await addLocation({ name, locationType, parentLocation, area });
+            setStatus({ message: "Location added successfully!", type: "success" });
+        } catch (error: any) {
+            setStatus({ message: error.message || "Failed to add location.", type: "error" });
+            return;
+        }
 
         // Close modal and reset form after a delay
         setTimeout(() => {
