@@ -96,7 +96,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 					onLocationTypeChange={() => {}}
 					selectedDeviceType="1"
 					onDeviceTypeChange={() => {}}
-					selectedWorker={1}
+					// selectedWorker={1}
 					onWorkerChange={() => {}}
 					locations={[{ id: 1, name: "Location A" }, { id: 2, name: "Location B" }]}
 					devices={[{ id: 1, name: "Device X" }, { id: 2, name: "Device Y" }]}

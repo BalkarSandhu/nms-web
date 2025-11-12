@@ -13,6 +13,7 @@ import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import { Bell, BellDot, X, ChevronsDown, ChevronUp, Bird, TriangleAlert, AlertTriangle, ChevronDown } from "lucide-react";
 
 export type NotificationType = {
+    id:number;
     message: string;
     priority: "low" | "medium" | "high";
     data?: {
