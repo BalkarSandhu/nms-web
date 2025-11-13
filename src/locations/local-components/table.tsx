@@ -5,6 +5,7 @@ import { useAppSelector } from '@/store/hooks';
 
 //--Local components
 import LocationsFilters, { type FilterConfig } from './filters';
+import LocationModifier from './location-modifier';
 
 //-- ShadCN Components
 import {
@@ -172,12 +173,14 @@ export default function LocationsTable({
                         <TableHead>Area</TableHead>
                         <TableHead>Worker</TableHead>
                         <TableHead className="text-right">Devices</TableHead>
+                        {/* No header for modifier */}
+                        <TableHead className="w-8"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {filteredLocations.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={8} className="text-center text-gray-500">
+                            <TableCell colSpan={9} className="text-center text-gray-500">
                                 No locations found
                             </TableCell>
                         </TableRow>
@@ -223,6 +226,10 @@ export default function LocationsTable({
                                             {location.devices_total} total
                                         </span>
                                     </div>
+                                </TableCell>
+                                {/* LocationModifier as last cell, pass locationId */}
+                                <TableCell>
+                                    <LocationModifier locationId={location.id} />
                                 </TableCell>
                             </TableRow>
                         ))
