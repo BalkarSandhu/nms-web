@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { isDataStale } from '@/lib/auth';
 
 //-- Local Components
 import Header from './local-components/header';
@@ -10,14 +11,15 @@ import { LocationDetailsSidebar } from './local-components/LocationDetailsSideba
 
 export default function LocationsPage() {
     const dispatch = useAppDispatch();
-    const { locations, loading, error } = useAppSelector(state => state.locations);
+    const { locations, loading, error, lastFetched } = useAppSelector(state => state.locations);
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!locations || locations.length === 0) {
+        // Only fetch if locations are not loaded OR data is stale (older than 5 minutes)
+        if (!locations || locations.length === 0 || isDataStale(lastFetched)) {
             dispatch(fetchLocations());
         }
-    }, [dispatch, locations]);
+    }, [dispatch, locations, lastFetched]);
 
     return (
         <div className="p-4 flex gap-4 bg-(--contrast) min-h-[90vh] max-h-full w-full">

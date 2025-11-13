@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchWorkers } from '@/store/workerSlice';
+import { isDataStale } from '@/lib/auth';
 import Header from './local-components/header';
 import WorkersTable from './local-components/table';
 import { WorkerDetailsSidebar } from './local-components/WorkerDetailsSidebar';
@@ -8,12 +9,15 @@ import { LoadingPage } from '@/components/loading-screen';
 
 export default function WorkersPage() {
     const dispatch = useAppDispatch();
-    const { loading, error, workers } = useAppSelector(state => state.workers);
+    const { loading, error, workers, lastFetched } = useAppSelector(state => state.workers);
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
 
     useEffect(() => {
-        dispatch(fetchWorkers({}));
-    }, [dispatch]);
+        // Only fetch if workers are not loaded OR data is stale (older than 5 minutes)
+        if (!workers || workers.length === 0 || isDataStale(lastFetched)) {
+            dispatch(fetchWorkers({}));
+        }
+    }, [dispatch, workers, lastFetched]);
 
     if (loading && workers.length === 0) {
         return <LoadingPage />;

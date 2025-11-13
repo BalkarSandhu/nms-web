@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices } from '@/store/deviceSlice';
+import { isDataStale } from '@/lib/auth';
 import Header from './local_components/header';
 import DevicesTable from './local_components/table';
 import { DeviceDetailsSidebar } from './local_components/DeviceDetailsSidebar';
@@ -8,12 +9,15 @@ import { LoadingPage } from '@/components/loading-screen';
 
 export default function DevicesPage() {
     const dispatch = useAppDispatch();
-    const { loading, error, devices } = useAppSelector(state => state.devices);
+    const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
 
     useEffect(() => {
-        dispatch(fetchAllDevices());
-    }, [dispatch]);
+        // Only fetch if devices are not loaded OR data is stale (older than 5 minutes)
+        if (!devices || devices.length === 0 || isDataStale(lastFetched)) {
+            dispatch(fetchAllDevices());
+        }
+    }, [dispatch, devices, lastFetched]);
 
     if (loading && devices.length === 0) {
         return <LoadingPage />;
