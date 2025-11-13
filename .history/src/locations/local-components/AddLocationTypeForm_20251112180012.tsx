@@ -5,7 +5,7 @@ import { addLocation } from './add-location-form';
 
 
 
-export const AddLocationForm = () => {
+export const AddLocationTypeForm = () => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const [locationType, setLocationType] = useState("");
@@ -68,7 +68,7 @@ export const AddLocationForm = () => {
                     label="Location Type"
                     placeholder="Select Type"
                     type="combobox"
-                    comboboxOptions={locationTypeOptions}
+                    comboboxOptions={["Building", "Floor", "Room", "Outdoor Area"]}
                     stateValue={locationType}
                     stateAction={setLocationType}
                     openState={locationTypeOpen}
@@ -78,7 +78,7 @@ export const AddLocationForm = () => {
                     label="Parent Location (Optional)"
                     placeholder="Select Parent"
                     type="combobox"
-                    comboboxOptions={[""]}
+                    comboboxOptions={["HQ Campus", "West Wing", "Data Center"]}
                     stateValue={parentLocation}
                     stateAction={setParentLocation}
                     openState={parentLocationOpen}

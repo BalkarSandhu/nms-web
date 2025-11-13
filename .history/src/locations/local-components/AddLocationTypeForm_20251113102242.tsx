@@ -1,20 +1,18 @@
 import React, { useState } from "react";
 import { Form, InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
-import { addLocation } from './add-location-form';
+import { addLocationType } from './add-location-type';
 
 
 
-export const AddLocationForm = () => {
+export const AddLocationTypeForm = () => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const [locationType, setLocationType] = useState("");
     const [parentLocation, setParentLocation] = useState("");
     const [area, setArea] = useState("");
     
-    const [locationTypeOpen, setLocationTypeOpen] = useState(false);
-    const [parentLocationOpen, setParentLocationOpen] = useState(false);
-    
+   
     const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,7 +25,7 @@ export const AddLocationForm = () => {
         }
 
         try {
-            await addLocation({ name, locationType, parentLocation, area });
+            await addLocationType({ name });
             setStatus({ message: "Location added successfully!", type: "success" });
         } catch (error: any) {
             setStatus({ message: error.message || "Failed to add location.", type: "error" });
@@ -49,12 +47,12 @@ export const AddLocationForm = () => {
 
     return (
         <Form
-            title="Add : Location"
+            title="Add : Location Type"
             open={open}
             setOpen={setOpen}
             onSubmit={handleSubmit}
             statusMessage={status}
-            trigger={<Button variant="outline">Add Location</Button>}
+            trigger={<Button variant="outline">Add Location Type</Button>}
         >
             <InputField
                 label="Name"
@@ -63,35 +61,7 @@ export const AddLocationForm = () => {
                 stateValue={name}
                 stateAction={setName}
             />
-            <div className="flex flex-col sm:flex-row gap-4">
-                <InputField
-                    label="Location Type"
-                    placeholder="Select Type"
-                    type="combobox"
-                    comboboxOptions={locationTypeOptions}
-                    stateValue={locationType}
-                    stateAction={setLocationType}
-                    openState={locationTypeOpen}
-                    openStateAction={setLocationTypeOpen}
-                />
-                <InputField
-                    label="Parent Location (Optional)"
-                    placeholder="Select Parent"
-                    type="combobox"
-                    comboboxOptions={[""]}
-                    stateValue={parentLocation}
-                    stateAction={setParentLocation}
-                    openState={parentLocationOpen}
-                    openStateAction={setParentLocationOpen}
-                />
-            </div>
-            <InputField
-                label="Area"
-                placeholder="e.g. Zone 51"
-                type="input"
-                stateValue={area}
-                stateAction={setArea}
-            />
+            
         </Form>
 
         

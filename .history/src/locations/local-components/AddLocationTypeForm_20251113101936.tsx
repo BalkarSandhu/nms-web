@@ -5,7 +5,7 @@ import { addLocation } from './add-location-form';
 
 
 
-export const AddLocationForm = () => {
+export const AddLocationTypeForm = () => {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const [locationType, setLocationType] = useState("");
@@ -49,12 +49,12 @@ export const AddLocationForm = () => {
 
     return (
         <Form
-            title="Add : Location"
+            title="Add : Location Type"
             open={open}
             setOpen={setOpen}
             onSubmit={handleSubmit}
             statusMessage={status}
-            trigger={<Button variant="outline">Add Location</Button>}
+            trigger={<Button variant="outline">Add Location Type</Button>}
         >
             <InputField
                 label="Name"
@@ -63,35 +63,7 @@ export const AddLocationForm = () => {
                 stateValue={name}
                 stateAction={setName}
             />
-            <div className="flex flex-col sm:flex-row gap-4">
-                <InputField
-                    label="Location Type"
-                    placeholder="Select Type"
-                    type="combobox"
-                    comboboxOptions={locationTypeOptions}
-                    stateValue={locationType}
-                    stateAction={setLocationType}
-                    openState={locationTypeOpen}
-                    openStateAction={setLocationTypeOpen}
-                />
-                <InputField
-                    label="Parent Location (Optional)"
-                    placeholder="Select Parent"
-                    type="combobox"
-                    comboboxOptions={[""]}
-                    stateValue={parentLocation}
-                    stateAction={setParentLocation}
-                    openState={parentLocationOpen}
-                    openStateAction={setParentLocationOpen}
-                />
-            </div>
-            <InputField
-                label="Area"
-                placeholder="e.g. Zone 51"
-                type="input"
-                stateValue={area}
-                stateAction={setArea}
-            />
+            
         </Form>
 
         

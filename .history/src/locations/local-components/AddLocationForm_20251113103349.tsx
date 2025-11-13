@@ -68,7 +68,7 @@ export const AddLocationForm = () => {
                     label="Location Type"
                     placeholder="Select Type"
                     type="combobox"
-                    comboboxOptions={locationTypeOptions}
+                    comboboxOptions={[""]}
                     stateValue={locationType}
                     stateAction={setLocationType}
                     openState={locationTypeOpen}
