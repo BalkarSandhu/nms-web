@@ -40,18 +40,11 @@ import { Check, ChevronsUpDown } from "lucide-react";
 
 
 //--- Input Field
-
-export type comboboxOptions = {
-  label:string;
-  value:string;
-}
-
-
 export type InputFieldType = {
     label : string;
     placeholder : string;
     type : "input" | "password" | "combobox";
-    comboboxOptions? : comboboxOptions[];
+    comboboxOptions? : string[];
     stateValue ?: string;
     stateAction ?: (value: string) => void;
     openState ?: boolean;
@@ -73,6 +66,7 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
             }
             { type === "password" &&
                 <input
+                    
                     type = "password"
                     placeholder = {placeholder}
                     value = {stateValue}
@@ -82,61 +76,63 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
             }
             { type === "combobox" &&  
                 <Popover open={openState} onOpenChange={openStateAction}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openState}
-                      className={cn(
-                        "w-full justify-between bg-(--contrast)/80 border-(--dark)  hover:text-(--contrast)",
-                        stateValue ? "text-(--contrast)" : "text-(--contrast)/50"
-                      )}
-                    >
-                      <span className="truncate text-sm text-(--base)/90">
-                        {comboboxOptions?.find(opt => opt.value === stateValue)?.label || label}
-                      </span>
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
-                    <Command className="bg-(--dark)/90 border-(--dark)">
-                      <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
-                      <CommandList className="max-h-[200px]">
-                        <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
-                        <CommandGroup className="p-1.5">
-                          {comboboxOptions?.map((option) => (
-                            <CommandItem
-                              key={option.value}
-                              value={option.value}
-                              onSelect={(currentValue) => {
-                                stateAction ? stateAction(
-                                  currentValue === stateValue ? "" : currentValue
-                                ) : null;
-                                openStateAction ? openStateAction(false) : null
-                              }}
-                              className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-1.5 size-3.5",
-                                  stateValue === option.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {option.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-            }
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openState}
+                className={cn(
+                  "w-full justify-between bg-(--contrast)/80 border-(--dark)  hover:text-(--contrast)",
+                  stateValue ? "text-(--contrast)" : "text-(--contrast)/50"
+                )}
+              >
+                <span className="truncate text-sm text-(--base)/90">
+                  {stateValue ? stateValue : label}
+                </span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
+              <Command className="bg-(--dark)/90 border-(--dark)">
+                <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+                <CommandList className="max-h-[200px]">
+                  <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
+                  <CommandGroup className="p-1.5">
+                    {comboboxOptions?.map((option) => (
+                      <CommandItem
+                        key={option}
+                        value={option}
+                        onSelect={(currentValue) => {
+                          stateAction?stateAction(
+                            currentValue === stateValue
+                              ? ""
+                              : currentValue
+                          ):null;
+                          openStateAction?openStateAction(false):null
+                        }}
+                        className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-1.5 size-3.5",
+                            stateValue === option
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {option}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+}
         </div>
+
     )
 }
-
 
 
 
@@ -194,8 +190,8 @@ export function Form({
       <DialogContent className="max-w-[425px] max-h-[85%] overflow-auto bg-linear-to-b from-(--base) to-(--dark) border-0 drop-shadow-lg">
         <DialogHeader>
           <DialogTitle className="text-(--contrast) text-[20px]">{title}</DialogTitle>
-          <DialogClose asChild className="text-(--contrast)">
-            <Button variant="ghost" className="absolute right-4 top-4"></Button>
+          <DialogClose asChild>
+            <Button variant="ghost" className="absolute right-4 top-4">✕</Button>
           </DialogClose>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
