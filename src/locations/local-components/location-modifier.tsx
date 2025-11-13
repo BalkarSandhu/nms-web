@@ -34,7 +34,7 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
 
     return (
         <Popover>
-            <PopoverTrigger className="flex w-10 items-senter justify-center">
+            <PopoverTrigger className="flex w-10 items-center justify-center">
                 <EllipsisVertical className="size-4 text-(--base)" />
             </PopoverTrigger>
             <PopoverContent>
