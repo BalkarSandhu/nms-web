@@ -45,6 +45,16 @@ type FiltersProps = {
   locationTypes: FilterOption[];
   selectedLocationType: string;
   onLocationTypeChange: (value: string) => void;
+
+  // Worker filter
+  workers: FilterOption[];
+  selectedWorker: string;
+  onWorkerChange: (value: string) => void;
+
+  // Associated Location filter
+  locations: FilterOption[];
+  selectedLocation: string;
+  onLocationChange: (value: string) => void;
 };
 
 export default function Filters({
@@ -58,11 +68,19 @@ export default function Filters({
   locationTypes,
   selectedLocationType,
   onLocationTypeChange,
+  workers,
+  selectedWorker,
+  onWorkerChange,
+  locations,
+  selectedLocation,
+  onLocationChange,
 }: FiltersProps) {
   const [fromDateOpen, setFromDateOpen] = useState(false);
   const [toDateOpen, setToDateOpen] = useState(false);
   const [deviceTypeOpen, setDeviceTypeOpen] = useState(false);
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
+  const [workerOpen, setWorkerOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
 
   // Convert string dates to Date objects
   const fromDateObj = fromDate ? new Date(fromDate) : undefined;
@@ -76,6 +94,14 @@ export default function Filters({
   const selectedLocationTypeLabel = locationTypes?.find(
     (lt) => lt.value === selectedLocationType
   )?.label || "Select location type...";
+
+  const selectedWorkerLabel = workers?.find(
+    (w) => w.value === selectedWorker
+  )?.label || "Select worker...";
+
+  const selectedLocationLabel = locations?.find(
+    (l) => l.value === selectedLocation
+  )?.label || "Select location...";
 
   return (
     <div className="w-full bg-(--dark) border-(--dark) border rounded-[10px] p-4 sticky top-0 z-10 shadow-md">
@@ -264,6 +290,106 @@ export default function Filters({
           </Popover>
         </div>
 
+        {/* Worker Filter */}
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          <Label className="text-[10px] font-medium text-(--contrast)">Worker</Label>
+          <Popover open={workerOpen} onOpenChange={setWorkerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={workerOpen}
+                className={cn(
+                  "w-full justify-between bg-(--base)/80 border-(--dark) hover:bg-(--base) hover:text-(--contrast)",
+                  selectedWorker ? "text-(--contrast)" : "text-(--contrast)/50"
+                )}
+              >
+                <span className="truncate text-sm">{selectedWorkerLabel}</span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
+              <Command className="bg-(--dark)/90 border-(--dark)">
+                <CommandInput placeholder="Search worker..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+                <CommandList className="max-h-[200px]">
+                  <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No worker found.</CommandEmpty>
+                  <CommandGroup className="p-1.5">
+                    {workers?.map((worker) => (
+                      <CommandItem
+                        key={worker.value}
+                        value={worker.value}
+                        onSelect={(currentValue) => {
+                          onWorkerChange(currentValue === selectedWorker ? "" : currentValue);
+                          setWorkerOpen(false);
+                        }}
+                        className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-1.5 size-3.5",
+                            selectedWorker === worker.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {worker.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Associated Location Filter */}
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          <Label className="text-[10px] font-medium text-(--contrast)">Location</Label>
+          <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={locationOpen}
+                className={cn(
+                  "w-full justify-between bg-(--base)/80 border-(--dark) hover:bg-(--base) hover:text-(--contrast)",
+                  selectedLocation ? "text-(--contrast)" : "text-(--contrast)/50"
+                )}
+              >
+                <span className="truncate text-sm">{selectedLocationLabel}</span>
+                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
+              <Command className="bg-(--dark)/90 border-(--dark)">
+                <CommandInput placeholder="Search location..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+                <CommandList className="max-h-[200px]">
+                  <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No location found.</CommandEmpty>
+                  <CommandGroup className="p-1.5">
+                    {locations?.map((location) => (
+                      <CommandItem
+                        key={location.value}
+                        value={location.value}
+                        onSelect={(currentValue) => {
+                          onLocationChange(currentValue === selectedLocation ? "" : currentValue);
+                          setLocationOpen(false);
+                        }}
+                        className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-1.5 size-3.5",
+                            selectedLocation === location.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {location.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {/* Clear Filters Button */}
         <Button
           variant="ghost"
@@ -272,6 +398,8 @@ export default function Filters({
             onToDateChange("");
             onDeviceTypeChange("");
             onLocationTypeChange("");
+            onWorkerChange("");
+            onLocationChange("");
           }}
           className=" text-[12px] ml-auto bg-(--base) text-(--contrast) hover:bg-(--base) hover:text-(--contrast) border border-(--dark)"
         >
