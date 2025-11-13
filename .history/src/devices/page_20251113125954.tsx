@@ -1,5 +1,5 @@
 import AddDeviceForm from "./local_components/AddDeviceForm";
-import { AddDeviceTypeForm } from "./local_components/AddDeviceTypeForm";
+import AddDeviceTypeForm from "./local_components/AddDeviceTypeForm";
 
 
 
