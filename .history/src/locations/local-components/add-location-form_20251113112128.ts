@@ -2,37 +2,38 @@ export async function addLocation({
   area,
   lat,
   lng,
-  locationTypeId,
+  locationType,
   name,
   project,
   statusI,
   statusReason,
   workerId,
-  parentLocation,
+
+  
 }: {
   name: string;
-  locationTypeId: number;
+  locationType: string;
   parentLocation?: string;
   area: string;
-  lat: number;
-  lng: number;
-  project: string;
-  statusI: string;
-  statusReason: string;
-  workerId: string;
+  lat:number;
+  lng:number;
+  project:string
+  statusI:string
+  statusReason:string
+  workerId:string
+
 }) {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
   const payload = {
     name,
-    location_type_id: locationTypeId,
+    locationType,
     area,
     lat,
     lng,
     project,
-    status: statusI,
-    status_reason: statusReason,
-    worker_id: workerId,
-    parent_location: parentLocation,
+    statusI,
+    statusReason,
+    workerId
   };
 
   const token = getCookie("token");
@@ -52,7 +53,6 @@ export async function addLocation({
 
   return await response.json();
 }
-
 export async function getLocationTypes(): Promise<{ id: number; name: string }[]> {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations/types`;
 
@@ -70,34 +70,13 @@ export async function getLocationTypes(): Promise<{ id: number; name: string }[]
 
   const locationTypeOptions = await response.json();
 
+  // return both id and name
   return locationTypeOptions.map((item: any) => ({
     id: item.id,
     name: item.name,
   }));
 }
 
-export async function getWorkerTypes(): Promise<{ id: string; hostname: string }[]> {
-  const url = `${import.meta.env.VITE_NMS_HOST}/workers`;
-
-  const token = getCookie("token");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch workers: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return data.workers.map((item: any) => ({
-    id: item.id,
-    hostname: item.hostname,
-  }));
-}
 
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;

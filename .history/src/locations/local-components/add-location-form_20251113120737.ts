@@ -91,9 +91,9 @@ export async function getWorkerTypes(): Promise<{ id: string; hostname: string }
     throw new Error(`Failed to fetch workers: ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const workerTypeOptions = await response.json();
 
-  return data.workers.map((item: any) => ({
+  return workerTypeOptions.map((item: any) => ({
     id: item.id,
     hostname: item.hostname,
   }));

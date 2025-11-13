@@ -2,7 +2,7 @@ export async function addLocation({
   area,
   lat,
   lng,
-  locationTypeId,
+  locationType,
   name,
   project,
   statusI,
@@ -11,7 +11,7 @@ export async function addLocation({
   parentLocation,
 }: {
   name: string;
-  locationTypeId: number;
+  locationType: number;
   parentLocation?: string;
   area: string;
   lat: number;
@@ -24,15 +24,15 @@ export async function addLocation({
   const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
   const payload = {
     name,
-    location_type_id: locationTypeId,
+    locationTypeId: locationType, // 👈 correct key name for backend
     area,
     lat,
     lng,
     project,
-    status: statusI,
-    status_reason: statusReason,
-    worker_id: workerId,
-    parent_location: parentLocation,
+    statusI,
+    statusReason,
+    workerId,
+    parentLocation,
   };
 
   const token = getCookie("token");
@@ -70,34 +70,13 @@ export async function getLocationTypes(): Promise<{ id: number; name: string }[]
 
   const locationTypeOptions = await response.json();
 
+  // return both id and name
   return locationTypeOptions.map((item: any) => ({
     id: item.id,
     name: item.name,
   }));
 }
 
-export async function getWorkerTypes(): Promise<{ id: string; hostname: string }[]> {
-  const url = `${import.meta.env.VITE_NMS_HOST}/workers`;
-
-  const token = getCookie("token");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch workers: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return data.workers.map((item: any) => ({
-    id: item.id,
-    hostname: item.hostname,
-  }));
-}
 
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
