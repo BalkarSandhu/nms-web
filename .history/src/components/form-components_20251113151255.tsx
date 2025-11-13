@@ -46,7 +46,7 @@ export type InputFieldType = {
     type : "input" | "password" | "combobox";
     comboboxOptions? : string[];
     stateValue ?: string;
-    stateAction ?: (value: string) => void;
+    stateAction ?: (value: string | number) => void;
     openState ?: boolean;
     openStateAction ?: (value: boolean) => void;
 }
@@ -133,7 +133,6 @@ export function InputField ( {label,placeholder,type,comboboxOptions,stateValue,
 
     )
 }
-
 
 
 

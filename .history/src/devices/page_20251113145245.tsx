@@ -1,8 +1,7 @@
 import AddDeviceForm from "./local_components/AddDeviceForm";
 import { AddDeviceTypeForm } from "./local_components/AddDeviceTypeForm";
+import { UpdateDeviceTypeForm } from "./local_components/UpdateDeviceType";
 import { updateDevice } from "./local_components/updateDevice";
-import { UpdateDeviceTypeForm }from "./local_components/UpdateDeviceTypeForm";
-
 
 
 
@@ -13,6 +12,7 @@ export default function DevicesPage() {
             <AddDeviceForm />
             <AddDeviceTypeForm />
             <UpdateDeviceTypeForm/>
+            <updateDevice/>
         </div>
     );
 }
