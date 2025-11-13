@@ -11,10 +11,6 @@ export const AddLocationForm = () => {
   const [area, setArea] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
-  const [project, setProject] = useState("");
-  const [statusI, setStatusI] = useState("");
-  const [statusReason, setStatusReason] = useState("");
-    const [workerId, setWorkerId] = useState("");
 
 
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
@@ -137,23 +133,23 @@ export const AddLocationForm = () => {
         label="status"
         placeholder="e.g. Main Office"
         type="input"
-        stateValue={statusI}
+        stateValue={status}
         stateAction={setStatusI}
       />
 
         <InputField
-        label="statusReason"
+        label="status"
         placeholder="e.g. Main Office"
         type="input"
-        stateValue={statusReason}
+        stateValue={status_reason}
         stateAction={setStatusReason}
       />
         <InputField
-        label="workerId"
+        label="status"
         placeholder="e.g. Main Office"
         type="input"
-        stateValue={workerId}
-        stateAction={setWorkerId}
+        stateValue={worker}
+        stateAction={setStatusI}
       />
 
       <div className="flex flex-col sm:flex-row gap-4">

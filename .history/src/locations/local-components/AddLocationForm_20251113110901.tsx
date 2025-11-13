@@ -11,10 +11,6 @@ export const AddLocationForm = () => {
   const [area, setArea] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
-  const [project, setProject] = useState("");
-  const [statusI, setStatusI] = useState("");
-  const [statusReason, setStatusReason] = useState("");
-    const [workerId, setWorkerId] = useState("");
 
 
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
@@ -102,13 +98,23 @@ export const AddLocationForm = () => {
         stateAction={setLat}
       />
       <InputField
-        label="Lng"
+        label="Long"
         placeholder="e.g. Zone 51"
         type="input"
         stateValue={lng}
         stateAction={setLng}
       />
+
       <InputField
+        label="Name"
+        placeholder="e.g. Main Office"
+        type="input"
+        stateValue={name}
+        stateAction={setName}
+      />
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <InputField
           label="Location Type"
           placeholder="Select Type"
           type="combobox"
@@ -118,46 +124,6 @@ export const AddLocationForm = () => {
           openState={locationTypeOpen}
           openStateAction={setLocationTypeOpen}
         />
-
-      <InputField
-        label="Name"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={name}
-        stateAction={setName}
-      />
-      <InputField
-        label="Project"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={project}
-        stateAction={setProject}
-      />
-      <InputField
-        label="status"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={statusI}
-        stateAction={setStatusI}
-      />
-
-        <InputField
-        label="statusReason"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={statusReason}
-        stateAction={setStatusReason}
-      />
-        <InputField
-        label="workerId"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={workerId}
-        stateAction={setWorkerId}
-      />
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        
         <InputField
           label="Parent Location (Optional)"
           placeholder="Select Parent"

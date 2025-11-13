@@ -1,39 +1,20 @@
 export async function addLocation({
-  area,
-  lat,
-  lng,
-  locationType,
   name,
-  project,
-  statusI,
-  statusReason,
-  workerId,
-
-  
+  locationType,
+  parentLocation,
+  area,
 }: {
   name: string;
   locationType: string;
   parentLocation?: string;
   area: string;
-  lat:number;
-  lng:number;
-  project:string
-  statusI:string
-  statusReason:string
-  workerId:string
-
 }) {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
   const payload = {
     name,
     locationType,
+    parentLocation,
     area,
-    lat,
-    lng,
-    project,
-    statusI,
-    statusReason,
-    workerId
   };
 
   const token = getCookie("token");

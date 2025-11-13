@@ -1,39 +1,20 @@
 export async function addLocation({
-  area,
-  lat,
-  lng,
-  locationType,
   name,
-  project,
-  statusI,
-  statusReason,
-  workerId,
-
-  
+  locationType,
+  parentLocation,
+  area,
 }: {
   name: string;
   locationType: string;
   parentLocation?: string;
   area: string;
-  lat:number;
-  lng:number;
-  project:string
-  statusI:string
-  statusReason:string
-  workerId:string
-
 }) {
-  const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
+  const url = `${import.meta.env.VITE_NMS_HOST}/devices`;
   const payload = {
     name,
     locationType,
+    parentLocation,
     area,
-    lat,
-    lng,
-    project,
-    statusI,
-    statusReason,
-    workerId
   };
 
   const token = getCookie("token");
@@ -53,6 +34,10 @@ export async function addLocation({
 
   return await response.json();
 }
+
+/**
+ * ✅ Function to fetch location type options from backend
+ */
 export async function getLocationTypes(): Promise<string[]> {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations/types`;
 
@@ -64,18 +49,19 @@ export async function getLocationTypes(): Promise<string[]> {
     },
   });
 
-
   if (!response.ok) {
     throw new Error(`Failed to fetch location types: ${response.statusText}`);
   }
 
-  const locationTypeOptions = await response.json();
+  const data = await response.json();
 
-  
-  return locationTypeOptions.map((item: any) => item.name);
+  // assuming API returns: [{ name: "Factory" }, { name: "Warehouse" }]
+  return data.map((item: any) => item.name);
 }
 
-
+/**
+ * 🔹 Helper to read token from cookies
+ */
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);

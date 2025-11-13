@@ -9,13 +9,6 @@ export const AddLocationForm = () => {
   const [locationType, setLocationType] = useState("");
   const [parentLocation, setParentLocation] = useState("");
   const [area, setArea] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
-  const [project, setProject] = useState("");
-  const [statusI, setStatusI] = useState("");
-  const [statusReason, setStatusReason] = useState("");
-    const [workerId, setWorkerId] = useState("");
-
 
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
   const [parentLocationOpen, setParentLocationOpen] = useState(false);
@@ -44,7 +37,7 @@ export const AddLocationForm = () => {
     e.preventDefault();
     setStatus({ message: "Submitting...", type: "info" });
 
-    if (!name || !locationType || !area ||!lat || !lng) {
+    if (!name || !locationType || !area) {
       setStatus({
         message: "Name, Location Type, and Area are required.",
         type: "error",
@@ -69,8 +62,6 @@ export const AddLocationForm = () => {
       setTimeout(() => {
         setStatus(undefined);
         setName("");
-        setLat("");
-        setLng("");
         setLocationType("");
         setParentLocation("");
         setArea("");
@@ -87,28 +78,16 @@ export const AddLocationForm = () => {
       statusMessage={status}
       trigger={<Button variant="outline">Add Location</Button>}
     >
+      <InputField
+        label="Name"
+        placeholder="e.g. Main Office"
+        type="input"
+        stateValue={name}
+        stateAction={setName}
+      />
+
+      <div className="flex flex-col sm:flex-row gap-4">
         <InputField
-        label="Area"
-        placeholder="e.g. Zone 51"
-        type="input"
-        stateValue={area}
-        stateAction={setArea}
-      />
-      <InputField
-        label="Lat"
-        placeholder="e.g. Zone 51"
-        type="input"
-        stateValue={lat}
-        stateAction={setLat}
-      />
-      <InputField
-        label="Lng"
-        placeholder="e.g. Zone 51"
-        type="input"
-        stateValue={lng}
-        stateAction={setLng}
-      />
-      <InputField
           label="Location Type"
           placeholder="Select Type"
           type="combobox"
@@ -118,46 +97,6 @@ export const AddLocationForm = () => {
           openState={locationTypeOpen}
           openStateAction={setLocationTypeOpen}
         />
-
-      <InputField
-        label="Name"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={name}
-        stateAction={setName}
-      />
-      <InputField
-        label="Project"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={project}
-        stateAction={setProject}
-      />
-      <InputField
-        label="status"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={statusI}
-        stateAction={setStatusI}
-      />
-
-        <InputField
-        label="statusReason"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={statusReason}
-        stateAction={setStatusReason}
-      />
-        <InputField
-        label="workerId"
-        placeholder="e.g. Main Office"
-        type="input"
-        stateValue={workerId}
-        stateAction={setWorkerId}
-      />
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        
         <InputField
           label="Parent Location (Optional)"
           placeholder="Select Parent"
@@ -170,7 +109,13 @@ export const AddLocationForm = () => {
         />
       </div>
 
-      
+      <InputField
+        label="Area"
+        placeholder="e.g. Zone 51"
+        type="input"
+        stateValue={area}
+        stateAction={setArea}
+      />
     </Form>
   );
 };
