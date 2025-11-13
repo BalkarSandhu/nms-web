@@ -128,9 +128,17 @@ export const AddLocationForm = () => {
       statusMessage={status}
       trigger={<Button variant="outline">Add Location</Button>}
     >
-      <InputField label="Area" placeholder="e.g. Zone 51" type="input" stateValue={area} stateAction={setArea} />
-      <InputField label="Lat" placeholder="e.g. 23.45" type="input" stateValue={lat} stateAction={setLat} />
-      <InputField label="Lng" placeholder="e.g. 85.32" type="input" stateValue={lng} stateAction={setLng} />
+      <InputField label="Name" placeholder="e.g. Main Office" type="input" stateValue={name} stateAction={setName} />
+
+
+      <div className="grid g  rid-cols-1 md:grid-cols-2 w-full h-full gap-2">
+        <InputField label="Lat" placeholder="e.g. 23.45" type="input" stateValue={lat} stateAction={setLat} />
+        <InputField label="Lng" placeholder="e.g. 85.32" type="input" stateValue={lng} stateAction={setLng} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 w-full h-full gap-2">
+        <InputField label="Area" placeholder="e.g. Zone 51" type="input" stateValue={area} stateAction={setArea} />
+        <InputField label="Project" placeholder="e.g. Project A" type="input" stateValue={project} stateAction={setProject} />
+      </div>
       <InputField
         label="Location Type"
         placeholder="Select Type"
@@ -141,10 +149,7 @@ export const AddLocationForm = () => {
         openState={locationTypeOpen}
         openStateAction={setLocationTypeOpen}
       />
-      <InputField label="Name" placeholder="e.g. Main Office" type="input" stateValue={name} stateAction={setName} />
-      <InputField label="Project" placeholder="e.g. Project A" type="input" stateValue={project} stateAction={setProject} />
-      <InputField label="Status" placeholder="Active/Inactive" type="input" stateValue={statusI} stateAction={setStatusI} />
-      <InputField label="Status Reason" placeholder="Reason" type="input" stateValue={statusReason} stateAction={setStatusReason} />
+
       <InputField
         label="Worker Type"
         placeholder="Select Worker"

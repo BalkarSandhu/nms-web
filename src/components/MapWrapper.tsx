@@ -258,7 +258,7 @@ const MapWrapper = forwardRef<MapRef, MapWrapperProps>(({
             sources: {
                 protomaps: {
                     type: "vector" as const,
-                    url: `pmtiles://${import.meta.env.VITE_MAP_SOURCE || `https://${import.meta.env.VITE_MAP_SOURCE || "localhost"}/India.pmtiles`}`,
+                    url: `pmtiles://${import.meta.env.VITE_MAP_SOURCE || `https://${import.meta.env.VITE_MAP_SOURCE || "192.168.29.77"}/India.pmtiles`}`,
                     attribution: '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
                 }
             },

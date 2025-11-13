@@ -116,22 +116,22 @@ export default function Metric1({
                         show: false
                     },
                     data: [
-                        { 
+                        labels.low && data.low > 0 ? { 
                             value: data.low, 
                             name: labels.low || "Low",
                             itemStyle: { color: greenColor }
-                        },
-                        { 
+                        } : null,
+                        labels.medium && data.medium > 0 ? { 
                             value: data.medium, 
                             name: labels.medium || "Medium",
                             itemStyle: { color: azulColor }
-                        },
-                        { 
+                        } : null,
+                        labels.high && data.high > 0 ? { 
                             value: data.high, 
                             name: labels.high || "High",
                             itemStyle: { color: redColor }
-                        }
-                    ]
+                        } : null
+                    ].filter((item): item is { value: number; name: string; itemStyle: { color: string } } => item !== null)
                 }
             ]
         };
@@ -168,18 +168,24 @@ export default function Metric1({
                 className={`flex flex-1 items-center justify-center w-full h-full min-h-0 ${chartClassName}`}
             />
             <div id="LegendContainer" className=" w-full flex justify-center gap-4">
-                <div className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-(--green)"></span>
-                    <span className="text-(--contrast) text-[10px]">{labels.low || "Online"}: {data.low}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-(--azul)" ></span>
-                    <span className="text-(--contrast) text-[10px]">{labels.medium || "Supervised"}: {data.medium}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-(--red)"></span>
-                    <span className="text-(--contrast) text-[10px]">{labels.high || "Offline"}: {data.high}</span>
-                </div>
+                {labels.low && (
+                    <div className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded-full bg-(--green)"></span>
+                        <span className="text-(--contrast) text-[10px]">{labels.low}: {data.low}</span>
+                    </div>
+                )}
+                {labels.medium && (
+                    <div className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded-full bg-(--azul)" ></span>
+                        <span className="text-(--contrast) text-[10px]">{labels.medium}: {data.medium}</span>
+                    </div>
+                )}
+                {labels.high && (
+                    <div className="flex items-center gap-1">
+                        <span className="w-3 h-3 rounded-full bg-(--red)"></span>
+                        <span className="text-(--contrast) text-[10px]">{labels.high}: {data.high}</span>
+                    </div>
+                )}
             </div>
         </BaseCard>
     );

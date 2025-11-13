@@ -7,18 +7,17 @@ import {
 
 
 //-- Lucide Icons
-import { Plus, Sheet, Search } from 'lucide-react';
+import { Plus, Sheet } from 'lucide-react';
 
 //-- Local Components
-import { AddLocationForm } from './AddLocationForm';
-import { AddLocationTypeForm } from './AddLocationTypeForm';
+import AddDeviceForm from './AddDeviceForm';
 
 
 export default function Header() {
 
     return (
         <div className="flex w-full h-9 overflow-auto bg-(--contrast) items-center justify-between">
-            <span className="text-(--base) text-[24px] font-semibold">Locations</span>
+            <span className="text-(--base) text-[24px] font-semibold">Devices</span>
 
 
             <div className="flex gap-2 h-fit w-fit">
@@ -28,8 +27,7 @@ export default function Header() {
                         <span className='text-(--contrast) h-fit'>Add</span>
                     </PopoverTrigger>
                     <PopoverContent>
-                        <AddLocationForm />
-                        <AddLocationTypeForm/>
+                        <AddDeviceForm />
                     </PopoverContent>
                 </Popover>
 

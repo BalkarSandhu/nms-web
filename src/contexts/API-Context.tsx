@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 //-- importing types
 
-import { readDeviceResponseSchema, readLocationSchema, readServiceSchema, readWorkerSchema } from "./read-Types";
+import { readDeviceResponseSchema, readLocationSchema, readServiceSchema, readWorkerResponseSchema } from "./read-Types";
 import type { readDeviceType, readLocationType, readServiceType, readWorkerType } from "./read-Types";
 
 export type ApiContextType = {
@@ -110,8 +110,8 @@ const fetchData = async() => {
         
         //-- Fetch Workers
         fetchWithTimeout(`${apiHost}/workers`)
-            .then(response => readWorkerSchema.array().parse(response))
-            .then(validatedWorkers => setWorkers(validatedWorkers))
+            .then(response => readWorkerResponseSchema.parse(response))
+            .then(validatedResponse => setWorkers(validatedResponse.workers))
             .catch(error => {
                 console.error("Error fetching workers:", error);
                 setWorkers([]);

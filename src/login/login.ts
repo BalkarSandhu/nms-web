@@ -24,7 +24,7 @@ type loginResponse = {
 // Helper function to set cookie
 function setCookie(name: string, value: string, expiryDate: string) {
     const expires = new Date(expiryDate);
-    // Only use Secure flag in production (https), not on localhost
+    // Only use Secure flag in production (https), not on 192.168.29.77
     const isSecure = window.location.protocol === 'https:';
     const secureFlag = isSecure ? '; Secure' : '';
     const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Strict${secureFlag}`;

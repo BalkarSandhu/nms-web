@@ -25,7 +25,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	// Get data from Redux store
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
 	const { locations: reduxLocations } = useAppSelector(state => state.locations);
-	const { workers: reduxWorkers, stats: workerStats } = useAppSelector(state => state.workers);
+	const { workers: reduxWorkers } = useAppSelector(state => state.workers);
 
 	// Fetch all data when component mounts
 	useEffect(() => {
@@ -50,36 +50,170 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	// Note: Removed blocking loading check to allow UI to render immediately
 	// Data will populate as API calls complete in parallel
 
-	// Calculate metrics from actual data
-	// Device status is a boolean, so we categorize based on other criteria
+	// Helper function to calculate downtime in hours
+	const calculateDowntime = (updatedAt: string): number => {
+		const now = new Date();
+		const lastUpdate = new Date(updatedAt);
+		const diffMs = now.getTime() - lastUpdate.getTime();
+		return Math.floor(diffMs / (1000 * 60 * 60)); // hours
+	};
+
+	// Helper function to format downtime
+	const formatDowntime = (hours: number): string => {
+		if (hours < 1) return '< 1h';
+		if (hours < 24) return `${hours}h`;
+		const days = Math.floor(hours / 24);
+		const remainingHours = hours % 24;
+		return `${days}d ${remainingHours}h`;
+	};
+
+	// DEVICES METRICS
+	const onlineDevices = activeDevices.filter(d => d.status);
+	const offlineDevices = activeDevices.filter(d => !d.status);
+	
 	const deviceMetrics = {
-		low: activeDevices.filter(d => d.status && d.consecutive_failures === 0).length, // healthy devices (online)
-		medium: activeDevices.filter(d => d.status && d.consecutive_failures > 0).length, // online but with failures (supervised)
-		high: activeDevices.filter(d => !d.status).length // offline devices
+		low: onlineDevices.length, // Online (green)
+		medium: 0, // Not used (keep empty as per requirements)
+		high: offlineDevices.length // Offline (red)
 	};
 
-	// Location metrics - group by location type or project
-	const locationsByType = activeLocations.reduce((acc, loc) => {
-		acc[loc.location_type_id] = (acc[loc.location_type_id] || 0) + 1;
-		return acc;
-	}, {} as Record<number, number>);
+	// Devices with longest downtime (offline devices sorted by updated_at)
+	const deviceDowntimeData = offlineDevices
+		.map(d => ({
+			id: d.id,
+			col1: d.display || d.hostname,
+			col2: formatDowntime(calculateDowntime(d.updated_at)),
+			downtime: calculateDowntime(d.updated_at),
+			link: `/devices?id=${d.id}`
+		}))
+		.sort((a, b) => b.downtime - a.downtime)
+		.slice(0, 10);
 
+	// LOCATIONS METRICS
+	const onlineLocations = activeLocations.filter(l => l.status === 'online');
+	const offlineLocations = activeLocations.filter(l => l.status === 'offline');
+	
 	const locationMetrics = {
-		low: Object.values(locationsByType)[0] || 0,
-		medium: Object.values(locationsByType)[1] || 0,
-		high: Object.values(locationsByType)[2] || 0
+		low: onlineLocations.length, // Online (green)
+		medium: 0, // Not used (keep empty)
+		high: offlineLocations.length // Offline (red)
 	};
 
-	// Workers data - use stats if available
-	const workerMetrics = workerStats ? {
-		low: workerStats.offline_workers,
-		medium: workerStats.pending_workers,
-		high: workerStats.active_workers
-	} : {
-		low: Math.floor(activeWorkers.length * 0.1),
-		medium: Math.floor(activeWorkers.length * 0.2),
-		high: activeWorkers.length - Math.floor(activeWorkers.length * 0.1) - Math.floor(activeWorkers.length * 0.2)
+	// Locations with longest downtime
+	const locationDowntimeData = offlineLocations
+		.map(l => ({
+			id: l.id,
+			col1: l.name,
+			col2: formatDowntime(calculateDowntime(l.updated_at || l.created_at || new Date().toISOString())),
+			downtime: calculateDowntime(l.updated_at || l.created_at || new Date().toISOString()),
+			link: `/locations?id=${l.id}`
+		}))
+		.sort((a, b) => b.downtime - a.downtime)
+		.slice(0, 10);
+
+	// WORKERS METRICS
+	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'online' || w.status === 'active');
+	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'online');
+	
+	const workerMetrics = {
+		low: activeWorkersOnline.length, // Active (green)
+		medium: 0, // Not used (keep empty)
+		high: offlineWorkersList.length // Offline (red)
 	};
+
+	// Workers with longest downtime
+	const workerDowntimeData = offlineWorkersList
+		.map(w => ({
+			id: w.id,
+			col1: w.hostname,
+			col2: formatDowntime(calculateDowntime(w.last_seen || w.updated_at)),
+			downtime: calculateDowntime(w.last_seen || w.updated_at),
+			link: `/workers?id=${w.id}`
+		}))
+		.sort((a, b) => b.downtime - a.downtime)
+		.slice(0, 10);
+
+	// MAP DATA PREPARATION
+	// Devices Map Data - show devices on map with green for online, red for offline
+	const devicesMapData = activeDevices
+		.map(d => {
+			// Find the location for this device
+			const location = activeLocations.find(l => l.id === d.location_id);
+			if (!location) return null;
+
+			const isOnline = d.status;
+			return {
+				id: `device-${d.id}`,
+				name: d.display || d.hostname,
+				coordinates: [location.lng, location.lat] as [number, number],
+				value: isOnline ? 100 : 50,
+				category: isOnline ? ('green' as const) : ('red' as const),
+				popupData: {
+					indicatorColour: isOnline ? ('green' as const) : ('red' as const),
+					headerLeft: { field: 'Device', value: d.display || d.hostname },
+					headerRight: { field: 'IP', value: d.ip },
+					sideLabel: { field: 'Status', value: isOnline ? 'Online' : 'Offline' },
+					data: [
+						{ field: 'Location', value: location.name, colour: 'white' as const },
+						{ field: 'Last Ping', value: new Date(d.last_ping).toLocaleString(), colour: 'blue' as const },
+						{ field: 'Failures', value: d.consecutive_failures.toString(), colour: d.consecutive_failures > 0 ? ('red' as const) : ('green' as const) },
+					]
+				}
+			};
+		})
+		.filter((item) => item !== null);
+
+	// Locations Map Data - show locations with circles (green for online, red for offline)
+	const locationsMapData = activeLocations.map(l => {
+		const isOnline = l.status === 'online';
+		return {
+			id: `location-${l.id}`,
+			name: l.name,
+			coordinates: [l.lng, l.lat] as [number, number],
+			value: isOnline ? 100 : 50,
+			category: isOnline ? ('green' as const) : ('red' as const),
+			popupData: {
+				indicatorColour: isOnline ? ('green' as const) : ('red' as const),
+				headerLeft: { field: 'Location', value: l.name },
+				headerRight: { field: 'Project', value: l.project },
+				sideLabel: { field: 'Area', value: l.area },
+				data: [
+					{ field: 'Status', value: l.status, colour: isOnline ? ('green' as const) : ('red' as const) },
+					{ field: 'Type', value: l.location_type_id.toString(), colour: 'blue' as const },
+				]
+			}
+		};
+	});
+
+	// Workers Map Data - show workers on map, use associated location lat/lng if worker doesn't have coordinates
+	const workersMapData = activeWorkers
+		.map(w => {
+			// Placeholder: Use first location - in real implementation, you'd look up worker's assigned location
+			const workerLocation = activeLocations[0];
+			
+			if (!workerLocation) return null;
+
+			const isOnline = w.status === 'online' || w.status === 'active';
+			return {
+				id: `worker-${w.id}`,
+				name: w.hostname,
+				coordinates: [workerLocation.lng, workerLocation.lat] as [number, number],
+				value: isOnline ? 100 : 50,
+				category: isOnline ? ('green' as const) : ('red' as const),
+				popupData: {
+					indicatorColour: isOnline ? ('green' as const) : ('red' as const),
+					headerLeft: { field: 'Worker', value: w.hostname },
+					headerRight: { field: 'IP', value: w.ip_address },
+					sideLabel: { field: 'Status', value: w.status },
+					data: [
+						{ field: 'Last Seen', value: new Date(w.last_seen).toLocaleString(), colour: 'white' as const },
+						{ field: 'Max Devices', value: w.max_devices.toString(), colour: 'blue' as const },
+						{ field: 'Approval', value: w.approval_status, colour: w.approval_status === 'approved' ? ('green' as const) : ('red' as const) },
+					]
+				}
+			};
+		})
+		.filter((item) => item !== null);
 
 	return (
 		<div className="flex flex-col gap-2 p-2 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
@@ -105,52 +239,80 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 			</div>
 			<Section
 				title="Devices"
+				mapData={devicesMapData}
 				metricsData={{
 					metric1: {
 						title: "Device Status",
 						data: deviceMetrics,
 						labels: {
 							low: "Online",
-							medium: "Supervised",
+							medium: "",
 							high: "Offline"
 						},
 						showLabels: true
 					},
 					metric2: {
-						data: deviceMetrics,
-						title: "Device Distribution",
-						labels: { low: "Online", medium: "Warning", high: "Offline" }
-					}
+						title: "Longest Downtime",
+						headers: {
+							col1: "Device",
+							col2: "Downtime"
+						},
+						data: deviceDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep linear gauge empty as per requirements
 				}}
 			/>
 			<Section
 				title="Locations"
+				mapData={locationsMapData}
 				metricsData={{
 					metric1: {
-						title: "Location Types",
+						title: "Location Status",
 						data: locationMetrics,
 						labels: {
-							low: "Type 1",
-							medium: "Type 2",
-							high: "Type 3"
+							low: "Online",
+							medium: "",
+							high: "Offline"
 						},
 						showLabels: true
 					},
 					metric2: {
-						data: locationMetrics,
-						title: "Location Distribution",
-						labels: { low: "Type 1", medium: "Type 2", high: "Type 3" }
-					}
+						title: "Longest Downtime",
+						headers: {
+							col1: "Location",
+							col2: "Downtime"
+						},
+						data: locationDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep linear gauge empty
 				}}
 			/>
 			<Section
 				title="Workers"
+				mapData={workersMapData}
 				metricsData={{
-					metric2: {
-						data: workerMetrics,
+					metric1: {
 						title: "Worker Status",
-						labels: { low: "Idle", medium: "Busy", high: "Active" }
-					}
+						data: workerMetrics,
+						labels: {
+							low: "Active",
+							medium: "",
+							high: "Offline"
+						},
+						showLabels: true
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: {
+							col1: "Worker",
+							col2: "Downtime"
+						},
+						data: workerDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep gauge empty
 				}}
 			/>
 		</div>

@@ -1,102 +1,51 @@
-import React, {useState} from 'react';
-
-//-- Local Components
-import {Form, InputField} from '@/components/form-components';
-
-//-- ShadCN components
-import { Button } from '@/components/ui/button';    
-
-
-
+import { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchWorkers } from '@/store/workerSlice';
+import Header from './local-components/header';
+import WorkersTable from './local-components/table';
+import { WorkerDetailsSidebar } from './local-components/WorkerDetailsSidebar';
+import { LoadingPage } from '@/components/loading-screen';
 
 export default function WorkersPage() {
+    const dispatch = useAppDispatch();
+    const { loading, error, workers } = useAppSelector(state => state.workers);
+    const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
 
-      const [open, setOpen] = useState(false);
-        const [name, setName] = useState("");
-        const [role, setRole] = useState("");
-        const [department, setDepartment] = useState("");
-        const [email, setEmail] = useState("");
-        
-        const [roleOpen, setRoleOpen] = useState(false);
-        const [departmentOpen, setDepartmentOpen] = useState(false);
-        
-        const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
-    
-        const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            setStatus({ message: "Submitting...", type: "info" });
-            
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-    
-            if (!name || !role || !email) {
-                setStatus({ message: "Name, Role, and Email are required.", type: "error" });
-                return;
-            }
-    
-            console.log({ name, role, department, email });
-            setStatus({ message: "Worker added successfully!", type: "success" });
-    
-            // Close modal and reset form after a delay
-            setTimeout(() => {
-                setOpen(false);
-                setTimeout(() => {
-                    setStatus(undefined);
-                    setName("");
-                    setRole("");
-                    setDepartment("");
-                    setEmail("");
-                }, 500);
-            }, 2000);
-        };
+    useEffect(() => {
+        dispatch(fetchWorkers({}));
+    }, [dispatch]);
+
+    if (loading && workers.length === 0) {
+        return <LoadingPage />;
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Workers</h2>
+                    <p className="text-gray-600">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="p-4 w-full h-full">
-            <Form
-            title="Add : Worker"
-            open={open}
-            setOpen={setOpen}
-            onSubmit={handleSubmit}
-            statusMessage={status}
-            trigger={<Button variant="outline">Add Worker</Button>}
-        >
-            <InputField
-                label="Name"
-                placeholder="e.g. John Doe"
-                type="input"
-                stateValue={name}
-                stateAction={setName}
-            />
-            <div className="flex flex-col sm:flex-row gap-4">
-                <InputField
-                    label="Role"
-                    placeholder="Select Role"
-                    type="combobox"
-                    comboboxOptions={["Technician", "Engineer", "Manager", "Administrator"]}
-                    stateValue={role}
-                    stateAction={setRole}
-                    openState={roleOpen}
-                    openStateAction={setRoleOpen}
-                />
-                <InputField
-                    label="Department (Optional)"
-                    placeholder="Select Department"
-                    type="combobox"
-                    comboboxOptions={["IT", "Operations", "Maintenance", "Support"]}
-                    stateValue={department}
-                    stateAction={setDepartment}
-                    openState={departmentOpen}
-                    openStateAction={setDepartmentOpen}
+        <div className="flex h-full">
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <Header />
+                <WorkersTable 
+                    onRowClick={(workerId: string) => setSelectedWorkerId(workerId)}
+                    selectedWorkerId={selectedWorkerId}
                 />
             </div>
-            <InputField
-                label="Email"
-                placeholder="e.g. john.doe@example.com"
-                type="input"
-                stateValue={email}
-                stateAction={setEmail}
-            />
-        </Form>
 
+            {/* Sidebar */}
+            <WorkerDetailsSidebar 
+                workerId={selectedWorkerId}
+                onClose={() => setSelectedWorkerId(null)}
+            />
         </div>
     );
 }

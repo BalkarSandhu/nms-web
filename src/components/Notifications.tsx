@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 
 //-- Lucide Icons
-import { Bell, BellDot, X, ChevronsDown, ChevronUp, Bird, TriangleAlert, AlertTriangle, ChevronDown } from "lucide-react";
+import { Bell, BellDot, ChevronUp, Bird, TriangleAlert, ChevronDown } from "lucide-react";
 
 export type NotificationType = {
     id:number;
@@ -62,13 +62,14 @@ export function NotificationPopUp(Notifications: NotificationsType) {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <button
-                    className="flex items-center w-full h-full border-0 justify-center size-5 p-0 transition-colors duration-200 focus:outline-none"
+                <Button
+                    variant="ghost"
+                    className="size-7 flex p-1 bg-(--contrast) border-2 border-(--base) hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center"
                 >
                     {(Notifications.Notifications && Notifications.Notifications.length > 0)
                         ? <BellDot className="h-5 w-5 text-(--base) bg-none" />
                         : <Bell className="h-5 w-5 text-(--base) bg-none" />}
-                </button>
+                </Button>
             </PopoverTrigger>
             <PopoverContent className="bg-linear-to-b from-(--base) to-(--dark) min-w-100 drop-shadow-lg p-0 mt-2 \
                                        border-0 min-h-[50vh] background-blur-lg">

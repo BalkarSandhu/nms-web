@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import Metrics from "./Metrics";
+import type { MapDataPoint } from "./Map-Viewer";
 // import type { GaugeDataItem } from "./Metric-1";
 
 export type MenuItemType = {
@@ -42,9 +43,10 @@ type SectionProps = {
     menuGroups?: MenuGroupType[];
     children?: ReactNode;
     metricsData?: SectionMetricsData;
+    mapData?: MapDataPoint[]; // Map data to pass to Metrics
 }
 
-export default function Section ({title, menuGroups, children, metricsData }: SectionProps) {
+export default function Section ({title, menuGroups, children, metricsData, mapData }: SectionProps) {
 
     const [metricState, setMetricState] = React.useState<boolean>(false);
 return (
@@ -108,6 +110,7 @@ return (
             metricState={metricState} 
             setMetricState={setMetricState}
             metricsData={metricsData}
+            mapData={mapData}
         />
     </section>
 )

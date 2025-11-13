@@ -1,33 +1,17 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 //-- Local Components
 import Header from './local-components/header';
 import LocationsTable from './local-components/table';
-import {
-  fetchLocations,
-  createLocation,
-  fetchLocationsByBounds,
-  fetchLocationsCount,
-  fetchLocationTypes,
-  createLocationType,
-  fetchLocationById,
-  deleteLocationType,
-  deleteLocation,
-  type CreateLocationPayload,
-  type GetLocationsByBoundsParams,
-  type GetLocationsCountParams,
-} from '@/store/locationsSlice';
-
-
-
-
-
+import { fetchLocations } from '@/store/locationsSlice';
+import { LocationDetailsSidebar } from './local-components/LocationDetailsSidebar';
 
 
 export default function LocationsPage() {
     const dispatch = useAppDispatch();
     const { locations, loading, error } = useAppSelector(state => state.locations);
+    const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
 
     useEffect(() => {
         if (!locations || locations.length === 0) {
@@ -36,7 +20,7 @@ export default function LocationsPage() {
     }, [dispatch, locations]);
 
     return (
-        <div className="p-4 flex gap-4 bg-(--contrast) min-h-full w-full">
+        <div className="p-4 flex gap-4 bg-(--contrast) min-h-[90vh] max-h-full w-full">
             <div className="h-full w-full">
                 <Header />
                 {loading ? (
@@ -44,14 +28,12 @@ export default function LocationsPage() {
                 ) : error ? (
                     <div className="p-4 text-center text-red-500">{error}</div>
                 ) : (
-                    <LocationsTable />
+                    <LocationsTable onRowClick={setSelectedLocationId} selectedLocationId={selectedLocationId} />
                 )}
             </div>
 
             {/*Details Sidebar*/}
-            <div className="md:flex md:flex-col hidden md:w-[280px] border-l-2 border-(--base)/20">
-                {/* Sidebar content here */}
-            </div>
+            <LocationDetailsSidebar locationId={selectedLocationId} onClose={() => setSelectedLocationId(null)} />
         </div>
     );
 }

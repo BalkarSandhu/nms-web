@@ -22,6 +22,10 @@ import {LoadingPage} from './components/loading-screen'
 //-- Contexts 
 import { APIProvider } from './contexts/API-Context'
 
+//-- Redux
+// import { useAppDispatch } from '@/store/hooks'
+// import { fetchLocationTypes } from '@/store/locationsSlice'
+
 //-- Icons
 import { Funnel, Moon } from 'lucide-react'
 
@@ -37,46 +41,104 @@ import WorkersPage from './workers/page'
 
 function App() {
   const location = useLocation()
+  // const dispatch = useAppDispatch()
   const [isButtonClicked, setIsButtonClicked] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
 
-  // Helper function to get cookie value by name
-  const getCookie = (name: string): string | null => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(';').shift() || null;
+
+  // Helper function to validate and get token
+  const validateToken = (): string | null => {
+    // If auth bypass is enabled, return a dummy token
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+      return 'bypass-token';
     }
-    return null;
+
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; token=`);
+    
+    if (parts.length !== 2) {
+      return null;
+    }
+
+    const cookieValue = parts.pop()?.split(';').shift() || null;
+    if (!cookieValue) {
+      return null;
+    }
+
+    try {
+      // JWT format: header.payload.signature
+      const payload = cookieValue.split('.')[1];
+      if (!payload) {
+        // Invalid JWT format, clear cookie
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        return null;
+      }
+
+      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      
+      // Check expiration
+      if (decoded.exp && typeof decoded.exp === 'number') {
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (decoded.exp < now) {
+          // Token expired, remove cookie
+          console.log('Token expired, clearing cookie');
+          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          return null;
+        }
+      }
+      
+      return cookieValue;
+    } catch (e) {
+      // If parsing fails, treat as invalid/expired
+      console.error('Token validation failed:', e);
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      return null;
+    }
   };
 
-  // Check system initialization status
+  // (Removed: location types are now fetched in dashboard/page.tsx)
+
+  // Check system initialization status on mount
   useEffect(() => {
     const checkAuthStatus = async () => {
-      const token = getCookie('token');
-      
-      // If user has a token, skip initialization check
-      if (token) {
+      // If auth bypass is enabled, set initialized and authenticated
+      if(import.meta.env.VITE_AUTH_BYPASS === 'true'){
         setIsLoading(false);
         setIsInitialized(true);
+        setIsAuthenticated(true);
         return;
       }
 
-      // Check if system is initialized
+      const token = validateToken();
+      
+      // If user has a valid token, they're authenticated
+      if (token) {
+        setIsLoading(false);
+        setIsInitialized(true);
+        setIsAuthenticated(true);
+        return;
+      }
+
+      // No valid token - check if system is initialized
       try {
         const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`);
         
         if (!response.ok) {
           console.error("Failed to check auth status");
           setIsLoading(false);
+          setIsAuthenticated(false);
           return;
         }
 
         const data: { initialized: boolean; message: string; user_count: number } = await response.json();
         setIsInitialized(data.initialized);
+        setIsAuthenticated(false);
       } catch (error) {
         console.error("Error checking auth status:", error);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
@@ -84,6 +146,33 @@ function App() {
 
     checkAuthStatus();
   }, []);
+
+  // Re-validate token on every route change
+  useEffect(() => {
+    // Skip validation for auth bypass mode
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+      setIsAuthenticated(true);
+      return;
+    }
+
+    // Skip validation on login/register pages
+    const currentPath = location.pathname;
+    if (currentPath === '/login' || currentPath === '/register') {
+      return;
+    }
+
+    // Validate token
+    const token = validateToken();
+    
+    if (!token && isAuthenticated) {
+      // Token expired or invalid, update auth state
+      console.log('Token validation failed on route change, redirecting to login');
+      setIsAuthenticated(false);
+    } else if (token && !isAuthenticated) {
+      // Token is valid, update auth state
+      setIsAuthenticated(true);
+    }
+  }, [location.pathname, isAuthenticated]);
   
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
@@ -124,29 +213,34 @@ function App() {
   }
 
   const useLayout = shouldUseLayout()
-  const token = getCookie('token');
 
   // Show loading screen while checking authentication
   if (isLoading) {
     return <LoadingPage />;
   }
 
-  // Redirect logic based on token and initialization status
+  // Redirect logic based on authentication and initialization status
   const getRedirectPath = () => {
+    // If auth bypass is enabled, never redirect
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+      return null;
+    }
+
     const currentPath = location.pathname;
-    
-    // If user has token, they're logged in - allow access
-    if (token) {
-      // If they're on login/register, redirect to dashboard
+
+    // User is authenticated
+    if (isAuthenticated) {
+      // Redirect away from login/register to dashboard
       if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
         return '/dashboard';
       }
-      return null; // No redirect needed
+      // Allow access to protected routes
+      return null;
     }
 
-    // No token - check if trying to access protected routes
+    // User is NOT authenticated
+    // If trying to access protected routes, redirect to login/register
     if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
-      // Redirect based on initialization status
       return isInitialized ? '/login' : '/register';
     }
 
@@ -155,7 +249,8 @@ function App() {
       return isInitialized ? '/login' : '/register';
     }
 
-    return null; // No redirect needed
+    // Already on login/register, no redirect needed
+    return null;
   };
 
   const redirectPath = getRedirectPath();
@@ -212,14 +307,11 @@ function App() {
                   hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
                       <Moon className="size-3.5 text-(--base)" />
                     </button>
-                    <button className="size-7 flex p-1 bg-(--contrast) border-2 border-(--base) \
-                    hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
-                      <NotificationPopUp Notifications={[
-                      { id: 1, priority: "low", message: "Device 192.168.1.1 is offline", type: "error" },
-                      { id: 2, priority: "medium", message: "Firmware update available for router", type: "info" },
-                      { id: 3, priority: "high", message: "High CPU usage detected", type: "warning" }
-                      ]}/>
-                    </button>
+                    <NotificationPopUp Notifications={[
+                      { id: 1, priority: "low", message: "Device 192.168.1.1 is offline", notificaitonState: "new" },
+                      { id: 2, priority: "medium", message: "Firmware update available for router", notificaitonState: "acknowledged" },
+                      { id: 3, priority: "high", message: "High CPU usage detected", notificaitonState: "resolved" }
+                    ]}/>
                   </div>
 
                 </div>
