@@ -11,6 +11,8 @@ import { Plus, Sheet } from 'lucide-react';
 
 //-- Local Components
 import AddDeviceForm from './AddDeviceForm';
+import {UpdateDeviceTypeForm} from './UpdateDeviceTypeForm';
+
 
 
 export default function Header() {
