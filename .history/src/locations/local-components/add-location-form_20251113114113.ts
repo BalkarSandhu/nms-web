@@ -76,29 +76,6 @@ export async function getLocationTypes(): Promise<{ id: number; name: string }[]
   }));
 }
 
-export async function getWorkerTypes(): Promise<{ id: string; hostname: string }[]> {
-  const url = `${import.meta.env.VITE_NMS_HOST}/workers`;
-
-  const token = getCookie("token");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch workers: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return data.workers.map((item: any) => ({
-    id: item.id,
-    hostname: item.hostname,
-  }));
-}
-
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);

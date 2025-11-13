@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Form, InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
-import { addLocation, getLocationTypes, getWorkerTypes } from "./add-location-form";
+import { addLocation, getLocationTypes } from "./add-location-form";
 
 export const AddLocationForm = () => {
   const [open, setOpen] = useState(false);
@@ -15,12 +15,9 @@ export const AddLocationForm = () => {
   const [statusReason, setStatusReason] = useState("");
   const [workerId, setWorkerId] = useState("");
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
-  const [workerTypeOpen, setWorkerTypeOpen] = useState(false);
   const [parentLocationOpen, setParentLocationOpen] = useState(false);
   const [locationTypeOptions, setLocationTypeOptions] = useState<{ id: number; name: string }[]>([]);
-  const [workerTypeOptions, setWorkerTypeOptions] = useState<{ id: string; hostname: string }[]>([]);
   const [locationType, setLocationType] = useState<string>("");
-  const [workerType, setWorkerType] = useState<string>("");
   const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
 
   useEffect(() => {
@@ -37,23 +34,7 @@ export const AddLocationForm = () => {
       }
     };
     fetchLocationTypes();
-  }, []);
-
-  useEffect(() => {
-    const fetchWorkersTypes = async () => {
-      try {
-        const types = await getWorkerTypes();
-        setWorkerTypeOptions(types);
-        if (types.length > 0 && !workerType) {
-          setWorkerType(types[0].hostname);
-        }
-      } catch (error) {
-        console.error("Error fetching workers:", error);
-        setWorkerTypeOptions([]);
-      }
-    };
-    fetchWorkersTypes();
-  }, []);
+  }, [locationType]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -65,10 +46,8 @@ export const AddLocationForm = () => {
       });
       return;
     }
-
-    const selectedLocationType = locationTypeOptions.find((t: any) => t.name === locationType);
-    const locationTypeId = selectedLocationType ? selectedLocationType.id : null;
-
+    const selectedType = locationTypeOptions.find((t: any) => t.name === locationType);
+    const locationTypeId = selectedType ? selectedType.id : null;
     if (!locationTypeId) {
       setStatus({
         message: "Invalid location type selected.",
@@ -76,10 +55,6 @@ export const AddLocationForm = () => {
       });
       return;
     }
-
-    const selectedWorker = workerTypeOptions.find((w: any) => w.hostname === workerType);
-    const selectedWorkerId = selectedWorker ? selectedWorker.id : "";
-
     try {
       await addLocation({
         area,
@@ -91,7 +66,7 @@ export const AddLocationForm = () => {
         project,
         statusI,
         statusReason,
-        workerId: selectedWorkerId,
+        workerId,
       });
       setStatus({ message: "Location added successfully!", type: "success" });
     } catch (error: any) {
@@ -111,10 +86,6 @@ export const AddLocationForm = () => {
         setLocationType("");
         setParentLocation("");
         setArea("");
-        setProject("");
-        setStatusI("");
-        setStatusReason("");
-        setWorkerType("");
       }, 500);
     }, 2000);
   };
@@ -145,16 +116,7 @@ export const AddLocationForm = () => {
       <InputField label="Project" placeholder="e.g. Project A" type="input" stateValue={project} stateAction={setProject} />
       <InputField label="Status" placeholder="Active/Inactive" type="input" stateValue={statusI} stateAction={setStatusI} />
       <InputField label="Status Reason" placeholder="Reason" type="input" stateValue={statusReason} stateAction={setStatusReason} />
-      <InputField
-        label="Worker Type"
-        placeholder="Select Worker"
-        type="combobox"
-        comboboxOptions={workerTypeOptions.map((t) => t.hostname)}
-        stateValue={workerType}
-        stateAction={setWorkerType}
-        openState={workerTypeOpen}
-        openStateAction={setWorkerTypeOpen}
-      />
+      <InputField label="Worker ID" placeholder="e.g. 123" type="input" stateValue={workerId} stateAction={setWorkerId} />
       <div className="flex flex-col sm:flex-row gap-4">
         <InputField
           label="Parent Location (Optional)"

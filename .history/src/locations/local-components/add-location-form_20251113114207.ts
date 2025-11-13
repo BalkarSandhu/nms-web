@@ -17,7 +17,7 @@ export async function addLocation({
   lat: number;
   lng: number;
   project: string;
-  statusI: string;
+  statusI: boolean;
   statusReason: string;
   workerId: string;
 }) {
@@ -73,29 +73,6 @@ export async function getLocationTypes(): Promise<{ id: number; name: string }[]
   return locationTypeOptions.map((item: any) => ({
     id: item.id,
     name: item.name,
-  }));
-}
-
-export async function getWorkerTypes(): Promise<{ id: string; hostname: string }[]> {
-  const url = `${import.meta.env.VITE_NMS_HOST}/workers`;
-
-  const token = getCookie("token");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch workers: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return data.workers.map((item: any) => ({
-    id: item.id,
-    hostname: item.hostname,
   }));
 }
 
