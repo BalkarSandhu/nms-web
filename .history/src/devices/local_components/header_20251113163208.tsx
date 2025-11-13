@@ -11,8 +11,8 @@ import { Plus, Sheet } from 'lucide-react';
 
 //-- Local Components
 import AddDeviceForm from './AddDeviceForm';
+import {UpdateDeviceTypeForm} from './UpdateDeviceTypeForm';
 import { AddDeviceTypeForm } from './AddDeviceTypeForm';
-import { DeleteDeviceForm } from './DeleteDeviceForm';
 
 
 
@@ -32,7 +32,7 @@ export default function Header() {
                     <PopoverContent>
                         <AddDeviceForm />
                         <AddDeviceTypeForm/>
-                        <DeleteDeviceForm/>
+                        <Delete
                     </PopoverContent>
                 </Popover>
 

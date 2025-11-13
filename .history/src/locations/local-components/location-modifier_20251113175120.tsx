@@ -53,7 +53,7 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
 
       {/* Delete Confirmation Modal */}
       {deleteOpen && (
-        <DeleteLocationForm
+        <DeleteLocationConfirm
           locationId={locationId}
           open={deleteOpen}
           setOpen={setDeleteOpen}

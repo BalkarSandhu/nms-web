@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { EditLocationForm } from "./EditLocationForm";
-import { DeleteLocationForm } from "./DeleteLocationForm";
+import { DeleteLocationConfirm } from "./DeleteLocationConfirm";
 
 type LocationModifierProps = {
   locationId: number;
@@ -53,7 +53,7 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
 
       {/* Delete Confirmation Modal */}
       {deleteOpen && (
-        <DeleteLocationForm
+        <DeleteLocationConfirm
           locationId={locationId}
           open={deleteOpen}
           setOpen={setDeleteOpen}

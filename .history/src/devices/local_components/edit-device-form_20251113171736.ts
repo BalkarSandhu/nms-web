@@ -1,11 +1,15 @@
-export async function updateDeviceType({
+// src/components/devices/edit-device-form.ts
+
+export async function editDevice({
   id,
-  name,
+  field,
+  value,
 }: {
   id: number;
-  name: string;
+  field: string;
+  value: string;
 }) {
-  const url = `${import.meta.env.VITE_NMS_HOST}/devices/types/${id}`;
+  const url = `${import.meta.env.VITE_NMS_HOST}/devices/${id}`;
 
   const getCookie = (cookieName: string): string | null => {
     const value = `; ${document.cookie}`;
@@ -18,7 +22,7 @@ export async function updateDeviceType({
 
   const token = getCookie("token");
 
-  const payload = { name };
+  const payload = { [field]: value };
 
   const response = await fetch(url, {
     method: "PUT",
@@ -30,7 +34,7 @@ export async function updateDeviceType({
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update Device type: ${response.statusText}`);
+    throw new Error(`Failed to edit device: ${response.statusText}`);
   }
 
   return await response.json();

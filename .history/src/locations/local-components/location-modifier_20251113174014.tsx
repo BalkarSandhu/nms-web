@@ -8,7 +8,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { EditLocationForm } from "./EditLocationForm";
-import { DeleteLocationForm } from "./DeleteLocationForm";
 
 type LocationModifierProps = {
   locationId: number;
@@ -16,7 +15,14 @@ type LocationModifierProps = {
 
 export default function LocationModifier({ locationId }: LocationModifierProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const handleEdit = () => {
+    setEditOpen(true);
+  };
+
+  const handleDelete = () => {
+    console.log("Delete location", locationId);
+  };
 
   return (
     <>
@@ -28,13 +34,13 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
           <div className="flex flex-col gap-2">
             <button
               className="text-(--base) flex items-center gap-1"
-              onClick={() => setEditOpen(true)}
+              onClick={handleEdit}
             >
               Edit <SquarePen className="size-3" />
             </button>
             <button
-              className="text-red-600 flex items-center gap-1"
-              onClick={() => setDeleteOpen(true)}
+              className="text-(--base) flex items-center gap-1"
+              onClick={handleDelete}
             >
               Delete <Trash2 className="size-3" />
             </button>
@@ -42,21 +48,11 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
         </PopoverContent>
       </Popover>
 
-      {/* Edit Modal */}
       {editOpen && (
         <EditLocationForm
           locationId={locationId}
           open={editOpen}
           setOpen={setEditOpen}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteOpen && (
-        <DeleteLocationForm
-          locationId={locationId}
-          open={deleteOpen}
-          setOpen={setDeleteOpen}
         />
       )}
     </>
