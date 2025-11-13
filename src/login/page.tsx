@@ -22,7 +22,7 @@ export default function LoginPage() {
         
         if (result.success) {
             console.log('Navigating to /dashboard');
-            navigate('/login');
+            navigate('/dashboard');
         } else {
             console.error('Registration failed:', result.message);
             setErrorMsg(result.message || 'Regsitration failed');
