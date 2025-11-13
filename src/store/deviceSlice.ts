@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { readDeviceType } from '@/contexts/read-Types';
+import { getAuthHeaders } from '@/lib/auth';
 
 // Types for Device Type
 export interface DeviceType {
@@ -71,6 +72,7 @@ interface DeviceState {
   paginationMeta: PaginatedDevicesResponse['meta'] | null;
   loading: boolean;
   error: string | null;
+  lastFetched: number | null; // Timestamp of last successful fetch
 }
 
 // Initial state
@@ -80,28 +82,7 @@ const initialState: DeviceState = {
   paginationMeta: null,
   loading: false,
   error: null,
-};
-
-// Helper to get cookie
-const getCookie = (name: string): string | null => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-};
-
-// Helper to create headers with auth
-const getAuthHeaders = (): HeadersInit => {
-  const token = getCookie('token');
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
+  lastFetched: null,
 };
 
 // Async thunks
@@ -257,6 +238,7 @@ const deviceSlice = createSlice({
         state.loading = false;
         state.devices = action.payload.devices;
         state.paginationMeta = null; // Clear pagination when fetching all
+        state.lastFetched = Date.now(); // Track when data was fetched
       })
       .addCase(fetchAllDevices.rejected, (state, action) => {
         state.loading = false;

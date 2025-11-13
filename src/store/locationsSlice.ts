@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getAuthHeaders } from '@/lib/auth';
 
 // Types for Location
 export interface Location {
@@ -74,6 +75,7 @@ interface LocationState {
   locationTypes: LocationType[];
   loading: boolean;
   error: string | null;
+  lastFetched: number | null; // Timestamp of last successful fetch
 }
 
 // Initial state
@@ -82,28 +84,7 @@ const initialState: LocationState = {
   locationTypes: [],
   loading: false,
   error: null,
-};
-
-// Helper to get cookie
-const getCookie = (name: string): string | null => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-};
-
-// Helper to create headers with auth
-const getAuthHeaders = (): HeadersInit => {
-  const token = getCookie('token');
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
+  lastFetched: null,
 };
 
 // Async thunks
@@ -300,6 +281,7 @@ const locationSlice = createSlice({
       .addCase(fetchLocations.fulfilled, (state, action) => {
         state.loading = false;
         state.locations = action.payload;
+        state.lastFetched = Date.now(); // Track when data was fetched
       })
       .addCase(fetchLocations.rejected, (state, action) => {
         state.loading = false;

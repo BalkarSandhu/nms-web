@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getAuthHeaders } from '@/lib/auth';
 
 // Types for Worker
 export interface Worker {
@@ -87,6 +88,7 @@ interface WorkerState {
   } | null;
   loading: boolean;
   error: string | null;
+  lastFetched: number | null; // Timestamp of last successful fetch
 }
 
 // Initial state
@@ -96,28 +98,7 @@ const initialState: WorkerState = {
   pagination: null,
   loading: false,
   error: null,
-};
-
-// Helper to get cookie
-const getCookie = (name: string): string | null => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-};
-
-// Helper to create headers with auth
-const getAuthHeaders = (): HeadersInit => {
-  const token = getCookie('token');
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
+  lastFetched: null,
 };
 
 // Async thunks
@@ -469,6 +450,7 @@ const workerSlice = createSlice({
           total_count: action.payload.total_count,
           total_pages: action.payload.total_pages,
         };
+        state.lastFetched = Date.now(); // Track when data was fetched
       })
       .addCase(fetchWorkers.rejected, (state, action) => {
         state.loading = false;
