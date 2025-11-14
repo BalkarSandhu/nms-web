@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
@@ -21,6 +21,7 @@ import { NotificationPopUp } from './components/Notifications'
 import {LoadingPage} from './components/loading-screen'
 //-- Contexts 
 import { APIProvider } from './contexts/API-Context'
+import { getAuthToken, clearAuthToken, subscribeToAuthChanges } from '@/lib/auth'
 
 //-- Redux
 // import { useAppDispatch } from '@/store/hooks'
@@ -47,57 +48,43 @@ function App() {
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
 
+  const expiryTimeoutRef = useRef<number | null>(null)
 
-  // Helper function to validate and get token
-  const validateToken = (): string | null => {
-    // If auth bypass is enabled, return a dummy token
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      return 'bypass-token';
+  const clearExpiryTimer = useCallback(() => {
+    if (expiryTimeoutRef.current) {
+      window.clearTimeout(expiryTimeoutRef.current)
+      expiryTimeoutRef.current = null
     }
+  }, [])
 
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; token=`);
-    
-    if (parts.length !== 2) {
-      return null;
-    }
+  const handleTokenInvalid = useCallback(() => {
+    clearAuthToken()
+    setIsAuthenticated(false)
+  }, [])
 
-    const cookieValue = parts.pop()?.split(';').shift() || null;
-    if (!cookieValue) {
-      return null;
-    }
+  const scheduleExpiryTimer = useCallback(
+    (expiresAt?: number | null) => {
+      clearExpiryTimer()
+      if (!expiresAt) return
 
-    try {
-      // JWT format: header.payload.signature
-      const payload = cookieValue.split('.')[1];
-      if (!payload) {
-        // Invalid JWT format, clear cookie
-        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        return null;
+      const bufferMs = 5_000 // proactively expire 5s early
+      const msUntilExpiry = expiresAt - Date.now() - bufferMs
+
+      if (msUntilExpiry <= 0) {
+        handleTokenInvalid()
+        return
       }
 
-      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-      
-      // Check expiration
-      if (decoded.exp && typeof decoded.exp === 'number') {
-        const now = Math.floor(Date.now() / 1000);
-        
-        if (decoded.exp < now) {
-          // Token expired, remove cookie
-          console.log('Token expired, clearing cookie');
-          document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-          return null;
-        }
-      }
-      
-      return cookieValue;
-    } catch (e) {
-      // If parsing fails, treat as invalid/expired
-      console.error('Token validation failed:', e);
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      return null;
+      expiryTimeoutRef.current = window.setTimeout(handleTokenInvalid, msUntilExpiry)
+    },
+    [clearExpiryTimer, handleTokenInvalid]
+  )
+
+  useEffect(() => {
+    return () => {
+      clearExpiryTimer()
     }
-  };
+  }, [clearExpiryTimer])
 
   // (Removed: location types are now fetched in dashboard/page.tsx)
 
@@ -112,13 +99,14 @@ function App() {
         return;
       }
 
-      const token = validateToken();
+      const validToken = getAuthToken();
       
       // If user has a valid token, they're authenticated
-      if (token) {
+      if (validToken) {
         setIsLoading(false);
         setIsInitialized(true);
         setIsAuthenticated(true);
+        scheduleExpiryTimer(validToken.expiresAt ?? null)
         return;
       }
 
@@ -145,7 +133,7 @@ function App() {
     };
 
     checkAuthStatus();
-  }, []);
+  }, [scheduleExpiryTimer]);
 
   // Re-validate token on every route change
   useEffect(() => {
@@ -155,24 +143,78 @@ function App() {
       return;
     }
 
-    // Skip validation on login/register pages
-    const currentPath = location.pathname;
-    if (currentPath === '/login' || currentPath === '/register') {
+    const tokenState = getAuthToken();
+
+    if (!tokenState) {
+      if (isAuthenticated) {
+        setIsAuthenticated(false);
+        clearExpiryTimer();
+      }
       return;
     }
 
-    // Validate token
-    const token = validateToken();
-    
-    if (!token && isAuthenticated) {
-      // Token expired or invalid, update auth state
-      console.log('Token validation failed on route change, redirecting to login');
-      setIsAuthenticated(false);
-    } else if (token && !isAuthenticated) {
-      // Token is valid, update auth state
+    scheduleExpiryTimer(tokenState.expiresAt ?? null);
+
+    if (!isAuthenticated) {
       setIsAuthenticated(true);
     }
-  }, [location.pathname, isAuthenticated]);
+  }, [location.pathname, isAuthenticated, clearExpiryTimer, scheduleExpiryTimer]);
+
+  // Listen for visibility/focus changes to refresh auth state
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+      return;
+    }
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+
+      const tokenState = getAuthToken();
+
+      if (!tokenState) {
+        handleTokenInvalid();
+        clearExpiryTimer();
+        return;
+      }
+
+      scheduleExpiryTimer(tokenState.expiresAt ?? null);
+      if (!isAuthenticated) {
+        setIsAuthenticated(true);
+      }
+    };
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [handleTokenInvalid, clearExpiryTimer, scheduleExpiryTimer, isAuthenticated]);
+
+  // Sync auth updates across tabs/windows
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges((event) => {
+      if (event.type === 'logout') {
+        clearExpiryTimer();
+        setIsAuthenticated(false);
+        return;
+      }
+
+      const tokenState = getAuthToken();
+      if (tokenState) {
+        setIsAuthenticated(true);
+        scheduleExpiryTimer(tokenState.expiresAt ?? null);
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+      clearExpiryTimer();
+    };
+  }, [scheduleExpiryTimer, clearExpiryTimer]);
   
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
