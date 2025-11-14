@@ -2,7 +2,7 @@ export async function addDevice({
   protocol,
   ipAddress,
   deviceTypeId,
-  // checkInterval,
+  checkInterval,
   displayName,
   username,
   password,
@@ -111,7 +111,7 @@ export async function getWorkerTypes(): Promise<{ id: string; hostname: string }
     headers: {
       Authorization: token ? `Bearer ${token}` : "",
     },
-  }); 
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch workers: ${response.statusText}`);

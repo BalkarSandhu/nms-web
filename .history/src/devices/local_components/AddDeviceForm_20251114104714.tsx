@@ -13,6 +13,7 @@ export default function AddDeviceForm() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [area, setArea] = useState("");
   const [device, setDevice] = useState("");
   const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
   const [workerType, setWorkerType] = useState<string>("");
@@ -156,6 +157,7 @@ export default function AddDeviceForm() {
         setDisplayName("");
         setUsername("");
         setPassword("");
+        setArea("");
         setDevice("");
         setLocationName("");
         setCommunity("");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Form, InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
-import { addDevice, getDeviceTypes, getWorkerTypes, getLocations } from './add-device-form';
+import { addDevice, getDeviceTypes, getWorkerTypes } from './add-device-form';
 
 export default function AddDeviceForm() {
   const [open, setOpen] = useState(false);
@@ -13,13 +13,12 @@ export default function AddDeviceForm() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [area, setArea] = useState("");
   const [device, setDevice] = useState("");
   const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
   const [workerType, setWorkerType] = useState<string>("");
   const [workerTypeOptions, setWorkerTypeOptions] = useState<{ id: string; hostname: string }[]>([]);
-  const [locationName, setLocationName] = useState<string>("");
-  const [locationOptions, setLocationOptions] = useState<{ id: number; name: string }[]>([]);
-  const [locationOpen, setLocationOpen] = useState(false);
+  const [locationId, setLocationId] = useState<{id: number; name: string} | null>(null);
   const [deviceTypeOptions, setDeviceTypeOptions] = useState<{ id: number; name: string }[]>([]);
   const [deviceTypeOpen, setDeviceTypeOpen] = useState(false);
   const [workerTypeOpen, setWorkerTypeOpen] = useState(false);
@@ -63,22 +62,6 @@ export default function AddDeviceForm() {
     fetchWorkersTypes();
   }, []);
 
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const locations = await getLocations();
-        setLocationOptions(locations);
-        if (locations.length > 0 && !locationName) {
-          setLocationName(locations[0].name);
-        }
-      } catch (error) {
-        console.error("Error fetching locations:", error);
-        setLocationOptions([]);
-      }
-    };
-    fetchLocations();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus({ message: "Submitting...", type: "info" });
@@ -113,10 +96,6 @@ export default function AddDeviceForm() {
       return;
     }
 
-    // Get location ID from selected location name
-    const selectedLocation = locationOptions.find((l: any) => l.name === locationName);
-    const locationId = selectedLocation ? selectedLocation.id : undefined;
-
     try {
       await addDevice({
         protocol,
@@ -126,7 +105,7 @@ export default function AddDeviceForm() {
         displayName,
         username,
         password,
-        location_id: locationId,
+        location_id: locationId ? locationId.id : undefined,
         device,
         workerId,
         community,
@@ -156,8 +135,8 @@ export default function AddDeviceForm() {
         setDisplayName("");
         setUsername("");
         setPassword("");
+        setArea("");
         setDevice("");
-        setLocationName("");
         setCommunity("");
         setSnmpVersion("2");
         setSnmpAuthProtocol("MD5");
@@ -331,11 +310,11 @@ export default function AddDeviceForm() {
         label="Location"
         placeholder="Select Location"
         type="combobox"
-        comboboxOptions={locationOptions.map((l) => l.name)}
-        stateValue={locationName}
-        stateAction={setLocationName}
-        openState={locationOpen}
-        openStateAction={setLocationOpen}
+        comboboxOptions={workerTypeOptions.map((w) => w.hostname)}
+        stateValue={locationId}
+        stateAction={setLocationId}
+        openState={workerTyp}
+        openStateAction={setWorkerTypeOpen}
       />
       <InputField
         label="Device"

@@ -15,7 +15,7 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
 
@@ -158,14 +158,15 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		})
 		.filter((item) => item !== null);
 
-	// Locations Map Data - Fixed to properly show green/azul/red for online/unknown/offline
+	// Locations Map Data - Fixed to properly show green/yellow/red for online/unknown/offline
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
 		const isUnknown = l.status === 'unknown';
+		const isOffline = l.status === 'offline';
 
 		// Determine color based on status
-		let indicatorColour: 'green' | 'red';
-		let category: 'green' | 'red' | 'azul';
+		let indicatorColour: 'green' | 'yellow' | 'red';
+		let category: 'green' | 'yellow' | 'red';
 		let value: number;
 
 		if (isOnline) {
@@ -173,8 +174,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			category = 'green';
 			value = 100;
 		} else if (isUnknown) {
-			indicatorColour = 'green';
-			category = 'azul';
+			indicatorColour = 'yellow';
+			category = 'yellow';
 			value = 75;
 		} else {
 			indicatorColour = 'red';
@@ -250,14 +251,10 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 					onLocationTypeChange={() => {}}
 					selectedDeviceType="1"
 					onDeviceTypeChange={() => {}}
-					selectedWorker="1"
 					onWorkerChange={() => {}}
-					selectedLocation="1"
-					onLocationChange={() => {}}
-					deviceTypes={[{ value: "1", label: "Device Type A" }, { value: "2", label: "Device Type B" }]}
-					locationTypes={[{ value: "1", label: "Location Type A" }, { value: "2", label: "Location Type B" }]}
-					locations={[{ value: "1", label: "Location A" }, { value: "2", label: "Location B" }]}
-					workers={[{ value: "1", label: "Worker John" }, { value: "2", label: "Worker Jane" }]}
+					locations={[{ id: 1, name: "Location A" }, { id: 2, name: "Location B" }]}
+					devices={[{ id: 1, name: "Device X" }, { id: 2, name: "Device Y" }]}
+					workers={[{ id: 1, name: "Worker John" }, { id: 2, name: "Worker Jane" }]}
 				/>
 			</div>
 			<Section

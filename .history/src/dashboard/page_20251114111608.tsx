@@ -162,6 +162,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
 		const isUnknown = l.status === 'unknown';
+		const isOffline = l.status === 'offline';
 
 		// Determine color based on status
 		let indicatorColour: 'green' | 'red';
