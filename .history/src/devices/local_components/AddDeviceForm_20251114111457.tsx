@@ -156,6 +156,7 @@ export default function AddDeviceForm() {
         setDisplayName("");
         setUsername("");
         setPassword("");
+        setArea("");
         setDevice("");
         setLocationName("");
         setCommunity("");

@@ -158,14 +158,15 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		})
 		.filter((item) => item !== null);
 
-	// Locations Map Data - Fixed to properly show green/azul/red for online/unknown/offline
+	// Locations Map Data - Fixed to properly show green/yellow/red for online/unknown/offline
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
 		const isUnknown = l.status === 'unknown';
+		const isOffline = l.status === 'offline';
 
 		// Determine color based on status
-		let indicatorColour: 'green' | 'red';
-		let category: 'green' | 'red' | 'azul';
+		let indicatorColour: 'green' | 'yellow' | 'red';
+		let category: 'green' | 'yellow' | 'red';
 		let value: number;
 
 		if (isOnline) {
@@ -173,8 +174,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			category = 'green';
 			value = 100;
 		} else if (isUnknown) {
-			indicatorColour = 'green';
-			category = 'azul';
+			indicatorColour = 'yellow';
+			category = 'yellow';
 			value = 75;
 		} else {
 			indicatorColour = 'red';
