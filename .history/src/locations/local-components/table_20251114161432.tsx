@@ -234,11 +234,17 @@ export default function LocationsTable({
                                 <TableCell>{location.type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        location.status === 'online' ? 'bg-green-100 text-green-800' :
-                                        location.status === 'offline' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
+                                        location.status === 'online' 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : location.status === 'offline'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                     }`}>
-                                        {location.status === 'unknown' ? '---' : location.status}
+                                        if (location.status ==='unknown') {
+                                            location.status='---'    
+                                        }
+                                        
+                                        {location.status}
                                     </span>
                                 </TableCell>
                                 <TableCell>{location.project}</TableCell>
