@@ -13,7 +13,7 @@ export const AddLocationForm = () => {
   const [project, setProject] = useState("");
   const [statusI, setStatusI] = useState("");
   const [statusReason, setStatusReason] = useState("");
-  const [workerId, setWorkerId] = useState("");
+  // const [workerId, setWorkerId] = useState("");
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
   const [workerTypeOpen, setWorkerTypeOpen] = useState(false);
   const [parentLocationOpen, setParentLocationOpen] = useState(false);

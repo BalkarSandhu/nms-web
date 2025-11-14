@@ -1,7 +1,7 @@
 // src/components/devices/DeleteDeviceForm.tsx
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Form } from "@/components/form-components";
 import { deleteDevice } from "./delete-device-form";
 
@@ -45,6 +45,7 @@ export const DeleteDeviceForm = ({
       setOpen={setOpen}
       onSubmit={handleSubmit}
       statusMessage={status}
+      trigger={<></>}
     >
     </Form>
   );

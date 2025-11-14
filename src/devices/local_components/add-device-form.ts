@@ -2,7 +2,7 @@ export async function addDevice({
   protocol,
   ipAddress,
   deviceTypeId,
-  checkInterval,
+  // checkInterval,
   displayName,
   username,
   password,

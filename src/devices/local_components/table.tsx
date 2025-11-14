@@ -230,7 +230,6 @@ export default function DevicesTable({
                                 <DevicesModifier
                                     deviceId={device.id}
                                     onEdit={(id) => console.log("Edit device", id)}
-                                    onDelete={(id) => console.log("Delete device", id)}
                                 />
                                 </TableCell>
 

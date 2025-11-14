@@ -1,7 +1,7 @@
 // src/components/locations/DeleteLocationConfirm.tsx
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Form } from "@/components/form-components";
 import { deleteLocation } from "./delete-location-form";
 
@@ -45,6 +45,7 @@ export const DeleteLocationForm = ({
       setOpen={setOpen}
       onSubmit={handleDelete}
       statusMessage={status}
+      trigger={<></>}
     >
       <p className="text-gray-700 mb-4">
         Are you sure you want to delete this location? This action cannot be undone.

@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  Command,
-  GalleryVerticalEnd,
+  // AudioWaveform,
+  // Command,
+  // GalleryVerticalEnd,
   Network,
   LayoutDashboard,
   Smartphone,

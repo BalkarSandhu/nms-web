@@ -1,6 +1,7 @@
+// import React from "react";
 // src/components/locations/LocationModifier.tsx
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { EllipsisVertical, SquarePen, Trash2 } from "lucide-react";
 import {
   Popover,

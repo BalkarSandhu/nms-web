@@ -34,7 +34,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
     const worker = workers.find(w => w.id === workerId);
     if (!worker) return null;
 
-    const workerDevices = devices.filter(device => (device as any).worker_id === workerId);
+    const workerDevices = devices.filter(device => device.worker_id === workerId);
     const onlineDevices = workerDevices.filter(d => d.status === true);
     const offlineDevices = workerDevices.filter(d => d.status === false);
 
