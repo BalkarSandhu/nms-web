@@ -4,6 +4,9 @@ import { useEffect } from 'react';
 import Section from "./local-components/Section";
 import Filters from "./local-components/Filters";
 
+// import { useAPIs } from "@/contexts/API-Context"
+// import type { ApiContextType } from "@/contexts/API-Context"
+
 // Redux imports
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
@@ -44,6 +47,9 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	const activeLocations = reduxLocations;
 	const activeWorkers = reduxWorkers;
 
+	// Note: Removed blocking loading check to allow UI to render immediately
+	// Data will populate as API calls complete in parallel
+
 	// Helper function to calculate downtime in hours
 	const calculateDowntime = (updatedAt: string): number => {
 		const now = new Date();
@@ -67,7 +73,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	
 	const deviceMetrics = {
 		low: onlineDevices.length, // Online (green)
-		medium: 0, // Not used
+		medium: 0, // Not used (keep empty as per requirements)
 		high: offlineDevices.length // Offline (red)
 	};
 
@@ -83,19 +89,18 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.sort((a, b) => b.downtime - a.downtime)
 		.slice(0, 10);
 
-	// LOCATIONS METRICS - Fixed to handle unknown, online, and offline
+	// LOCATIONS METRICS
 	const onlineLocations = activeLocations.filter(l => l.status === 'online');
-	const unknownLocations = activeLocations.filter(l => l.status === 'unknown');
 	const offlineLocations = activeLocations.filter(l => l.status === 'offline');
 	
 	const locationMetrics = {
 		low: onlineLocations.length, // Online (green)
-		medium: unknownLocations.length, // Unknown (yellow)
+		medium: 0, // Not used (keep empty)
 		high: offlineLocations.length // Offline (red)
 	};
 
-	// Locations with longest downtime (combine offline and unknown)
-	const locationDowntimeData = [...offlineLocations, ...unknownLocations]
+	// Locations with longest downtime
+	const locationDowntimeData = offlineLocations
 		.map(l => ({
 			id: l.id,
 			col1: l.name,
@@ -112,7 +117,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
-		medium: 0, // Not used
+		medium: 0, // Not used (keep empty)
 		high: offlineWorkersList.length // Offline (red)
 	};
 
@@ -158,55 +163,30 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		})
 		.filter((item) => item !== null);
 
-	// Locations Map Data - Fixed to properly show green/yellow/red for online/unknown/offline
+	// Locations Map Data - show locations with circles (green for online, red for offline)
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
-		const isUnknown = l.status === 'unknown';
-		const isOffline = l.status === 'offline';
-
-		// Determine color based on status
-		let indicatorColour: 'green' | 'yellow' | 'red';
-		let category: 'green' | 'yellow' | 'red';
-		let value: number;
-
-		if (isOnline) {
-			indicatorColour = 'green';
-			category = 'green';
-			value = 100;
-		} else if (isUnknown) {
-			indicatorColour = 'yellow';
-			category = 'yellow';
-			value = 75;
-		} else {
-			indicatorColour = 'red';
-			category = 'red';
-			value = 50;
-		}
-
+		const unknown
 		return {
 			id: `location-${l.id}`,
 			name: l.name,
 			coordinates: [l.lng, l.lat] as [number, number],
-			value: value,
-			category: category,
+			value: isOnline ? 100 : 50,
+			category: isOnline ? ('green' as const) : ('red' as const),
 			popupData: {
-				indicatorColour: indicatorColour,
+				indicatorColour: isOnline ? ('green' as const) : ('red' as const),
 				headerLeft: { field: 'Location', value: l.name },
 				headerRight: { field: 'Project', value: l.project },
 				sideLabel: { field: 'Area', value: l.area },
 				data: [
-					{ 
-						field: 'Status', 
-						value: l.status.charAt(0).toUpperCase() + l.status.slice(1), 
-						colour: indicatorColour
-					},
+					{ field: 'Status', value: l.status, colour: isOnline ? ('green' as const) : ('red' as const) },
 					{ field: 'Type', value: l.location_type_id.toString(), colour: 'blue' as const },
 				]
 			}
 		};
 	});
 
-	// Workers Map Data - show workers on map
+	// Workers Map Data - show workers on map, use associated location lat/lng if worker doesn't have coordinates
 	const workersMapData = activeWorkers
 		.map(w => {
 			// Placeholder: Use first location - in real implementation, you'd look up worker's assigned location
@@ -251,6 +231,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 					onLocationTypeChange={() => {}}
 					selectedDeviceType="1"
 					onDeviceTypeChange={() => {}}
+					// selectedWorker={1}
 					onWorkerChange={() => {}}
 					locations={[{ id: 1, name: "Location A" }, { id: 2, name: "Location B" }]}
 					devices={[{ id: 1, name: "Device X" }, { id: 2, name: "Device Y" }]}
@@ -280,7 +261,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: deviceDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined
+					metric3: undefined // Keep linear gauge empty as per requirements
 				}}
 			/>
 			<Section
@@ -292,7 +273,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: locationMetrics,
 						labels: {
 							low: "Online",
-							medium: "Unknown",
+							medium: "",
 							high: "Offline"
 						},
 						showLabels: true
@@ -306,7 +287,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: locationDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined
+					metric3: undefined // Keep linear gauge empty
 				}}
 			/>
 			<Section
@@ -332,7 +313,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: workerDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined
+					metric3: undefined // Keep gauge empty
 				}}
 			/>
 		</div>

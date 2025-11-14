@@ -127,34 +127,21 @@ export async function getWorkerTypes(): Promise<{ id: string; hostname: string }
 
 export async function getLocations(): Promise<{ id: number; name: string }[]> {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
-
   const token = getCookie("token");
-
   const response = await fetch(url, {
     headers: {
       Authorization: token ? `Bearer ${token}` : "",
     },
   });
-
   if (!response.ok) {
     throw new Error(`Failed to fetch locations: ${response.statusText}`);
   }
-
   const data = await response.json();
-
-  // Assuming the API returns an array directly like your JSON example
-  // If it's wrapped in an object like { locations: [...] }, adjust accordingly
-  return Array.isArray(data) 
-    ? data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-      }))
-    : data.locations?.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-      })) || [];
+  return data.locations.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+  }));
 }
-
 
 
 function getCookie(name: string): string | null {
