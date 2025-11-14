@@ -120,11 +120,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavUser() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { state } = useSidebar()
 
   const handleLogout = () => {
     dispatch(logout())
@@ -138,9 +140,12 @@ export function NavUser() {
           size="lg"
           className="hover:bg-(--red) hover:scale-105 text-(--contrast) transition-all duration-300 cursor-pointer group"
           onClick={handleLogout}
+          title="Log out"
         >
           <LogOut className="text-(--red) group-hover:text-(--contrast) transition-colors duration-300" />
-          <span className="font-semibold group-hover:text-(--contrast)">Log out</span>
+          {state === 'expanded' && (
+            <span className="font-semibold group-hover:text-(--contrast)">Log out</span>
+          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
