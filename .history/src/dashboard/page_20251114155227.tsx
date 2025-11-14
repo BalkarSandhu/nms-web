@@ -137,7 +137,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.slice(0, 10);
 
 	// Context-aware navigation callbacks for each section
-	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
+	const handleDeviceStatusClick = (status: 'online' | 'offline') => {
 		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
 	};
 
@@ -146,7 +146,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	};
 
 	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+		navigate(`/workers?status=${status === 'online' ? 'active' : 'offline'}`);
 	};
 	
 

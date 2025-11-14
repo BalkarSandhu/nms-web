@@ -197,8 +197,8 @@ export default function Metric1({
                 )}
                 {labels.medium && (
                     <div className="flex items-center gap-1">
-                        <button onClick={() => onStatusClick?.('unknown')} className="w-3 h-3 rounded-full bg-(--azul)" aria-label="Unknown status" />
-                        <button onClick={() => onStatusClick?.('unknown')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.medium}: {data.medium}</button>
+                        <span className="w-3 h-3 rounded-full bg-(--azul)" ></span>
+                        <span className="text-(--contrast) text-[10px]">{labels.medium}: {data.medium}</span>
                     </div>
                 )}
                 {labels.high && (

@@ -3,6 +3,7 @@ import BaseCard from "./Base-Card";
 import "@/index.css";
 import { useEffect, useRef } from "react";
 import * as echarts from "echarts";
+import { useNavigate } from 'react-router-dom';
 
 import { MenuGroupType } from "./Base-Card";
 
@@ -26,7 +27,7 @@ export interface Metric1Props {
     chartClassName?: string;
     showLabels?: boolean;
     menuGroups?: MenuGroupType[]; // Match BaseCard's menu structure
-    onStatusClick?: (status: 'online' | 'offline' | 'unknown') => void; // Context-aware navigation callback
+    onStatusClick?: (status: 'online' | 'offline') => void; // Context-aware navigation callback
 }
 
 export default function Metric1({ 
@@ -36,10 +37,10 @@ export default function Metric1({
     className = "",
     chartClassName = "",
     showLabels = true,
-    menuGroups,
-    onStatusClick
+    menuGroups
 }: Metric1Props) {
     const chartRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     const resolvedMenuGroups = menuGroups ?? [
         {
@@ -139,21 +140,19 @@ export default function Metric1({
         };
 
         chart.setOption(option);
-        // Navigate on slice click using context-aware callback
+        // Navigate on slice click
         const handleChartClick = (params: any) => {
             const name = (params && params.name) ? String(params.name).toLowerCase() : '';
             if (name.includes('online')) {
-                onStatusClick?.('online');
+                navigate('/devices?status=online');
                 return;
             }
             if (name.includes('offline')) {
-                onStatusClick?.('offline');
+                navigate('/devices?status=offline');
                 return;
             }
-            if (name.includes('unknown')) {
-                onStatusClick?.('unknown');
-                return;
-            }
+            // Fallback
+            navigate('/devices');
         };
 
         chart.on('click', handleChartClick);
@@ -180,7 +179,7 @@ export default function Metric1({
             chart.off('click');
             chart.dispose();
         };
-    }, [data, labels, showLabels, onStatusClick]);
+    }, [data, labels, showLabels, navigate]);
 
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
@@ -191,20 +190,20 @@ export default function Metric1({
             <div id="LegendContainer" className=" w-full flex justify-center gap-4">
                 {labels.low && (
                     <div className="flex items-center gap-1">
-                        <button onClick={() => onStatusClick?.('online')} className="w-3 h-3 rounded-full bg-(--green)" aria-label="Online devices" />
-                        <button onClick={() => onStatusClick?.('online')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.low}: {data.low}</button>
+                        <button onClick={() => navigate('/devices?status=online')} className="w-3 h-3 rounded-full bg-(--green)" aria-label="Online devices" />
+                        <button onClick={() => navigate('/devices?status=online')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.low}: {data.low}</button>
                     </div>
                 )}
                 {labels.medium && (
                     <div className="flex items-center gap-1">
-                        <button onClick={() => onStatusClick?.('unknown')} className="w-3 h-3 rounded-full bg-(--azul)" aria-label="Unknown status" />
-                        <button onClick={() => onStatusClick?.('unknown')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.medium}: {data.medium}</button>
+                        <span className="w-3 h-3 rounded-full bg-(--azul)" ></span>
+                        <span className="text-(--contrast) text-[10px]">{labels.medium}: {data.medium}</span>
                     </div>
                 )}
                 {labels.high && (
                     <div className="flex items-center gap-1">
-                        <button onClick={() => onStatusClick?.('offline')} className="w-3 h-3 rounded-full bg-(--red)" aria-label="Offline devices" />
-                        <button onClick={() => onStatusClick?.('offline')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.high}: {data.high}</button>
+                        <button onClick={() => navigate('/devices?status=offline')} className="w-3 h-3 rounded-full bg-(--red)" aria-label="Offline devices" />
+                        <button onClick={() => navigate('/devices?status=offline')} className="text-(--contrast) text-[10px]" style={{background:'transparent',border:0,padding:0,marginLeft:6}}>{labels.high}: {data.high}</button>
                     </div>
                 )}
             </div>

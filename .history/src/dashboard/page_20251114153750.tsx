@@ -115,8 +115,8 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.slice(0, 10);
 
 	// WORKERS METRICS
-	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
-	const offlineWorkersList = activeWorkers.filter(w => w.status === 'OFFLINE' || w.status !== 'ONLINE');
+	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'online' || w.status === 'active');
+	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'online');
 	
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
@@ -137,18 +137,17 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.slice(0, 10);
 
 	// Context-aware navigation callbacks for each section
-	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
+	const handleDeviceStatusClick = (status: 'online' | 'offline') => {
 		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
 	};
 
-	const handleLocationStatusClick = (status: 'online' | 'offline'| 'unknown') => {
-		navigate(`/locations?status=${encodeURIComponent(status)}`);
+	const handleLocationStatusClick = (status: 'online' | 'offline'|) => {
+		navigate(`/locations?status=${status === 'online' ? 'online' : 'unknown'}`);
 	};
 
-	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+	const handleWorkerStatusClick = (status: 'online' | 'offline') => {
+		navigate(`/workers?status=${status === 'online' ? 'active' : 'offline'}`);
 	};
-	
 
 	// MAP DATA PREPARATION
 	// Devices Map Data - show devices on map with green for online, red for offline
@@ -234,7 +233,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 			
 			if (!workerLocation) return null;
 
-			const isOnline = w.status === 'ONLINE' || w.status === 'active';
+			const isOnline = w.status === 'online' || w.status === 'active';
 			return {
 				id: `worker-${w.id}`,
 				name: w.hostname,
@@ -347,7 +346,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						labels: {
 							low: "ONLINE",
 							medium: "",
-							high: "OFFLINE"
+							high: "Offline"
 						},
 						showLabels: true,
 						onStatusClick: handleWorkerStatusClick

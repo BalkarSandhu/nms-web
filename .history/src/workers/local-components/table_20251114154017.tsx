@@ -21,39 +21,7 @@ export default function WorkersTable({ onRowClick, selectedWorkerId }: WorkersTa
     const { workers } = useAppSelector(state => state.workers);
     const { devices } = useAppSelector(state => state.devices);
     
-    const [filters, setFilters] = useState<Record<string, string>>(() => {
-        // Initialize from the URL
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const statusParam = params.get('status');
-            const init: Record<string, string> = {};
-            if (statusParam) {
-                const normalized = String(statusParam).toLowerCase();
-                init.status = normalized;
-            }
-            return init;
-        } catch (e) {
-            return {};
-        }
-    });
-
-    // React to changes in the search params (client navigation)
-    const [searchParams] = useSearchParams();
-
-    useEffect(() => {
-        const statusParam = searchParams.get('status');
-        if (statusParam) {
-            const normalized = String(statusParam).toLowerCase();
-            setFilters(prev => ({ ...prev, status: normalized }));
-        } else {
-            // If param removed, clear the status filter
-            setFilters(prev => {
-                const copy = { ...prev };
-                delete copy.status;
-                return copy;
-            });
-        }
-    }, [searchParams]);
+    const [filters, setFilters] = useState<Record<string, string>>({});
 
     // Create enriched workers with device count
     const enrichedWorkers = useMemo((): EnrichedWorker[] => {

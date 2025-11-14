@@ -146,7 +146,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	};
 
 	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+		navigate(`/workers?status=${status === 'online' ? 'active' : 'offline'}`);
 	};
 	
 

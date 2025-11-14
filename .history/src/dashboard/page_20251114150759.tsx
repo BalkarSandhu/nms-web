@@ -1,12 +1,8 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 //--local-components
 import Section from "./local-components/Section";
 import Filters from "./local-components/Filters";
-
-// import { useAPIs } from "@/contexts/API-Context"
-// import type { ApiContextType } from "@/contexts/API-Context"
 
 // Redux imports
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -19,10 +15,9 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
-	const navigate = useNavigate();
 
 	// Get data from Redux store
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
@@ -49,9 +44,6 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	const activeLocations = reduxLocations;
 	const activeWorkers = reduxWorkers;
 
-	// Note: Removed blocking loading check to allow UI to render immediately
-	// Data will populate as API calls complete in parallel
-
 	// Helper function to calculate downtime in hours
 	const calculateDowntime = (updatedAt: string): number => {
 		const now = new Date();
@@ -75,7 +67,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 	
 	const deviceMetrics = {
 		low: onlineDevices.length, // Online (green)
-		medium: 0, // Not used (keep empty as per requirements)
+		medium: 0, // Not used
 		high: offlineDevices.length // Offline (red)
 	};
 
@@ -91,18 +83,18 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.sort((a, b) => b.downtime - a.downtime)
 		.slice(0, 10);
 
-	// LOCATIONS METRICS
+	// LOCATIONS METRICS - Fixed to handle unknown, online, and offline
 	const onlineLocations = activeLocations.filter(l => l.status === 'online');
 	const unknownLocations = activeLocations.filter(l => l.status === 'unknown');
 	const offlineLocations = activeLocations.filter(l => l.status === 'offline');
 	
 	const locationMetrics = {
 		low: onlineLocations.length, // Online (green)
-		medium: unknownLocations.length, // Not used (keep empty)
+		medium: unknownLocations.length, // Unknown (yellow)
 		high: offlineLocations.length // Offline (red)
 	};
 
-	// Locations with longest downtime
+	// Locations with longest downtime (combine offline and unknown)
 	const locationDowntimeData = [...offlineLocations, ...unknownLocations]
 		.map(l => ({
 			id: l.id,
@@ -116,11 +108,11 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 
 	// WORKERS METRICS
 	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
-	const offlineWorkersList = activeWorkers.filter(w => w.status === 'OFFLINE' || w.status !== 'ONLINE');
+	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'ONLINE');
 	
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
-		medium: 0, // Not used (keep empty)
+		medium: 0, // Not used
 		high: offlineWorkersList.length // Offline (red)
 	};
 
@@ -136,54 +128,50 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		.sort((a, b) => b.downtime - a.downtime)
 		.slice(0, 10);
 
-	// Context-aware navigation callbacks for each section
-	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
-	};
-
-	const handleLocationStatusClick = (status: 'online' | 'offline'| 'unknown') => {
-		navigate(`/locations?status=${encodeURIComponent(status)}`);
-	};
-
-	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
-	};
-	
-
 	// MAP DATA PREPARATION
 	// Devices Map Data - show devices on map with green for online, red for offline
 	const devicesMapData = activeDevices
-		.map(d => {
-			// Find the location for this device
-			const location = activeLocations.find(l => l.id === d.location_id);
-			if (!location) return null;
+  .map(d => {
+	const location = activeLocations.find(l => l.id === d.location_id);
+	if (!location) return null;
 
-			const isOnline = d.status;
-			return {
-				id: `device-${d.id}`,
-				name: d.display || d.hostname,
-				coordinates: [location.lng, location.lat] as [number, number],
-				value: isOnline ? 100 : 50,
-				category: isOnline ? ('green' as const) : ('red' as const),
-				popupData: {
-					indicatorColour: isOnline ? ('green' as const) : ('red' as const),
-					headerLeft: { field: 'Device', value: d.display || d.hostname },
-					headerRight: { field: 'IP', value: d.ip },
-					sideLabel: { field: 'Status', value: isOnline ? 'Online' : 'Offline' },
-					data: [
-						{ field: 'Location', value: location.name, colour: 'white' as const },
-						{ field: 'Last Ping', value: new Date(d.last_ping).toLocaleString(), colour: 'blue' as const },
-						{ field: 'Failures', value: d.consecutive_failures.toString(), colour: d.consecutive_failures > 0 ? ('red' as const) : ('green' as const) },
-					]
-				}
-			};
-		})
-		.filter((item) => item !== null);
+	const isOnline = d.status;
 
-	// Locations Map Data - show locations with circles (green for online, red for offline)
+	return {
+	  id: `device-${d.id}`,
+	  name: d.display || d.hostname,
+	  coordinates: [location.lng, location.lat] as [number, number],
+	  value: isOnline ? 100 : 50,
+	  category: isOnline ? ('green' as const) : ('red' as const),
+	  status: isOnline ? "online" : "offline",
+
+	  // 👉 NEW: onClick callback info
+	  onClickNavigate: {
+		status: isOnline ? "online" : "offline"
+	  },
+
+	  popupData: {
+		indicatorColour: isOnline ? ('green' as const) : ('red' as const),
+		headerLeft: { field: 'Device', value: d.display || d.hostname },
+		headerRight: { field: 'IP', value: d.ip },
+		sideLabel: { field: 'Status', value: isOnline ? 'Online' : 'Offline' },
+		data: [
+		  { field: 'Location', value: location.name, colour: 'white' as const },
+		  { field: 'Last Ping', value: new Date(d.last_ping).toLocaleString(), colour: 'blue' as const },
+		  { field: 'Failures', value: d.consecutive_failures.toString(), colour: d.consecutive_failures > 0 ? ('red' as const) : ('green' as const) },
+		]
+	  }
+	};
+  })
+  .filter(item => item !== null);
+
+
+	// Locations Map Data - Fixed to properly show green/azul/red for online/unknown/offline
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
-		const isUnknown=l.status==='unknown';
+		const isUnknown = l.status === 'unknown';
+
+		// Determine color based on status
 		let indicatorColour: 'green' | 'red';
 		let category: 'green' | 'red' | 'azul';
 		let value: number;
@@ -201,14 +189,13 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 			category = 'red';
 			value = 50;
 		}
+
 		return {
 			id: `location-${l.id}`,
 			name: l.name,
 			coordinates: [l.lng, l.lat] as [number, number],
 			value: value,
 			category: category,
-
-
 			popupData: {
 				indicatorColour: indicatorColour,
 				headerLeft: { field: 'Location', value: l.name },
@@ -226,7 +213,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 		};
 	});
 
-	// Workers Map Data - show workers on map, use associated location lat/lng if worker doesn't have coordinates
+	// Workers Map Data - show workers on map
 	const workersMapData = activeWorkers
 		.map(w => {
 			// Placeholder: Use first location - in real implementation, you'd look up worker's assigned location
@@ -234,7 +221,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 			
 			if (!workerLocation) return null;
 
-			const isOnline = w.status === 'ONLINE' || w.status === 'active';
+			const isOnline = w.status === 'online' || w.status === 'active';
 			return {
 				id: `worker-${w.id}`,
 				name: w.hostname,
@@ -278,10 +265,8 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 					deviceTypes={[{ value: "1", label: "Device Type A" }, { value: "2", label: "Device Type B" }]}
 					locationTypes={[{ value: "1", label: "Location Type A" }, { value: "2", label: "Location Type B" }]}
 					locations={[{ value: "1", label: "Location A" }, { value: "2", label: "Location B" }]}
-					
 					workers={[{ value: "1", label: "Worker John" }, { value: "2", label: "Worker Jane" }]}
 				/>
-				
 			</div>
 			<Section
 				title="Devices"
@@ -295,8 +280,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 							medium: "",
 							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleDeviceStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",
@@ -307,7 +291,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: deviceDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined // Keep linear gauge empty as per requirements
+					metric3: undefined
 				}}
 			/>
 			<Section
@@ -322,8 +306,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 							medium: "Unknown",
 							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleLocationStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",
@@ -334,7 +317,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: locationDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined // Keep linear gauge empty
+					metric3: undefined
 				}}
 			/>
 			<Section
@@ -347,10 +330,9 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						labels: {
 							low: "ONLINE",
 							medium: "",
-							high: "OFFLINE"
+							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleWorkerStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",
@@ -361,7 +343,7 @@ export default function Dashboard({ isButtonClicked, setIsButtonClicked }: Dashb
 						data: workerDowntimeData,
 						maxRows: 5
 					},
-					metric3: undefined // Keep gauge empty
+					metric3: undefined
 				}}
 			/>
 		</div>
