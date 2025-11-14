@@ -107,8 +107,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.slice(0, 10);
 
 	// WORKERS METRICS
-	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'online' || w.status === 'active');
-	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'online');
+	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
+	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'ONLINE');
 	
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
@@ -320,7 +320,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						title: "Worker Status",
 						data: workerMetrics,
 						labels: {
-							low: "Active",
+							low: "ONLINE",
 							medium: "",
 							high: "Offline"
 						},

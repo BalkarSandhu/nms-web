@@ -3,14 +3,14 @@ import json
 import csv
 
 header = {
-    "Authorization": "Bearer nms_d4a8be55b70fb6a5ce1179b3f17398f09842791c4fa7baeeb38365b586c13f43"
-}
+    "Authorization": "Bearer nms_e7e8d458a5370f12a62121dddf6e9e27ac8fb937ddc77953e45d4582366a4c61"
+    }
 
 
 device_types = {
-    "BULLET":1,
-    "DOME": 2,
-    "PTZ": 3,
+    "BULLET":2,
+    "DOME": 3,
+    "PTZ": 4,
   }
 
 ##-- map location
@@ -59,7 +59,7 @@ with open("cameras.csv", "r") as file:
 
         try:
             response = requests.post(
-                "http://103.208.173.228:8000/api/v1/devices",
+                "http://192.168.29.77:8000/api/v1/devices",
                 headers=header,
                 json={
                 "attributes": {
@@ -75,7 +75,8 @@ with open("cameras.csv", "r") as file:
                 "hostname": row["ip"],
                 "ip": row["ip"],
                 "location_id": location_id,
-                "protocol": "ICMP"
+                "protocol": "ICMP",
+                "worker_id": "bs-f4289d02b815"
                 })
            
             response.raise_for_status()

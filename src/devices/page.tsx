@@ -37,7 +37,7 @@ export default function DevicesPage() {
     return (
         <div className="flex h-full p-2 w-full bg-(--contrast) gap-2 ">
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden p-2">
+            <div className="flex-1 flex flex-col overflow-hidden p-2 w-8/10">
                 <Header />
                 <DevicesTable 
                     onRowClick={(deviceId: number) => setSelectedDeviceId(deviceId)}

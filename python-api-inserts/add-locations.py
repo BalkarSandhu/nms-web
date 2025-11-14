@@ -3,22 +3,23 @@ import json
 import csv
 
 header = {
-    "Authorization": "Bearer nms_d4a8be55b70fb6a5ce1179b3f17398f09842791c4fa7baeeb38365b586c13f43"
-}
+    "Authorization": "Bearer nms_e7e8d458a5370f12a62121dddf6e9e27ac8fb937ddc77953e45d4582366a4c61"
+    }
 
-with open("locations.csv", "r") as file:
+with open("./locations.csv", "r") as file:
     data = csv.DictReader(file)
     for row in data:
         try:
             response = requests.post(
-                "http://103.208.173.228:8000/api/v1/locations",
+                "http://192.168.29.77:8000/api/v1/locations",
                 headers=header,
                 json={
                     "area": "BLOCK II",
                     "lat": float(row["lat"]),
                     "lng": float(row["long"]),
-                    "location": row["name"],
-                    "location_type_id": int(row["type"])
+                    "name": row["name"],
+                    "location_type_id": int(row["type"]),
+                    "worker_id": "bs-f4289d02b815"
                 }
             )
             response.raise_for_status()

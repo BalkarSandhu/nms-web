@@ -303,15 +303,16 @@ function App() {
   }
 
   return (
-    <div className="w-full h-full">
+    <div className="flex min-h-screen w-full overflow-hidden bg-(--dark)">
 
 
       {useLayout ? (
         <APIProvider>
-          <SidebarProvider defaultOpen>
+          <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
             <AppSidebar />
-            <SidebarInset className="p-0 m-0">
-              <header className="flex sticky top-0 z-100 bg-(--dark) h-12 shrink-0 items-center gap-2 border-none \
+            <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
+              <div className="flex h-full w-full flex-col overflow-hidden">
+                <header className="flex sticky top-0 z-100 bg-(--dark) h-12 shrink-0 items-center gap-2 border-none \
         transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12\
         rounded-t-5 w-full">
                 <div className="flex items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
@@ -360,28 +361,33 @@ function App() {
               </header>
 
 
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/devices" element={<DevicesPage />} />
-                <Route path="/locations" element={<LocationsPage />} />
-                <Route path="/workers" element={<WorkersPage />} />
-                <Route path="/field-technicians" element={<WorkersPage />} />
-              </Routes>
+              <div className="flex-1 min-w-0 overflow-x-auto">
+                <Routes>
+                  <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/devices" element={<DevicesPage />} />
+                  <Route path="/locations" element={<LocationsPage />} />
+                  <Route path="/workers" element={<WorkersPage />} />
+                  <Route path="/field-technicians" element={<WorkersPage />} />
+                </Routes>
+              </div>
+              </div>
             </SidebarInset>
           </SidebarProvider>
         </APIProvider>
       ) : (
-        <Routes>
-          <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/locations" element={<LocationsPage />} />
-          <Route path="/workers" element={<WorkersPage />} />
-          <Route path="/field-technicians" element={<WorkersPage />} />
-        </Routes>
+        <div className="flex-1 min-w-0 overflow-x-auto">
+          <Routes>
+            <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/locations" element={<LocationsPage />} />
+            <Route path="/workers" element={<WorkersPage />} />
+            <Route path="/field-technicians" element={<WorkersPage />} />
+          </Routes>
+        </div>
       )}
     </div>
   )
