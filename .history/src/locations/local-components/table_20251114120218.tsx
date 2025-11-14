@@ -49,12 +49,12 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
     const { locations, locationTypes } = useAppSelector(state => state.locations);
     const { workers } = useAppSelector(state => state.workers);
     const { devices } = useAppSelector(state => state.devices);
-    
+
 
     return useMemo(() => {
         return locations.map((location) => {
             // Find location type name
-            const locationType = locationTypes.find(lt => lt.id === location.location_type_id);
+            const locationType = locationTypes.find(lt => lt.id === locationType.name);
             const type_name = locationType?.name || locationType?.location_type || 'Unknown';
 
             // Find worker hostname (check if worker_id exists on location)
@@ -198,7 +198,7 @@ export default function LocationsTable({
                             >
                                 <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell className="font-medium">{location.name}</TableCell>
-                                <TableCell>{location.type_name}</TableCell>
+                                <TableCell>{location.location_type_id}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                         location.status === 'online' 
@@ -213,7 +213,7 @@ export default function LocationsTable({
                                 <TableCell>{location.project}</TableCell>
                                 <TableCell>{location.area}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {location.worker_hostname|| 'N/A'}
+                                    {location.worker_id || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end text-xs">

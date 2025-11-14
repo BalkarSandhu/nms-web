@@ -213,7 +213,7 @@ export default function LocationsTable({
                                 <TableCell>{location.project}</TableCell>
                                 <TableCell>{location.area}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {location.worker_hostname|| 'N/A'}
+                                    {location.worker_id || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end text-xs">
