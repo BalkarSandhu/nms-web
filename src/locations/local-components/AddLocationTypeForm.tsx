@@ -35,9 +35,6 @@ export const AddLocationTypeForm = () => {
             setTimeout(() => {
                 setStatus(undefined);
                 setName("");
-                setLocationType("");
-                setParentLocation("");
-                setArea("");
             }, 500);
         }, 2000);
     };

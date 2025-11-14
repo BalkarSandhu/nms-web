@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import {
     Popover,
     PopoverContent,
@@ -7,7 +7,7 @@ import {
 
 
 //-- Lucide Icons
-import { Plus, Sheet, Search } from 'lucide-react';
+import { Plus, Sheet } from 'lucide-react';
 
 //-- Local Components
 import { AddLocationForm } from './AddLocationForm';

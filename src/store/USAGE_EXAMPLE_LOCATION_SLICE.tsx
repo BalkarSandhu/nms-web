@@ -9,7 +9,7 @@ import {
   fetchLocationsCount,
   fetchLocationTypes,
   createLocationType,
-  fetchLocationById,
+  // fetchLocationById,
   deleteLocationType,
   deleteLocation,
   type CreateLocationPayload,
@@ -73,10 +73,10 @@ export function ExampleLocationComponent() {
   };
 
   // Example: Fetch a specific location by ID
-  const handleFetchLocationById = async (locationId: number) => {
-    await dispatch(fetchLocationById(locationId));
-    // Location is added/updated in store
-  };
+  // const handleFetchLocationById = async (locationId: number) => {
+  //   await dispatch(fetchLocationById(locationId));
+  //   // Location is added/updated in store
+  // };
 
   // Example: Delete a location
   const handleDeleteLocation = async (locationId: number) => {

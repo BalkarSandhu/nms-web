@@ -8,7 +8,7 @@ import PopOverContent, { type FilterLink } from './hover-over-popup';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // Register PMTiles protocol
-let protocol = new Protocol();
+const protocol = new Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
 // Popup data structure matching hover-over-popup.tsx

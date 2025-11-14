@@ -2,7 +2,7 @@ export async function updateDeviceType({
   id,
   name,
 }: {
-  id: number;
+  id: string;
   name: string;
 }) {
   const url = `${import.meta.env.VITE_NMS_HOST}/devices/types/${id}`;

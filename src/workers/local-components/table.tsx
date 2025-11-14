@@ -25,7 +25,7 @@ export default function WorkersTable({ onRowClick, selectedWorkerId }: WorkersTa
     // Create enriched workers with device count
     const enrichedWorkers = useMemo((): EnrichedWorker[] => {
         return workers.map(worker => {
-            const workerDevices = devices.filter(d => (d as any).worker_id === worker.id);
+            const workerDevices = devices.filter(d => d.worker_id === worker.id);
             const deviceCount = workerDevices.length;
             const utilizationPercent = worker.max_devices > 0 
                 ? Math.round((deviceCount / worker.max_devices) * 100)
