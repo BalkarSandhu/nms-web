@@ -1,6 +1,6 @@
 // src/components/devices/devices-modifier.tsx
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { EllipsisVertical, SquarePen, Trash2 } from "lucide-react";
 import {
   Popover,
@@ -15,14 +15,14 @@ type DevicesModifierProps = {
   onEdit?: (deviceId: number) => void;
 };
 
-export default function DevicesModifier({ deviceId, onEdit }: DevicesModifierProps) {
+export default function DevicesModifier({ deviceId }: DevicesModifierProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen,setEditOpen]=useState(false);
 
-  const handleEdit = () => {
-    console.log("Edit device:", deviceId);
-    onEdit?.(deviceId);
-  };
+  // const handleEdit = () => {
+  //   console.log("Edit device:", deviceId);
+  //   onEdit?.(deviceId);
+  // };
 
   const handleDelete = () => {
     setDeleteOpen(true);

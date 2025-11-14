@@ -1,7 +1,7 @@
 // src/components/devices/EditDeviceForm.tsx
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Form, InputField } from "@/components/form-components";
 import { editDevice } from "./edit-device-form";
 
@@ -105,6 +105,7 @@ export const EditDeviceForm = ({
       setOpen={setOpen}
       onSubmit={handleSubmit}
       statusMessage={status}
+      trigger={<></>}
     >
       <InputField
         label="Select Field"

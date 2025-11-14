@@ -1,7 +1,7 @@
 // src/components/locations/EditLocationForm.tsx
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Form, InputField } from "@/components/form-components";
 import { editLocation } from "./edit-location-form";
 import { useAppSelector } from "@/store/hooks";
@@ -76,6 +76,7 @@ export const EditLocationForm = ({
       setOpen={setOpen}
       onSubmit={handleSubmit}
       statusMessage={status}
+      trigger={<></>}
     >
       <InputField
         label="Select Field"
