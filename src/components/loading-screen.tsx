@@ -1,5 +1,5 @@
 export const LoadingPage = () => (
-  <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-gray-900 to-black">
+  <div className="w-full h-full flex items-center justify-center bg-linear-to-b from-(--base) to-(--dark)">
     <span className="loader">
       <span className="ball ball-3"></span>
       <span className="ball ball-4"></span>
