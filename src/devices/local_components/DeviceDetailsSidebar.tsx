@@ -43,7 +43,7 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
     };
 
     return (
-        <div className="md:flex md:flex-col hidden md:w-[320px] border-l-2 border-(--base)/20 bg-white overflow-y-scroll">
+        <div className="md:flex md:flex-col hidden md:w-2/10 border-l-2 border-(--base)/20 bg-white overflow-y-scroll">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
                 <div className="flex items-center justify-between">
