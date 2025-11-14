@@ -68,13 +68,15 @@ export const UpdateDeviceTypeForm = () => {
       <InputField
         label="Device Type"
         placeholder="Select Type"
-        type="combobox"
-        comboboxOptions={deviceTypeOptions.map((t) => t.name)}
+        type="selectBox"
+        selectBo={deviceTypeOptions.map((t) => t.name)}
         stateValue={deviceType}
         stateAction={setDeviceType}
         openState={deviceTypeOpen}
         openStateAction={setDeviceTypeOpen}
       />
+      
+      
 
     
       <InputField

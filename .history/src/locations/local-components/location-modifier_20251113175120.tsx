@@ -1,7 +1,6 @@
-// import React from "react";
 // src/components/locations/LocationModifier.tsx
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { EllipsisVertical, SquarePen, Trash2 } from "lucide-react";
 import {
   Popover,
@@ -54,7 +53,7 @@ export default function LocationModifier({ locationId }: LocationModifierProps) 
 
       {/* Delete Confirmation Modal */}
       {deleteOpen && (
-        <DeleteLocationForm
+        <DeleteLocationConfirm
           locationId={locationId}
           open={deleteOpen}
           setOpen={setDeleteOpen}

@@ -201,7 +201,7 @@ export default function DevicesTable({
                                     </div>
                                 </TableCell>
                                 <TableCell className="font-mono text-sm">{device.ip}:{device.port}</TableCell>
-                                <TableCell>{device.device_type_id}</TableCell>
+                                <TableCell>{device.device_type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                         device.status 
@@ -211,9 +211,9 @@ export default function DevicesTable({
                                         {device.status ? 'Online' : 'Offline'}
                                     </span>
                                 </TableCell>
-                                <TableCell>{device.location_id || 'N/A'}</TableCell>
+                                <TableCell>{device.location_name || 'N/A'}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {device.worker_id || 'N/A'}
+                                    {device.worker_hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

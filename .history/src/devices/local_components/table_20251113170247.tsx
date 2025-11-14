@@ -213,7 +213,7 @@ export default function DevicesTable({
                                 </TableCell>
                                 <TableCell>{device.location_id || 'N/A'}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {device.worker_id || 'N/A'}
+                                    {device.worker_hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

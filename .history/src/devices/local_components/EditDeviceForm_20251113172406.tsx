@@ -1,0 +1,107 @@
+// src/components/devices/EditDeviceForm.tsx
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Form, InputField } from "@/components/form-components";
+import { editDevice } from "./edit-device-form";
+
+const editableFields = [
+  "ip",
+  "displayName",
+  "area",
+  "device",
+  "protocol",
+  "workerId",
+  "community",
+  "snmpVersion",
+  "snmpAuthProtocol",
+  "snmpUsername",
+  "snmpPassword",
+  "snmpPrivProtocol",
+  "snmpPrivPassword",
+];
+
+export const EditDeviceForm = ({
+  deviceId,
+  open,
+  setOpen,
+}: {
+  deviceId: number;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
+  const [status, setStatus] = useState<
+    { message: string; type: "error" | "success" | "info" } | undefined
+  >(undefined);
+
+  const [selectedField, setSelectedField] = useState("");
+  const [newValue, setNewValue] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!selectedField || !newValue) {
+      setStatus({
+        message: "Please select a field and provide a new value.",
+        type: "error",
+      });
+      return;
+    }
+
+    setStatus({ message: "Updating...", type: "info" });
+
+    try {
+      await editDevice({
+        id: deviceId,
+        field: selectedField,
+        data: newValue,
+      });
+      setStatus({ message: "Device updated successfully!", type: "success" });
+
+      setTimeout(() => {
+        setOpen(false);
+        setStatus(undefined);
+        setSelectedField("");
+        setNewValue("");
+      }, 1500);
+    } catch (error: any) {
+      setStatus({
+        message: error.message || "Failed to update device.",
+        type: "error",
+      });
+    }
+  };
+
+  return (
+    <Form
+      title="Edit Device"
+      open={open}
+      setOpen={setOpen}
+      onSubmit={handleSubmit}
+      statusMessage={status}
+    >
+      <InputField
+        label="Select Field"
+        placeholder="Choose field to edit"
+        type="combobox"
+        comboboxOptions={editableFields}
+        stateValue={selectedField}
+        stateAction={setSelectedField}
+      />
+
+      {selectedField && (
+        <InputField
+          label="New Value"
+          placeholder="Enter new value"
+          type="input"
+          stateValue={newValue}
+          stateAction={setNewValue}
+        />
+      )}
+
+      <Button type="submit" className="mt-2">
+        Update
+      </Button>
+    </Form>
+  );
+};

@@ -1,12 +1,7 @@
 import { useMemo, useState } from 'react';
-
-//-- Redux
 import { useAppSelector } from '@/store/hooks';
-
-//--Local components
 import DevicesFilters, { type FilterConfig } from './filters';
-
-//-- ShadCN Components
+import DeviceModifier from './DeviceModifier';
 import {
     Table,
     TableBody,
@@ -16,9 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import DevicesModifier from './devices-modifier';
 
-// Enhanced device type with all related data
 export type EnrichedDevice = {
     id: number;
     hostname: string;
@@ -40,15 +33,11 @@ export type EnrichedDevice = {
     created_at: string;
     updated_at: string;
     status_reason: string;
-    // Enriched fields
-    device_type_name: string; // from DeviceType
-    location_name?: string; // from Location
-    worker_hostname?: string; // from Worker
+    device_type_name: string;
+    location_name?: string;
+    worker_hostname?: string;
 };
 
-/**
- * Custom hook to get enriched device data with all relationships
- */
 export const useEnrichedDevices = (): EnrichedDevice[] => {
     const { devices, deviceTypes } = useAppSelector(state => state.devices);
     const { locations } = useAppSelector(state => state.locations);
@@ -56,15 +45,12 @@ export const useEnrichedDevices = (): EnrichedDevice[] => {
 
     return useMemo(() => {
         return devices.map((device) => {
-            // Find device type name
             const deviceType = deviceTypes.find(dt => dt.id === device.device_type_id);
             const device_type_name = deviceType?.name || 'Unknown';
 
-            // Find location name
             const location = locations.find(l => l.id === device.location_id);
             const location_name = location?.name;
 
-            // Find worker hostname
             const worker_id = (device as any).worker_id || '';
             const worker = workers.find(w => w.id === worker_id);
             const worker_hostname = worker?.hostname;
@@ -87,13 +73,9 @@ export default function DevicesTable({
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
 }) {
-    // Use the custom hook to get enriched data
     const enrichedDevices = useEnrichedDevices();
-    
-    // State for filters
     const [filters, setFilters] = useState<Record<string, string>>({});
 
-    // Get unique values for filter options
     const filterOptions = useMemo(() => {
         const uniqueTypes = [...new Set(enrichedDevices.map(dev => dev.device_type_name))].sort();
         const uniqueStatuses = [...new Set(enrichedDevices.map(dev => dev.status ? 'Online' : 'Offline'))].sort();
@@ -110,7 +92,6 @@ export default function DevicesTable({
         };
     }, [enrichedDevices]);
 
-    // Create filter configs
     const filterConfigs: FilterConfig[] = [
         {
             label: "Type",
@@ -139,7 +120,6 @@ export default function DevicesTable({
         },
     ];
 
-    // Apply filters to devices
     const filteredDevices = useMemo(() => {
         return enrichedDevices.filter(device => {
             if (filters.type && device.device_type_name !== filters.type) return false;
@@ -171,14 +151,13 @@ export default function DevicesTable({
                         <TableHead>Location</TableHead>
                         <TableHead>Worker</TableHead>
                         <TableHead className="text-right">Failures</TableHead>
-                        <TableHead className="text-center">Actions</TableHead>
-
+                        <TableHead className="w-[60px]"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {filteredDevices.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={8} className="text-center text-gray-500">
+                            <TableCell colSpan={9} className="text-center text-gray-500">
                                 No devices found
                             </TableCell>
                         </TableRow>
@@ -201,7 +180,7 @@ export default function DevicesTable({
                                     </div>
                                 </TableCell>
                                 <TableCell className="font-mono text-sm">{device.ip}:{device.port}</TableCell>
-                                <TableCell>{device.device_type_id}</TableCell>
+                                <TableCell>{device.device_type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                         device.status 
@@ -211,9 +190,9 @@ export default function DevicesTable({
                                         {device.status ? 'Online' : 'Offline'}
                                     </span>
                                 </TableCell>
-                                <TableCell>{device.location_id || 'N/A'}</TableCell>
+                                <TableCell>{device.location_name || 'N/A'}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {device.worker_id || 'N/A'}
+                                    {device.worker_hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -226,15 +205,9 @@ export default function DevicesTable({
                                         {device.consecutive_failures}
                                     </span>
                                 </TableCell>
-                                <TableCell className="text-center">
-                                <DevicesModifier
-                                    deviceId={device.id}
-                                    onEdit={(id) => console.log("Edit device", id)}
-                                    onDelete={(id) => console.log("Delete device", id)}
-                                />
+                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                    <DeviceModifier deviceId={device.id} />
                                 </TableCell>
-
-
                             </TableRow>
                         ))
                     )}

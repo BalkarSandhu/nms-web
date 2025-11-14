@@ -197,7 +197,7 @@ export default function LocationsTable({
                             >
                                 <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell className="font-medium">{location.name}</TableCell>
-                                <TableCell>{location.location_type_id}</TableCell>
+                                <TableCell>{location.type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                         location.status === 'online' 
@@ -212,7 +212,7 @@ export default function LocationsTable({
                                 <TableCell>{location.project}</TableCell>
                                 <TableCell>{location.area}</TableCell>
                                 <TableCell className="text-sm text-gray-600">
-                                    {location.worker_id || 'N/A'}
+                                    {location.worker_hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end text-xs">
