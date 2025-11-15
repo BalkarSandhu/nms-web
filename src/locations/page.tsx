@@ -36,7 +36,7 @@ export default function LocationsPage() {
 
     useEffect(() => {
         // Only fetch if locations are not loaded OR data is stale (older than 5 minutes)
-        if (!locations || locations.length === 0 || isDataStale(lastFetched)) {
+        if (!locations || isDataStale(lastFetched)) {
             dispatch(fetchLocations());
         }
     }, [dispatch, locations, lastFetched]);

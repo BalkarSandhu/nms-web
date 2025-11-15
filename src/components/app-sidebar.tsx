@@ -11,7 +11,7 @@ import {
   Smartphone,
   MapPin,
   Users,
-  HardHat,
+  // HardHat,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,64 +26,99 @@ import {
 } from "@/components/ui/sidebar"
 
 // This is sample data.
-const data = {
-  user: {
-    name: "dadhwal",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+// const data = {
+//   user: {
+//     name: "dadhwal",
+//     email: "m@example.com",
+//     avatar: "/avatars/shadcn.jpg",
+//   },
+//   teams: [
+//     {
+//       name: "Dadhwal NMS",
+//       logo: Network,
+//       plan: "Enterprise",
+//     },
+//     // {
+//     //   name: "Acme Corp.",
+//     //   logo: AudioWaveform,
+//     //   plan: "Startup",
+//     // },
+//     // {
+//     //   name: "Evil Corp.",
+//     //   logo: Command,
+//     //   plan: "Free",
+//     // },
+//   ],
+//   navMain: [
+//     {
+//       title: "Dashboard",
+//       url: "/dashboard",
+//       icon: LayoutDashboard,
+//       isActive: true,
+//     },
+//     {
+//       title: "Devices",
+//       url: "/devices",
+//       icon: Smartphone,
+//     },
+//     {
+//       title: "Locations",
+//       url: "/locations",
+//       icon: MapPin,
+//     },
+//     {
+//       title: "Workers",
+//       url: "/workers",
+//       icon: Users,
+//     },
+//     {
+//       title: "Field Technicians",
+//       url: "/field-technicians",
+//       icon: HardHat,
+//     },
+//   ],
+//   projects: [],
+// }
+
+const baseNavItems = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+    isActive: false,
   },
-  teams: [
-    {
-      name: "Dadhwal NMS",
-      logo: Network,
-      plan: "Enterprise",
-    },
-    // {
-    //   name: "Acme Corp.",
-    //   logo: AudioWaveform,
-    //   plan: "Startup",
-    // },
-    // {
-    //   name: "Evil Corp.",
-    //   logo: Command,
-    //   plan: "Free",
-    // },
-  ],
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      title: "Devices",
-      url: "/devices",
-      icon: Smartphone,
-    },
-    {
-      title: "Locations",
-      url: "/locations",
-      icon: MapPin,
-    },
-    {
-      title: "Workers",
-      url: "/workers",
-      icon: Users,
-    },
-    {
-      title: "Field Technicians",
-      url: "/field-technicians",
-      icon: HardHat,
-    },
-  ],
-  projects: [],
-}
+  {
+    title: "Devices",
+    url: "/devices",
+    icon: Smartphone,
+    isActive: false,
+  },
+  {
+    title: "Locations",
+    url: "/locations",
+    icon: MapPin,
+    isActive: false,
+  },
+  {
+    title: "Workers",
+    url: "/workers",
+    icon: Users,
+    isActive: false,
+  },
+]
+
+const teams = [
+  {
+    name: "Dadhwal NMS",
+    logo: Network,
+    plan: "Enterprise",
+  },
+]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const navItems = React.useMemo(() => {
-    return NAV_ITEMS.map((item) => {
+    return baseNavItems.map((item) => {
       const isExactMatch = location.pathname === item.url
       const isNestedMatch = !isExactMatch && item.url !== '/' && location.pathname.startsWith(item.url)
       return {
