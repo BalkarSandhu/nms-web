@@ -1,7 +1,5 @@
-
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-
 
 //-- Redux
 import { useAppSelector } from '@/store/hooks';
@@ -85,36 +83,18 @@ export const useEnrichedDevices = (): EnrichedDevice[] => {
 
 export default function DevicesTable({ 
     onRowClick, 
-    selectedDeviceId,
-    onDataChange
+    selectedDeviceId 
 }: { 
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
-    onDataChange?: (rows: EnrichedDevice[]) => void;
 }) {
     // Use the custom hook to get enriched data
     const enrichedDevices = useEnrichedDevices();
     
     // State for filters
-    const [filters, setFilters] = useState<Record<string, string>>(() => {
-        // Initialize from the URL so child `DevicesFilters` receives initialFilters correctly
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const statusParam = params.get('status');
-            const init: Record<string, string> = {};
-            if (statusParam) {
-                const normalized = String(statusParam).toLowerCase();
-                if (normalized === 'online' || normalized === 'offline') {
-                    init.status = normalized.charAt(0).toUpperCase() + normalized.slice(1);
-                }
-            }
-            return init;
-        } catch (e) {
-            return {};
-        }
-    });
+    const [filters, setFilters] = useState<Record<string, string>>({});
 
-    // React to changes in the search params (client navigation)
+    // Read URL search params to pre-populate filters (e.g., /devices?status=Offline)
     const [searchParams] = useSearchParams();
 
     useEffect(() => {
@@ -126,15 +106,9 @@ export default function DevicesTable({
                 const formatted = normalized.charAt(0).toUpperCase() + normalized.slice(1);
                 setFilters(prev => ({ ...prev, status: formatted }));
             }
-        } else {
-            // If param removed, clear the status filter
-            setFilters(prev => {
-                const copy = { ...prev };
-                delete copy.status;
-                return copy;
-            });
         }
-    // Update when searchParams change
+    // We only want to run this on mount or when the search params object changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
 
     // Get unique values for filter options
@@ -194,10 +168,6 @@ export default function DevicesTable({
             return true;
         });
     }, [enrichedDevices, filters]);
-
-    useEffect(() => {
-        onDataChange?.(filteredDevices)
-    }, [filteredDevices, onDataChange])
 
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">

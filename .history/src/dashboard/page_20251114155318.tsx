@@ -19,7 +19,7 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();

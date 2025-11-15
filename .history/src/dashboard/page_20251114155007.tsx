@@ -19,7 +19,7 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -137,7 +137,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.slice(0, 10);
 
 	// Context-aware navigation callbacks for each section
-	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
+	const handleDeviceStatusClick = (status: 'online' | 'offline') => {
 		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
 	};
 
@@ -145,10 +145,9 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		navigate(`/locations?status=${encodeURIComponent(status)}`);
 	};
 
-	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+	const handleWorkerStatusClick = (status: 'ONLINE' | 'OFFLINE') => {
+		navigate(`/workers?status=${status === 'ONLINE' ? 'active' : 'OFFLINE'}`);
 	};
-	
 
 	// MAP DATA PREPARATION
 	// Devices Map Data - show devices on map with green for online, red for offline

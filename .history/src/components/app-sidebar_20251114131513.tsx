@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useLocation } from 'react-router-dom'
 import {
   // AudioWaveform,
   // Command,
@@ -81,25 +80,13 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const location = useLocation()
-  const navItems = React.useMemo(() => {
-    return NAV_ITEMS.map((item) => {
-      const isExactMatch = location.pathname === item.url
-      const isNestedMatch = !isExactMatch && item.url !== '/' && location.pathname.startsWith(item.url)
-      return {
-        ...item,
-        isActive: isExactMatch || isNestedMatch,
-      }
-    })
-  }, [location.pathname])
-
   return (
     <Sidebar collapsible="icon" {...props} className="bg-(--dark) text-(--contrast) border-r-2 border-(--base)">
       <SidebarHeader className="bg-(--dark) text-(--contrast)">
-        <TeamSwitcher teams={teams} />
+        <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent className="bg-(--dark) text-(--contrast)">
-        <NavMain items={navItems} />
+        <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter className="bg-(--dark) text-(--contrast)">
         <NavUser/>

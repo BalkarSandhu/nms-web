@@ -1,7 +1,5 @@
-
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-
 
 //-- Redux
 import { useAppSelector } from '@/store/hooks';
@@ -85,12 +83,10 @@ export const useEnrichedDevices = (): EnrichedDevice[] => {
 
 export default function DevicesTable({ 
     onRowClick, 
-    selectedDeviceId,
-    onDataChange
+    selectedDeviceId 
 }: { 
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
-    onDataChange?: (rows: EnrichedDevice[]) => void;
 }) {
     // Use the custom hook to get enriched data
     const enrichedDevices = useEnrichedDevices();
@@ -194,10 +190,6 @@ export default function DevicesTable({
             return true;
         });
     }, [enrichedDevices, filters]);
-
-    useEffect(() => {
-        onDataChange?.(filteredDevices)
-    }, [filteredDevices, onDataChange])
 
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">

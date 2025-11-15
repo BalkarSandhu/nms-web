@@ -19,7 +19,7 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -146,7 +146,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	};
 
 	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+		navigate(`/workers?status=${status === 'online' ? 'active' : 'offline'}`);
 	};
 	
 

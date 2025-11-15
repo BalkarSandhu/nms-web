@@ -291,7 +291,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						title: "Device Status",
 						data: deviceMetrics,
 						labels: {
-							low: "Online",
+							low: "s",
 							medium: "",
 							high: "Offline"
 						},

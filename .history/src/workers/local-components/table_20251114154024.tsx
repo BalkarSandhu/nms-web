@@ -1,13 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-
 import { useAppSelector } from '@/store/hooks';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import WorkersFilters, { FilterConfig } from '@/workers/local-components/filters';
 import type { Worker } from '@/store/workerSlice';
 
 // Enriched worker type with additional computed fields
-export type EnrichedWorker = Worker & {
+type EnrichedWorker = Worker & {
     deviceCount: number;
     utilizationPercent: number;
 };
@@ -16,10 +15,9 @@ export type EnrichedWorker = Worker & {
 type WorkersTableProps = {
     onRowClick?: (workerId: string) => void;
     selectedWorkerId?: string | null;
-    onDataChange?: (rows: EnrichedWorker[]) => void;
 };
 
-export default function WorkersTable({ onRowClick, selectedWorkerId, onDataChange }: WorkersTableProps) {
+export default function WorkersTable({ onRowClick, selectedWorkerId }: WorkersTableProps) {
     const { workers } = useAppSelector(state => state.workers);
     const { devices } = useAppSelector(state => state.devices);
     
@@ -142,10 +140,6 @@ export default function WorkersTable({ onRowClick, selectedWorkerId, onDataChang
         if (percent >= 70) return 'text-yellow-600';
         return 'text-green-600';
     };
-
-    useEffect(() => {
-        onDataChange?.(filteredWorkers)
-    }, [filteredWorkers, onDataChange])
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-white">

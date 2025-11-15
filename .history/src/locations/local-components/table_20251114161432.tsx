@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-
 //-- Redux
 import { useAppSelector } from '@/store/hooks';
 
@@ -87,12 +86,10 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
 
 export default function LocationsTable({ 
     onRowClick, 
-    selectedLocationId,
-    onDataChange
+    selectedLocationId 
 }: { 
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
-    onDataChange?: (rows: EnrichedLocation[]) => void;
 }) {
     // Use the custom hook to get enriched data
     const enrichedLocations = useEnrichedLocations();
@@ -190,10 +187,6 @@ export default function LocationsTable({
         });
     }, [enrichedLocations, filters]);
 
-    useEffect(() => {
-        onDataChange?.(filteredLocations)
-    }, [filteredLocations, onDataChange])
-
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">
             <LocationsFilters 
@@ -241,11 +234,17 @@ export default function LocationsTable({
                                 <TableCell>{location.type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        location.status === 'online' ? 'bg-green-100 text-green-800' :
-                                        location.status === 'offline' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
+                                        location.status === 'online' 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : location.status === 'offline'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                     }`}>
-                                        {location.status === 'unknown' ? '---' : location.status}
+                                        if (location.status ==='unknown') {
+                                            location.status='---'    
+                                        }
+                                        
+                                        {location.status}
                                     </span>
                                 </TableCell>
                                 <TableCell>{location.project}</TableCell>

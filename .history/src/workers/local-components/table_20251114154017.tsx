@@ -1,13 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-
 import { useAppSelector } from '@/store/hooks';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import WorkersFilters, { FilterConfig } from '@/workers/local-components/filters';
 import type { Worker } from '@/store/workerSlice';
 
 // Enriched worker type with additional computed fields
-export type EnrichedWorker = Worker & {
+type EnrichedWorker = Worker & {
     deviceCount: number;
     utilizationPercent: number;
 };
@@ -16,46 +15,13 @@ export type EnrichedWorker = Worker & {
 type WorkersTableProps = {
     onRowClick?: (workerId: string) => void;
     selectedWorkerId?: string | null;
-    onDataChange?: (rows: EnrichedWorker[]) => void;
 };
 
-export default function WorkersTable({ onRowClick, selectedWorkerId, onDataChange }: WorkersTableProps) {
+export default function WorkersTable({ onRowClick, selectedWorkerId }: WorkersTableProps) {
     const { workers } = useAppSelector(state => state.workers);
     const { devices } = useAppSelector(state => state.devices);
     
-    const [filters, setFilters] = useState<Record<string, string>>(() => {
-        // Initialize from the URL
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const statusParam = params.get('status');
-            const init: Record<string, string> = {};
-            if (statusParam) {
-                const normalized = String(statusParam).toLowerCase();
-                init.status = normalized;
-            }
-            return init;
-        } catch (e) {
-            return {};
-        }
-    });
-
-    // React to changes in the search params (client navigation)
-    const [searchParams] = useSearchParams();
-
-    useEffect(() => {
-        const statusParam = searchParams.get('status');
-        if (statusParam) {
-            const normalized = String(statusParam).toLowerCase();
-            setFilters(prev => ({ ...prev, status: normalized }));
-        } else {
-            // If param removed, clear the status filter
-            setFilters(prev => {
-                const copy = { ...prev };
-                delete copy.status;
-                return copy;
-            });
-        }
-    }, [searchParams]);
+    const [filters, setFilters] = useState<Record<string, string>>({});
 
     // Create enriched workers with device count
     const enrichedWorkers = useMemo((): EnrichedWorker[] => {
@@ -142,10 +108,6 @@ export default function WorkersTable({ onRowClick, selectedWorkerId, onDataChang
         if (percent >= 70) return 'text-yellow-600';
         return 'text-green-600';
     };
-
-    useEffect(() => {
-        onDataChange?.(filteredWorkers)
-    }, [filteredWorkers, onDataChange])
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-white">

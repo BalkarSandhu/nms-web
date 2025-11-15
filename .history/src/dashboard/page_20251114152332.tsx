@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 //--local-components
 import Section from "./local-components/Section";
@@ -19,10 +18,9 @@ type DashboardProps = {
 	setIsButtonClicked?: (value: boolean) => void;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
+export default function Dashboard({ isButtonClicked, setIsButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
-	const navigate = useNavigate();
 
 	// Get data from Redux store
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
@@ -115,8 +113,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.slice(0, 10);
 
 	// WORKERS METRICS
-	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
-	const offlineWorkersList = activeWorkers.filter(w => w.status === 'OFFLINE' || w.status !== 'ONLINE');
+	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'online' || w.status === 'active');
+	const offlineWorkersList = activeWorkers.filter(w => w.status === 'offline' || w.status !== 'online');
 	
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
@@ -135,20 +133,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		}))
 		.sort((a, b) => b.downtime - a.downtime)
 		.slice(0, 10);
-
-	// Context-aware navigation callbacks for each section
-	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
-	};
-
-	const handleLocationStatusClick = (status: 'online' | 'offline'| 'unknown') => {
-		navigate(`/locations?status=${encodeURIComponent(status)}`);
-	};
-
-	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
-	};
-	
 
 	// MAP DATA PREPARATION
 	// Devices Map Data - show devices on map with green for online, red for offline
@@ -234,7 +218,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			
 			if (!workerLocation) return null;
 
-			const isOnline = w.status === 'ONLINE' || w.status === 'active';
+			const isOnline = w.status === 'online' || w.status === 'active';
 			return {
 				id: `worker-${w.id}`,
 				name: w.hostname,
@@ -295,8 +279,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							medium: "",
 							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleDeviceStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",
@@ -322,8 +305,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							medium: "Unknown",
 							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleLocationStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",
@@ -347,10 +329,9 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						labels: {
 							low: "ONLINE",
 							medium: "",
-							high: "OFFLINE"
+							high: "Offline"
 						},
-						showLabels: true,
-						onStatusClick: handleWorkerStatusClick
+						showLabels: true
 					},
 					metric2: {
 						title: "Longest Downtime",

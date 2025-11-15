@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-
 //-- Redux
 import { useAppSelector } from '@/store/hooks';
 
@@ -87,50 +86,16 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
 
 export default function LocationsTable({ 
     onRowClick, 
-    selectedLocationId,
-    onDataChange
+    selectedLocationId 
 }: { 
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
-    onDataChange?: (rows: EnrichedLocation[]) => void;
 }) {
     // Use the custom hook to get enriched data
     const enrichedLocations = useEnrichedLocations();
     
     // State for filters
-    const [filters, setFilters] = useState<Record<string, string>>(() => {
-        // Initialize from the URL so child `LocationsFilters` receives initialFilters correctly
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const statusParam = params.get('status');
-            const init: Record<string, string> = {};
-            if (statusParam) {
-                const normalized = String(statusParam).toLowerCase();
-                init.status = normalized;
-            }
-            return init;
-        } catch (e) {
-            return {};
-        }
-    });
-
-    // React to changes in the search params (client navigation)
-    const [searchParams] = useSearchParams();
-
-    useEffect(() => {
-        const statusParam = searchParams.get('status');
-        if (statusParam) {
-            const normalized = String(statusParam).toLowerCase();
-            setFilters(prev => ({ ...prev, status: normalized }));
-        } else {
-            // If param removed, clear the status filter
-            setFilters(prev => {
-                const copy = { ...prev };
-                delete copy.status;
-                return copy;
-            });
-        }
-    }, [searchParams]);
+    const [filters, setFilters] = useState<Record<string, string>>({});
 
     // Get unique values for filter options
     const filterOptions = useMemo(() => {
@@ -190,10 +155,6 @@ export default function LocationsTable({
         });
     }, [enrichedLocations, filters]);
 
-    useEffect(() => {
-        onDataChange?.(filteredLocations)
-    }, [filteredLocations, onDataChange])
-
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">
             <LocationsFilters 
@@ -241,11 +202,13 @@ export default function LocationsTable({
                                 <TableCell>{location.type_name}</TableCell>
                                 <TableCell>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        location.status === 'online' ? 'bg-green-100 text-green-800' :
-                                        location.status === 'offline' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
+                                        location.status === 'online' 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : location.status === 'offline'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-gray-100 text-gray-800'
                                     }`}>
-                                        {location.status === 'unknown' ? '---' : location.status}
+                                        {location.status}
                                     </span>
                                 </TableCell>
                                 <TableCell>{location.project}</TableCell>
