@@ -33,7 +33,7 @@ export default function DevicesPage() {
 
     useEffect(() => {
         // Only fetch if devices are not loaded OR data is stale (older than 5 minutes)
-        if (!devices || devices.length === 0 || isDataStale(lastFetched)) {
+        if (!devices || isDataStale(lastFetched)) {
             dispatch(fetchAllDevices());
         }
     }, [dispatch, devices, lastFetched]);

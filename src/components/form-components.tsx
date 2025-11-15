@@ -1,5 +1,7 @@
 import "@/index.css";
 
+//---  lucide icons
+import { X } from "lucide-react";
 
 //-- ShadCN components
 import {
@@ -244,11 +246,11 @@ export function Form({
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="max-w-[425px] max-h-[85%] overflow-auto bg-linear-to-b from-(--base) to-(--dark) border-0 drop-shadow-lg">
+      <DialogContent className="[&>[data-radix-dialog-close]]:hidden max-w-[425px] max-h-[85%] overflow-auto bg-linear-to-b from-(--base) to-(--dark) border-0 drop-shadow-lg">
         <DialogHeader>
           <DialogTitle className="text-(--contrast) text-[20px]">{title}</DialogTitle>
           <DialogClose asChild className="text-(--contrast)">
-            <Button variant="ghost" className="absolute right-4 top-4"></Button>
+            <Button data-radix-dialog-close variant="ghost" className="absolute right-4 top-4"><X/></Button>
           </DialogClose>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
