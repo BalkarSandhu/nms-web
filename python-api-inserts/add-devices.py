@@ -59,7 +59,7 @@ with open("cameras.csv", "r") as file:
 
         try:
             response = requests.post(
-                "http://192.168.29.77:8000/api/v1/devices",
+                "http://103.208.173.228:8000/api/v1/devices",
                 headers=header,
                 json={
                 "attributes": {

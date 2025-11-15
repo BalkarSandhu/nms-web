@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 //-- Redux
 import { useAppSelector } from '@/store/hooks';
@@ -85,10 +85,12 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
 
 export default function LocationsTable({ 
     onRowClick, 
-    selectedLocationId 
+    selectedLocationId,
+    onDataChange
 }: { 
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
+    onDataChange?: (rows: EnrichedLocation[]) => void;
 }) {
     // Use the custom hook to get enriched data
     const enrichedLocations = useEnrichedLocations();
@@ -153,6 +155,10 @@ export default function LocationsTable({
             return true;
         });
     }, [enrichedLocations, filters]);
+
+    useEffect(() => {
+        onDataChange?.(filteredLocations)
+    }, [filteredLocations, onDataChange])
 
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">

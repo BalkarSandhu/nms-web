@@ -11,7 +11,7 @@ with open("./locations.csv", "r") as file:
     for row in data:
         try:
             response = requests.post(
-                "http://192.168.29.77:8000/api/v1/locations",
+                "http://103.208.173.228:8000/api/v1/locations",
                 headers=header,
                 json={
                     "area": "BLOCK II",

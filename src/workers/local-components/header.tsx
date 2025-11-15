@@ -1,10 +1,12 @@
-import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
+import { Plus, Sheet } from 'lucide-react';
 
-export default function Header() {
-    const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
-    const [isExportOpen, setIsExportOpen] = useState(false);
+type HeaderProps = {
+    onExport?: () => void;
+    exportDisabled?: boolean;
+}
+
+export default function Header({ onExport, exportDisabled }: HeaderProps) {
 
     return (
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
@@ -13,11 +15,11 @@ export default function Header() {
                 <p className="text-sm text-gray-500 mt-1">Manage worker nodes and their assignments</p>
             </div>
             
-            <div className="flex gap-2">
-                {/* Add Worker Button */}
-                <Popover open={isAddWorkerOpen} onOpenChange={setIsAddWorkerOpen}>
-                    <PopoverTrigger asChild>
-                        <Button>Add Worker</Button>
+            <div className="flex gap-2 h-fit w-fit">
+                <Popover>
+                    <PopoverTrigger className="w-fit h-fit gap-2 px-4 py-1 flex bg-(--green) rounded-[10px] items-center">
+                        <Plus className="size-4 text-(--contrast)" />
+                        <span className='text-(--contrast) h-fit'>Add</span>
                     </PopoverTrigger>
                     <PopoverContent className="w-[500px]" align="end">
                         <div className="space-y-2">
@@ -27,18 +29,15 @@ export default function Header() {
                     </PopoverContent>
                 </Popover>
 
-                {/* Export Button */}
-                <Popover open={isExportOpen} onOpenChange={setIsExportOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline">Export</Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px]" align="end">
-                        <div className="space-y-2">
-                            <h3 className="font-semibold text-sm">Export Workers</h3>
-                            <p className="text-xs text-gray-500">Export functionality coming soon...</p>
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                <button
+                    type="button"
+                    onClick={onExport}
+                    disabled={exportDisabled}
+                    className="w-fit h-fit py-1 gap-2 px-4 flex bg-(--azul) rounded-[10px] items-center disabled:opacity-50 disabled:pointer-events-none"
+                >
+                    <Sheet className="size-4 text-(--contrast)" />
+                    <span className='text-(--contrast) h-fit'>Export</span>
+                </button>
             </div>
         </div>
     );

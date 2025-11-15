@@ -121,7 +121,7 @@ export const MapViewer = ({
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
-    const pmtilesUrl = import.meta.env.VITE_MAP_SOURCE || 'http://192.168.29.77:8080/India.pmtiles';
+    const pmtilesUrl = import.meta.env.VITE_MAP_SOURCE || 'http://192.168.29.244:8080/India.pmtiles';
     
     // Define custom layers for India PMTiles data
     const customLayers: any[] = [

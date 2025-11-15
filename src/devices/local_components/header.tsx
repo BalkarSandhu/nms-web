@@ -14,9 +14,12 @@ import AddDeviceForm from './AddDeviceForm';
 import { AddDeviceTypeForm } from './AddDeviceTypeForm';
 // import { DeleteDeviceForm } from './DeleteDeviceForm';
 
+type HeaderProps = {
+    onExport?: () => void;
+    exportDisabled?: boolean;
+}
 
-
-export default function Header() {
+export default function Header({ onExport, exportDisabled }: HeaderProps) {
 
     return (
         <div className="flex w-full h-9 overflow-auto bg-(--contrast) items-center justify-between">
@@ -36,15 +39,15 @@ export default function Header() {
                     </PopoverContent>
                 </Popover>
 
-                <Popover>
-                    <PopoverTrigger className="w-fit h-fit py-1 gap-2 px-4 flex bg-(--azul) rounded-[10px] items-center">
-                        <Sheet className="size-4 text-(--contrast)" />
-                        <span className='text-(--contrast) h-fit'>Export</span>
-                    </PopoverTrigger>
-                    <PopoverContent>
-
-                    </PopoverContent>
-                </Popover>
+                <button
+                    type="button"
+                    onClick={onExport}
+                    disabled={exportDisabled}
+                    className="w-fit h-fit py-1 gap-2 px-4 flex bg-(--azul) rounded-[10px] items-center disabled:opacity-50 disabled:pointer-events-none"
+                >
+                    <Sheet className="size-4 text-(--contrast)" />
+                    <span className='text-(--contrast) h-fit'>Export</span>
+                </button>
 
             </div>
 
