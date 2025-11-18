@@ -11,6 +11,7 @@ import {
   Smartphone,
   MapPin,
   Users,
+  NewspaperIcon
   // HardHat,
 } from "lucide-react"
 
@@ -105,6 +106,13 @@ const baseNavItems = [
     icon: Users,
     isActive: false,
   },
+  {
+    title: "Reports",
+    url: "/reports",
+    icon: NewspaperIcon,
+    isActive: false,
+  },
+
 ]
 
 const teams = [

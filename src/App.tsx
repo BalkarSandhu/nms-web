@@ -35,6 +35,7 @@ import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
 import LoginPage from './login/page'
 import DevicesPage from './devices/page'
+import ReportsPage from './reports/page'
 import LocationsPage from './locations/page'
 import WorkersPage from './workers/page'
 
@@ -242,6 +243,9 @@ function App() {
     if (path === '/devices') {
       return 'Devices';
     }
+    if(path === '/reports'){
+      return 'Reports';
+    }
     if (path === '/locations') {
       return 'Locations';
     }
@@ -367,6 +371,7 @@ function App() {
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/devices" element={<DevicesPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
                   <Route path="/locations" element={<LocationsPage />} />
                   <Route path="/workers" element={<WorkersPage />} />
                   <Route path="/field-technicians" element={<WorkersPage />} />
@@ -383,6 +388,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/field-technicians" element={<WorkersPage />} />
