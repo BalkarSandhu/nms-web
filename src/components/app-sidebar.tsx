@@ -107,11 +107,17 @@ const baseNavItems = [
     isActive: false,
   },
   {
-    title: "Reports",
-    url: "/reports",
-    icon: NewspaperIcon,
-    isActive: false,
-  },
+  title: "Reports",
+  url: "/reports",
+  icon: NewspaperIcon,
+  isActive: false,
+  items: [
+    { title: "Device Reports", url: "/reports/devices" },
+    { title: "Locations Report", url: "/reports/locations" },
+    { title: "Workers Report", url: "/reports/workers" },
+  ],
+}
+
 
 ]
 

@@ -1,0 +1,45 @@
+// src/reports/ReportsPage.tsx
+
+import { useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
+
+const data = [
+  { name: "Jan", devices: 20, workers: 8 },
+  { name: "Feb", devices: 35, workers: 15 },
+  { name: "Mar", devices: 28, workers: 12 },
+  { name: "Apr", devices: 42, workers: 20 },
+  { name: "May", devices: 55, workers: 25 },
+];
+
+export default function ReportsPage() {
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-semibold mb-4">Analytics Overview</h1>
+
+      <div className="w-full h-[350px] bg-white rounded-xl shadow p-4">
+        <h2 className="font-semibold mb-2">Devices with Active Locations</h2>
+
+        <ResponsiveContainer width="70%" height="50%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="devices" stroke="#2563eb" strokeWidth={2} />
+            <Line type="monotone" dataKey="workers" stroke="#16a34a" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}

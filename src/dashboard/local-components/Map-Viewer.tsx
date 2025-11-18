@@ -65,6 +65,8 @@ export interface MapViewerProps {
   heatmapZoomThreshold?: number; // Zoom level below which heatmap is shown
   pointsZoomThreshold?: number; // Zoom level above which points are shown
   mapFlavor?: 'dark' | 'light'; // Map theme
+  autoZoomToDensity?: boolean; // Automatically zoom to highest density area
+  densityRadius?: number; // Radius in km for density calculation (default: 50)
 }
 
 export const MapViewer = ({

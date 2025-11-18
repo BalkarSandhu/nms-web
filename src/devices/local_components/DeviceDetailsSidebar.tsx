@@ -79,8 +79,8 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                                 <ChevronDown className="size-4 text-gray-500" />
                             )}
                         </div>
-                        {expandedSections.deviceInfo && (
-                            <div className="px-4 pb-4 space-y-3 border-t">
+                        {expandedSections.deviceInfo && (   
+                            <div className="px-4 pb-4 space-y-3 bg-green-50 rounded-lg-3 border-t text-sm font-medium">
                                 <InfoRow label="Device Type" value={deviceType?.name || 'Unknown'} />
                                 <InfoRow label="Hostname" value={device.hostname || 'N/A'} />
                                 <InfoRow label="IP Address" value={device.ip || 'N/A'} />
@@ -104,14 +104,12 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                                 {expandedSections.location ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
                             </div>
                             {expandedSections.location && (
-                                <div className="px-4 pb-4 border-t">
-                                    <div className="bg-blue-50 rounded-lg p-3">
-                                        <p className="text-sm font-medium text-blue-900">{location.name}</p>
-                                        {(location as any).address && (
-                                            <p className="text-xs text-blue-700 mt-1">{(location as any).address}</p>
-                                        )}
-                                    </div>
-                                </div>
+                                <div className="px-4 pb-4 bg-green-50 rounded-lg-3 space-y-3 border-t text-sm font-medium">
+                                <InfoRow label="Location Name" value={location.name || 'Unknown'} />
+                                <InfoRow label="Lattitude" value={location.lat || 'N/A'} />
+                                <InfoRow label="Longitude " value={location.lng || 'N/A'} />
+                                
+                            </div>
                             )}
                         </div>
                     )}
@@ -127,18 +125,19 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                                 {expandedSections.worker ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
                             </div>
                             {expandedSections.worker && (
-                                <div className="px-4 pb-4 border-t">
-                                    <div className="bg-purple-50 rounded-lg p-3">
-                                        <p className="text-sm font-medium text-purple-900">{worker.hostname}</p>
-                                        <div className="mt-2 space-y-1">
-                                            <p className="text-xs text-purple-700">IP: {worker.ip_address || 'N/A'}</p>
-                                            <p className="text-xs text-purple-700">Status: {worker.status || 'N/A'}</p>
-                                            <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${worker.approval_status === 'approved' ? 'bg-green-100 text-green-700' : worker.approval_status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                <div className=" border-t">
+                                    <div className="px-4 pb-4 bg-green-50 rounded-lg-3 space-y-3 border-t text-sm font-medium">
+                                        <InfoRow label="Worker Name" value={worker.hostname || 'Unknown'} />
+                                        <InfoRow label="IP" value={worker.ip_address || 'N/A'} />
+                                        <InfoRow label="Status " value={worker.status || 'N/A'} />
+                                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${worker.approval_status === 'approved' ? 'bg-green-100 text-green-700' : worker.approval_status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-yellow-700'}`}>
                                                 {worker.approval_status === 'approved' ? 'Approved' : worker.approval_status === 'denied' ? 'Denied' : 'Pending'}
                                             </div>
+                                
+                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                   
+                                
                             )}
                         </div>
                     )}
@@ -176,7 +175,7 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                             </div>
                             {expandedSections.connectionHealth && (
                                 <div className="px-4 pb-4 border-t">
-                                    <div className={`rounded-lg p-3 ${device.consecutive_failures > 0 ? 'bg-yellow-50' : 'bg-green-50'}`}>
+                                    <div className={`rounded-lg p-3 ${device.consecutive_failures > 0 ? 'bg-green-50' : 'bg-green-50'}`}>
                                         <p className="text-xs text-gray-600">Consecutive Failures</p>
                                         <p className={`text-2xl font-bold ${device.consecutive_failures > 0 ? 'text-yellow-700' : 'text-green-700'}`}>
                                             {device.consecutive_failures}
@@ -191,7 +190,7 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                 {/* ⭐ Action Buttons */}
                 <div className="flex justify-between gap-3 mt-6">
                     <button
-                        className="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700"
+                        className="w-full bg-(--azul)/70 text-white py-2 rounded-md text-sm hover:bg-(--azul)/90"
                         onClick={() => setEditOpen(true)}
                     >
                         Edit Device

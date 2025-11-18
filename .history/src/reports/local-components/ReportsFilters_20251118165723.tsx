@@ -89,7 +89,7 @@ export default function ReportsFilters({ initial = {}, onGenerate }: Props) {
       {/* Filter Header */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900">Report Filters</h3>
-        
+
       </div>
 
       {/* Filters Grid */}
