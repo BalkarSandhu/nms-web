@@ -23,7 +23,7 @@ export default function Header({ onExport, exportDisabled }: HeaderProps) {
 
     return (
         <div className="flex w-full h-9 overflow-auto bg-(--contrast) items-center justify-between">
-            <span className="text-(--base) text-[24px] font-semibold">Devices</span>
+           
 
 
             <div className="flex gap-2 h-fit w-fit">

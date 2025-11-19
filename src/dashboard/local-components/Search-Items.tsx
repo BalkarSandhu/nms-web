@@ -14,8 +14,7 @@ export default function SearchBar(){
         flex items-center justify-left rounded-[8px] gap-2 px-2 hover:bg-(--contrast)/50 \
         transition-colors ease-in-out">
 
-            <Search className="size-4 text-(--base)"/>
-            <span className="text-(--base)">Search</span>
+            
 
         </button>
     )

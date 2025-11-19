@@ -117,6 +117,21 @@ export const fetchAllDevices = createAsyncThunk(
     }
   }
 );
+export const fetchDevices = createAsyncThunk(
+  'devices/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) throw new Error('Failed to fetch all devices');
+      const data: AllDevicesResponse = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
 
 export const createDevice = createAsyncThunk(
   'devices/create',

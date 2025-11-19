@@ -332,7 +332,7 @@ function App() {
                   />
 
 
-                  <SearchBar />
+                 
                   <Breadcrumb className='w-full'>
                     <BreadcrumbList className='text-(--contrast)'>
                       <BreadcrumbItem className="hidden md:block">
@@ -346,23 +346,7 @@ function App() {
                       </BreadcrumbItem>
                     </BreadcrumbList>
                   </Breadcrumb>
-                  <div className="flex flex-row justify-end gap-2 w-full">
-                    <button className="size-7  flex p-1 bg-(--contrast) border-2 border-(--base) \
-                  hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center"
-                      onClick={() => setIsButtonClicked(!isButtonClicked)}
-                    >
-                      <Funnel className="size-3.5 text-(--base)" />
-                    </button>
-                    <button className="size-7  flex p-1 bg-(--contrast) border-2 border-(--base) \
-                  hover:bg-(--contrast)/50 rounded-[10px] items-center justify-center">
-                      <Moon className="size-3.5 text-(--base)" />
-                    </button>
-                    <NotificationPopUp Notifications={[
-                      { id: 1, priority: "low", message: "Device 192.168.1.1 is offline", notificaitonState: "new" },
-                      { id: 2, priority: "medium", message: "Firmware update available for router", notificaitonState: "acknowledged" },
-                      { id: 3, priority: "high", message: "High CPU usage detected", notificaitonState: "resolved" }
-                    ]}/>
-                  </div>
+                  
 
                 </div>
               </header>
