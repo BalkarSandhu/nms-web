@@ -32,7 +32,7 @@ export interface Metric1Props {
 export default function Metric1({ 
     title = "Metric 1",
     data = { low: 25, medium: 35, high: 40 },
-    labels = { low: "Online", medium: "Supervised", high: "Offline" },
+    labels = { low: "Onlines", medium: "Supervised", high: "Offline" },
     className = "",
     chartClassName = "",
     showLabels = true,
@@ -80,7 +80,7 @@ export default function Metric1({
         const option: echarts.EChartsOption = {
             tooltip: {
                 trigger: 'item',
-                formatter: '{b}: {c} ',
+                formatter: '{b}: {c} ({d}%)',
                 backgroundColor: baseColor,
                 borderColor: contrastColor,
                 textStyle: {

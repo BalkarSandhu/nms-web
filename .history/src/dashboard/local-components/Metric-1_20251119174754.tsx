@@ -80,7 +80,7 @@ export default function Metric1({
         const option: echarts.EChartsOption = {
             tooltip: {
                 trigger: 'item',
-                formatter: '{b}: {c} ',
+                formatter: '{b}: {c} )',
                 backgroundColor: baseColor,
                 borderColor: contrastColor,
                 textStyle: {
