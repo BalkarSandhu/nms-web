@@ -221,9 +221,9 @@ export default function DevicesTable({
                         <TableHead className="w-[60px]">S.No</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Area</TableHead>
-                        <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Location</TableHead>
                         
                         
                     </TableRow>

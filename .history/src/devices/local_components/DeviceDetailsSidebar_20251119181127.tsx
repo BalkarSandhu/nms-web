@@ -104,7 +104,24 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                     
                     
 
-                
+                    {/* Last Ping */}
+                    {device.last_ping && (
+                        <div className="border rounded-lg">
+                            <div 
+                                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center"
+                                onClick={() => toggleSection('lastPing')}
+                            >
+                                <h3 className="text-sm font-semibold text-gray-700">Last Updated</h3>
+                                {expandedSections.lastPing ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                            </div>
+                            {expandedSections.lastPing && (
+                                <div className="px-4 pb-4 border-t">
+                                    
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     
                 </div>
 

@@ -180,7 +180,12 @@ export default function DevicesTable({
             label: "Worker",
             key: "worker",
             options: filterOptions.workers,
-        }
+        },
+        {
+            label: "Protocol",
+            key: "protocol",
+            options: filterOptions.protocols,
+        },
     ];
 
     // Apply filters to devices
@@ -215,17 +220,17 @@ export default function DevicesTable({
             />
 
             <Table>
-                
+                <TableCaption>List of all devices in the network.</TableCaption>
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-[60px]">S.No</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Area</TableHead>
-                        <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
-                        
-                        
+                        <TableHead>Location</TableHead>
+                        <TableHead>Area</TableHead>
+                        <TableHead className="text-right">Failures</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -259,12 +264,6 @@ export default function DevicesTable({
                                         </p>
                                     </div>
                                 </TableCell>
-                                <TableCell className={`text-sm ${localSelectedId === device.id ? 'text-blue-100' : 'text-gray-600'}`}>
-                                    {device.worker_hostname || 'N/A'}
-                                </TableCell>
-                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
-                                    {device.location_name || 'N/A'}
-                                </TableCell>
                                 <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
                                     {device.device_type_name}
                                 </TableCell>
@@ -281,10 +280,37 @@ export default function DevicesTable({
                                         {device.status ? 'Online' : 'Offline'}
                                     </span>
                                 </TableCell>
-                                
-                                
-                                
-                            
+                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
+                                    {device.location_name || 'N/A'}
+                                </TableCell>
+                                <TableCell className={`text-sm ${localSelectedId === device.id ? 'text-blue-100' : 'text-gray-600'}`}>
+                                    {device.worker_hostname || 'N/A'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                                        device.consecutive_failures === 0 
+                                            ? localSelectedId === device.id
+                                                ? 'bg-green-200 text-green-900'
+                                                : 'bg-green-100 text-green-800'
+                                            : device.consecutive_failures < 3
+                                            ? localSelectedId === device.id
+                                                ? 'bg-yellow-200 text-yellow-900'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                            : localSelectedId === device.id
+                                            ? 'bg-red-200 text-red-900'
+                                            : 'bg-red-100 text-red-800'
+                                    }`}>
+                                        {device.consecutive_failures}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    <div className={localSelectedId === device.id ? 'opacity-90' : ''}>
+                                        <DevicesModifier
+                                            deviceId={device.id}
+                                            onEdit={(id) => console.log("Edit device", id)}
+                                        />
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))
                     )}

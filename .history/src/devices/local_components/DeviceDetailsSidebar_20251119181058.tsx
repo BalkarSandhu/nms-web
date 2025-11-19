@@ -86,12 +86,9 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                                 <InfoRow label="Location Name" value={location.name || 'Unknown'} />
                                 <InfoRow label="Lattitude" value={location.lat || 'N/A'} />
                                 <InfoRow label="Longitude " value={location.lng || 'N/A'} />
-                                <InfoRow label="Area" value={worker.hostname || 'Unknown'} />    
-                                <InfoRow label="Status " value={worker.status || 'N/A'} />
-                                <InfoRow 
-                                        label="Timestamp" 
-                                        value={new Date(device.last_ping).toLocaleString()} 
-                                    />
+                                <InfoRow label="Area" value={worker.hostname || 'Unknown'} />
+                                       
+                                        <InfoRow label="Status " value={worker.status || 'N/A'} />
                                 
                                 {device.imei && <InfoRow label="IMEI" value={device.imei} />}
                                 {(device as any).iccid && <InfoRow label="ICCID" value={(device as any).iccid} />}
@@ -104,7 +101,27 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                     
                     
 
-                
+                    {/* Last Ping */}
+                    {device.last_ping && (
+                        <div className="border rounded-lg">
+                            <div 
+                                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center"
+                                onClick={() => toggleSection('lastPing')}
+                            >
+                                <h3 className="text-sm font-semibold text-gray-700">Last Updated</h3>
+                                {expandedSections.lastPing ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                            </div>
+                            {expandedSections.lastPing && (
+                                <div className="px-4 pb-4 border-t">
+                                    <InfoRow 
+                                        label="Timestamp" 
+                                        value={new Date(device.last_ping).toLocaleString()} 
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     
                 </div>
 

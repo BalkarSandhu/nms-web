@@ -222,8 +222,8 @@ export default function DevicesTable({
                         <TableHead>Name</TableHead>
                         <TableHead>Area</TableHead>
                         <TableHead>Location</TableHead>
-                        <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Location</TableHead>
                         
                         
                     </TableRow>

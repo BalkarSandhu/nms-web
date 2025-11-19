@@ -86,12 +86,9 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                                 <InfoRow label="Location Name" value={location.name || 'Unknown'} />
                                 <InfoRow label="Lattitude" value={location.lat || 'N/A'} />
                                 <InfoRow label="Longitude " value={location.lng || 'N/A'} />
-                                <InfoRow label="Area" value={worker.hostname || 'Unknown'} />    
-                                <InfoRow label="Status " value={worker.status || 'N/A'} />
-                                <InfoRow 
-                                        label="Timestamp" 
-                                        value={new Date(device.last_ping).toLocaleString()} 
-                                    />
+                                <InfoRow label="Worker Name" value={worker.hostname || 'Unknown'} />
+                                       
+                                        <InfoRow label="Status " value={worker.status || 'N/A'} />
                                 
                                 {device.imei && <InfoRow label="IMEI" value={device.imei} />}
                                 {(device as any).iccid && <InfoRow label="ICCID" value={(device as any).iccid} />}
@@ -102,9 +99,53 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                     </div>
 
                     
-                    
+                    {/* Worker Information */}
+                    {worker && (
+                        <div className="border rounded-lg">
+                            <div 
+                                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center"
+                                onClick={() => toggleSection('worker')}
+                            >
+                                <h3 className="text-sm font-semibold text-gray-700">Assigned Worker</h3>
+                                {expandedSections.worker ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                            </div>
+                            {expandedSections.worker && (
+                                <div className=" border-t">
+                                    <div className="px-4 pb-4 bg-green-50 rounded-lg-3 space-y-3 border-t text-sm font-medium">
+                                        
+                                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${worker.approval_status === 'approved' ? 'bg-green-100 text-green-700' : worker.approval_status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-yellow-700'}`}>
+                                                {worker.approval_status === 'approved' ? 'Approved' : worker.approval_status === 'denied' ? 'Denied' : 'Pending'}
+                                            </div>
+                                
+                            </div>
+                                        </div>
+                                   
+                                
+                            )}
+                        </div>
+                    )}
 
-                
+                    {/* Last Ping */}
+                    {device.last_ping && (
+                        <div className="border rounded-lg">
+                            <div 
+                                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-center"
+                                onClick={() => toggleSection('lastPing')}
+                            >
+                                <h3 className="text-sm font-semibold text-gray-700">Last Updated</h3>
+                                {expandedSections.lastPing ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+                            </div>
+                            {expandedSections.lastPing && (
+                                <div className="px-4 pb-4 border-t">
+                                    <InfoRow 
+                                        label="Timestamp" 
+                                        value={new Date(device.last_ping).toLocaleString()} 
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     
                 </div>
 

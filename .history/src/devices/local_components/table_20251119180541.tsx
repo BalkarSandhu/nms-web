@@ -180,7 +180,12 @@ export default function DevicesTable({
             label: "Worker",
             key: "worker",
             options: filterOptions.workers,
-        }
+        },
+        {
+            label: "Protocol",
+            key: "protocol",
+            options: filterOptions.protocols,
+        },
     ];
 
     // Apply filters to devices
@@ -215,16 +220,15 @@ export default function DevicesTable({
             />
 
             <Table>
-                
+                <TableCaption>List of all devices in the network.</TableCaption>
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-[60px]">S.No</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Area</TableHead>
-                        <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
-                        
+                        <TableHead>Location</TableHead>
+                        <TableHead>Area</TableHead>
                         
                     </TableRow>
                 </TableHeader>
@@ -259,12 +263,6 @@ export default function DevicesTable({
                                         </p>
                                     </div>
                                 </TableCell>
-                                <TableCell className={`text-sm ${localSelectedId === device.id ? 'text-blue-100' : 'text-gray-600'}`}>
-                                    {device.worker_hostname || 'N/A'}
-                                </TableCell>
-                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
-                                    {device.location_name || 'N/A'}
-                                </TableCell>
                                 <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
                                     {device.device_type_name}
                                 </TableCell>
@@ -281,8 +279,12 @@ export default function DevicesTable({
                                         {device.status ? 'Online' : 'Offline'}
                                     </span>
                                 </TableCell>
-                                
-                                
+                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
+                                    {device.location_name || 'N/A'}
+                                </TableCell>
+                                <TableCell className={`text-sm ${localSelectedId === device.id ? 'text-blue-100' : 'text-gray-600'}`}>
+                                    {device.worker_hostname || 'N/A'}
+                                </TableCell>
                                 
                             
                             </TableRow>

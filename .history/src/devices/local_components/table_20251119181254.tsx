@@ -221,9 +221,9 @@ export default function DevicesTable({
                         <TableHead className="w-[60px]">S.No</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Area</TableHead>
-                        <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Location</TableHead>
                         
                         
                     </TableRow>
@@ -263,9 +263,6 @@ export default function DevicesTable({
                                     {device.worker_hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
-                                    {device.location_name || 'N/A'}
-                                </TableCell>
-                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
                                     {device.device_type_name}
                                 </TableCell>
                                 <TableCell>
@@ -281,7 +278,9 @@ export default function DevicesTable({
                                         {device.status ? 'Online' : 'Offline'}
                                     </span>
                                 </TableCell>
-                                
+                                <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
+                                    {device.location_name || 'N/A'}
+                                </TableCell>
                                 
                                 
                             
