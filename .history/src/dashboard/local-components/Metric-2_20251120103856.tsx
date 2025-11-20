@@ -56,7 +56,9 @@ export default function Metric2({
                     <span className="text-(--contrast)/50 text-[9px] font-semibold uppercase tracking-wider">
                         {headers.col1}
                     </span>
-        
+                    <span className="text-(--contrast)/50 text-[9px] font-semibold uppercase tracking-wider text-right">
+                        {headers.col2}
+                    </span>
                 </div>
 
                 {/* Rows */}
@@ -67,14 +69,8 @@ export default function Metric2({
                             onClick={() => handleRowClick(row)}
                             className="grid grid-cols-[1fr,auto] gap-4 py-2 px-2 rounded-md hover:bg-(--contrast)/5 transition-colors text-left"
                         >
-                            <span className="flex justify-between items-center text-xs font-medium text-(--contrast)">
-                            <span className="truncate">{row.col1}</span>
-                            <span className="text-red-500">{row.col2}</span>
-                            </span>
-
-
-
-                            
+                            <span className="text-(--contrast) text-xs truncate font-medium">{row.col1}</span>
+                            <span className="text-(--red) text-xs font-bold whitespace-nowrap">{row.col2}</span>
                         </button>
                     ))}
                 </div>

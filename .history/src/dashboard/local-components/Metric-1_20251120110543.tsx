@@ -89,8 +89,8 @@ export default function Metric1({
                             <div className="w-2 h-2 rounded-full bg-(--red)"></div>
 
                             {/* Label shows both */}
-                            <span className="text-(--contrast) text-xs font-small">
-                                {labels.high} 
+                            <span className="text-(--contrast) text-xs font-medium">
+                                {labels.high} / {labels.medium}
                             </span>
                         </div>
 

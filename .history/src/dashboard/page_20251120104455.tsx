@@ -257,7 +257,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.filter((item) => item !== null);
 
 	return (
-		<div className="flex flex-col p-1 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
+		<div className="flex flex-col gap-2 p-2 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
 			<div
 				className={`transition-all duration-500 ease-in-out overflow-hidden ${isButtonClicked ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
 					}`}

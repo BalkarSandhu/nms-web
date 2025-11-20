@@ -67,13 +67,7 @@ export default function Metric2({
                             onClick={() => handleRowClick(row)}
                             className="grid grid-cols-[1fr,auto] gap-4 py-2 px-2 rounded-md hover:bg-(--contrast)/5 transition-colors text-left"
                         >
-                            <span className="flex justify-between items-center text-xs font-medium text-(--contrast)">
-                            <span className="truncate">{row.col1}</span>
-                            <span className="text-red-500">{row.col2}</span>
-                            </span>
-
-
-
+                            <span className="text-(--contrast) text-xs truncate font-medium">{row.col1}       {row.col2}</span>
                             
                         </button>
                     ))}
