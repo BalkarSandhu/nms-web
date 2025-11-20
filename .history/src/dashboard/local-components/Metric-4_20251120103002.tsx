@@ -66,8 +66,8 @@ export default function Metric4({
 
     const getIcon = (typeName: string) => {
         const name = typeName.toLowerCase();
-        if (name.includes('PTZ') || name.includes('PTZ')) return "📹";
-        if (name.includes('Workstation') || name.includes('WorkStation')) return "🔐";
+        if (name.includes('camera') || name.includes('PTZ')) return "📹";
+        if (name.includes('access') || name.includes('control')) return "🔐";
         if (name.includes('sensor')) return "📡";
         if (name.includes('gateway') || name.includes('router')) return "🌐";
         if (name.includes('office') || name.includes('building')) return "🏢";
