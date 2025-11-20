@@ -18,7 +18,7 @@ import "@/index.css";
 //--Custom components
 import SearchBar from './dashboard/local-components/Search-Items'
 import { NotificationPopUp } from './components/Notifications'
-import {LoadingPage} from './components/loading-screen'
+import { LoadingPage } from './components/loading-screen'
 //-- Contexts 
 import { APIProvider } from './contexts/API-Context'
 import { getAuthToken, clearAuthToken, subscribeToAuthChanges } from '@/lib/auth'
@@ -97,7 +97,7 @@ function App() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       // If auth bypass is enabled, set initialized and authenticated
-      if(import.meta.env.VITE_AUTH_BYPASS === 'true'){
+      if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
         setIsLoading(false);
         setIsInitialized(true);
         setIsAuthenticated(true);
@@ -105,7 +105,7 @@ function App() {
       }
 
       const validToken = getAuthToken();
-      
+
       // If user has a valid token, they're authenticated
       if (validToken) {
         setIsLoading(false);
@@ -118,7 +118,7 @@ function App() {
       // No valid token - check if system is initialized
       try {
         const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`);
-        
+
         if (!response.ok) {
           console.error("Failed to check auth status");
           setIsLoading(false);
@@ -220,7 +220,7 @@ function App() {
       clearExpiryTimer();
     };
   }, [scheduleExpiryTimer, clearExpiryTimer]);
-  
+
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
     const path = location.pathname
@@ -247,7 +247,7 @@ function App() {
     if (path === '/devices') {
       return 'Devices';
     }
-    if(path === '/reports'){
+    if (path === '/reports') {
       return 'Reports';
     }
     if (path === '/locations') {
@@ -319,54 +319,55 @@ function App() {
           <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
             <AppSidebar />
             <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
-              <div className="flex sticky top-0 h-full w-full flex-col overflow-hidden">
-                <header className="flex sticky top-0 z-50 h-12 shrink-0 items-center gap-2 border-none \
-        transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 w-full" style={{backgroundColor: 'var(--dark)'}}>
-                <div className="flex sticky top-0  items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
-                  <SidebarTrigger className="-ml-1 text-(--contrast)" />
+              <div className="flex h-full w-full flex-col overflow-hidden">
+                <header className="sticky top-0 z-50 h-12 shrink-0 items-center gap-2 border-none \
+                                   transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 \
+                                   w-full" style={{ backgroundColor: 'var(--dark)' }}>
+                  <div className="flex sticky top-0  items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
+                    <SidebarTrigger className="-ml-1 text-(--contrast)" />
 
 
-                  <Separator
-                    orientation="vertical"
-                    className="mr-2 data-[orientation=vertical]:h-4 bg-(--contrast)"
-                  />
+                    <Separator
+                      orientation="vertical"
+                      className="mr-2 data-[orientation=vertical]:h-4 bg-(--contrast)"
+                    />
 
 
-                 
-                  <Breadcrumb className='w-full'>
-                    <BreadcrumbList className='text-(--contrast)'>
-                      <BreadcrumbItem className="hidden md:block">
-                        <BreadcrumbLink href="/dashboard" >
-                          { }
-                        </BreadcrumbLink>
-                      </BreadcrumbItem>
-                      <BreadcrumbSeparator className="hidden md:block" />
-                      <BreadcrumbItem>
-                        <BreadcrumbPage className="text-(--contrast)">{getPageName()}</BreadcrumbPage>
-                      </BreadcrumbItem>
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                  
 
+                    <Breadcrumb className='w-full'>
+                      <BreadcrumbList className='text-(--contrast)'>
+                        <BreadcrumbItem className="hidden md:block">
+                          <BreadcrumbLink href="/dashboard" >
+                            { }
+                          </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator className="hidden md:block" />
+                        <BreadcrumbItem>
+                          <BreadcrumbPage className="text-(--contrast)">{getPageName()}</BreadcrumbPage>
+                        </BreadcrumbItem>
+                      </BreadcrumbList>
+                    </Breadcrumb>
+
+
+                  </div>
+                </header>
+
+
+                <div className="flex-1 min-w-0 overflow-x-auto">
+                  <Routes>
+                    <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/devices" element={<DevicesPage />} />
+                    <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/reports/devices" element={<DevicesReportsPage />} />
+                    <Route path="/reports/locations" element={<LocationsReportsPage />} />
+                    <Route path="/reports/workers" element={<WorkersReportsPage />} />
+                    <Route path="/locations" element={<LocationsPage />} />
+                    <Route path="/workers" element={<WorkersPage />} />
+                    <Route path="/field-technicians" element={<WorkersPage />} />
+                  </Routes>
                 </div>
-              </header>
-
-
-              <div className="flex-1 min-w-0 overflow-x-auto">
-                <Routes>
-                  <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/devices" element={<DevicesPage />} />
-                  <Route path="/reports" element={<ReportsPage />} />
-                  <Route path="/reports/devices" element={<DevicesReportsPage />} />
-                  <Route path="/reports/locations" element={<LocationsReportsPage />} />
-                  <Route path="/reports/workers" element={<WorkersReportsPage />} />
-                  <Route path="/locations" element={<LocationsPage />} />
-                  <Route path="/workers" element={<WorkersPage />} />
-                  <Route path="/field-technicians" element={<WorkersPage />} />
-                </Routes>
-              </div>
               </div>
             </SidebarInset>
           </SidebarProvider>

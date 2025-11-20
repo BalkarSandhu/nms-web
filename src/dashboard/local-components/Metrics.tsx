@@ -1,7 +1,7 @@
 import Metric1 from "./Metric-1";
 import Metric2 from "./Metric-2";
 import Metric3 from "./Metric-3";
-import Metric4 from "./Metric-4";
+import MetricGeneral from "./Metric-4";
 import MetricMapSwitcher from "./Metric-Map-Switcher";
 import { MapViewer } from "./Map-Viewer";
 import type { MapDataPoint } from "./Map-Viewer";
@@ -22,10 +22,10 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
         console.log('Clicked point:', point);
     };
 
-    const handleTypeClick = (type: string) => {
-        console.log('Clicked device type:', type);
-        // Add navigation logic here - e.g., filter devices by type
-        // Example: navigate(`/devices?type=${type}`)
+    const handleMetricItemClick = (item: { label: string; value: number }) => {
+        console.log('Clicked metric item:', item);
+        // Add navigation logic here - e.g., filter by label
+        // Example: navigate(`/devices?type=${item.label}`)
     };
 
     return (
@@ -37,11 +37,13 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
                             {...metricsData.metric1}
                         />
                     )}
-                    
-                    <Metric4 
-                        title="Devices by Type"
-                        onTypeClick={handleTypeClick}
-                    />
+                    {metricsData?.metric4 && (
+                        <MetricGeneral
+                            title={metricsData.metric4Title || "Summary by Type"}
+                            data={metricsData.metric4}
+                            onItemClick={handleMetricItemClick}
+                        />
+                    )}
                     {metricsData?.metric2 && (
                         <Metric2 {...metricsData.metric2} />
                     )}

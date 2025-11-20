@@ -28,6 +28,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
 	const { locations: reduxLocations } = useAppSelector(state => state.locations);
 	const { workers: reduxWorkers } = useAppSelector(state => state.workers);
+	const { deviceTypes } = useAppSelector(state => state.devices);
+	const { locationTypes } = useAppSelector(state => state.locations);
 
 	// Fetch all data when component mounts
 	useEffect(() => {
@@ -72,7 +74,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	// DEVICES METRICS
 	const onlineDevices = activeDevices.filter(d => d.status);
 	const offlineDevices = activeDevices.filter(d => !d.status);
-	
+
 	const deviceMetrics = {
 		low: onlineDevices.length, // Online (green)
 		medium: 0, // Not used (keep empty as per requirements)
@@ -95,7 +97,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const onlineLocations = activeLocations.filter(l => l.status === 'online');
 	const unknownLocations = activeLocations.filter(l => l.status === 'unknown');
 	const offlineLocations = activeLocations.filter(l => l.status === 'offline');
-	
+
 	const locationMetrics = {
 		low: onlineLocations.length, // Online (green)
 		medium: unknownLocations.length, // Not used (keep empty)
@@ -117,7 +119,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	// WORKERS METRICS
 	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
 	const offlineWorkersList = activeWorkers.filter(w => w.status === 'OFFLINE' || w.status !== 'ONLINE');
-	
+
 	const workerMetrics = {
 		low: activeWorkersOnline.length, // Active (green)
 		medium: 0, // Not used (keep empty)
@@ -141,14 +143,14 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
 	};
 
-	const handleLocationStatusClick = (status: 'online' | 'offline'| 'unknown') => {
+	const handleLocationStatusClick = (status: 'online' | 'offline' | 'unknown') => {
 		navigate(`/locations?status=${encodeURIComponent(status)}`);
 	};
 
 	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
 		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
 	};
-	
+
 
 	// MAP DATA PREPARATION
 	// Devices Map Data - show devices on map with green for online, red for offline
@@ -183,7 +185,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	// Locations Map Data - show locations with circles (green for online, red for offline)
 	const locationsMapData = activeLocations.map(l => {
 		const isOnline = l.status === 'online';
-		const isUnknown=l.status==='unknown';
+		const isUnknown = l.status === 'unknown';
 		let indicatorColour: 'green' | 'red';
 		let category: 'green' | 'red' | 'azul';
 		let value: number;
@@ -215,9 +217,9 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 				headerRight: { field: 'Project', value: l.project },
 				sideLabel: { field: 'Area', value: l.area },
 				data: [
-					{ 
-						field: 'Status', 
-						value: l.status.charAt(0).toUpperCase() + l.status.slice(1), 
+					{
+						field: 'Status',
+						value: l.status.charAt(0).toUpperCase() + l.status.slice(1),
 						colour: indicatorColour
 					},
 					{ field: 'Type', value: l.location_type_id.toString(), colour: 'blue' as const },
@@ -231,7 +233,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.map(w => {
 			// Placeholder: Use first location - in real implementation, you'd look up worker's assigned location
 			const workerLocation = activeLocations[0];
-			
+
 			if (!workerLocation) return null;
 
 			const isOnline = w.status === 'ONLINE' || w.status === 'active';
@@ -257,7 +259,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		.filter((item) => item !== null);
 
 	return (
-		<div className="flex flex-col p-1 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
+		<div className="flex flex-col p-2 bg-linear-to-b from-(--base) to-(--dark) w-full min-h-full">
 			<div
 				className={`transition-all duration-500 ease-in-out overflow-hidden ${isButtonClicked ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
 					}`}
@@ -265,90 +267,121 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 				<Filters
 					fromDate={"2024-01-01"}
 					toDate={"2024-12-31"}
-					onFromDateChange={() => {}}
-					onToDateChange={() => {}}
+					onFromDateChange={() => { }}
+					onToDateChange={() => { }}
 					selectedLocationType="1"
-					onLocationTypeChange={() => {}}
+					onLocationTypeChange={() => { }}
 					selectedDeviceType="1"
-					onDeviceTypeChange={() => {}}
+					onDeviceTypeChange={() => { }}
 					selectedWorker="1"
-					onWorkerChange={() => {}}
+					onWorkerChange={() => { }}
 					selectedLocation="1"
-					onLocationChange={() => {}}
+					onLocationChange={() => { }}
 					deviceTypes={[{ value: "1", label: "Device Type A" }, { value: "2", label: "Device Type B" }]}
 					locationTypes={[{ value: "1", label: "Location Type A" }, { value: "2", label: "Location Type B" }]}
 					locations={[{ value: "1", label: "Location A" }, { value: "2", label: "Location B" }]}
-					
+
 					workers={[{ value: "1", label: "Worker John" }, { value: "2", label: "Worker Jane" }]}
 				/>
-				
+
 			</div>
 
-// DEVICES SECTION
-<Section
-    title="Devices"
-    mapData={devicesMapData}
-    metricsData={{
-        metric1: {
-            title: "Device Status",
-            data: deviceMetrics,
-            labels: { low: "Online", medium: "", high: "Offline" },
-            onStatusClick: handleDeviceStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Device", col2: "Downtime" },
-            data: deviceDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/devices/${row.id}`) // Proper navigation
-        },
-        metric3: undefined // Empty for now
-    }}
-/>
+			<Section
+				title="Devices"
+				mapData={devicesMapData}
+				metricsData={{
+					metric1: {
+						title: "Device Status",
+						data: deviceMetrics,
+						labels: { low: "Online", medium: "", high: "Offline" },
+						onStatusClick: handleDeviceStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: { col1: "Device", col2: "Downtime" },
+						data: deviceDowntimeData,
+						maxRows: 5,
+						onRowClick: (row) => navigate(`/devices/${row.id}`)
+					},
+					metric3: undefined,
+					metric4: activeDevices
+						.reduce((acc, d) => {
+							// Find the device type by ID
+							const devicetype = deviceTypes.find(dt => dt.id === d.device_type_id);
+							const typeName = devicetype?.name || "Unknown";
 
-// LOCATIONS SECTION
-<Section
-    title="Locations"
-    mapData={locationsMapData}
-    metricsData={{
-        metric1: {
-            title: "Location Status",
-            data: locationMetrics,
-            labels: { low: "Online", medium: "Unknown", high: "Offline" },
-            onStatusClick: handleLocationStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Location", col2: "Downtime" },
-            data: locationDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/locations/${row.id}`)
-        },
-        
-    }}
-/>
+							const found = acc.find(item => item.label === typeName);
+							if (found) {
+								found.value += 1;
+							} else {
+								acc.push({ label: typeName, value: 1 });
+							}
+							return acc;
+						}, [] as { label: string; value: number }[])
+						.sort((a, b) => b.value - a.value)
+						.slice(0, 3)
+				}}
+			/>
 
-// WORKERS SECTION
-<Section
-    title="Workers"
-    mapData={workersMapData}
-    metricsData={{
-        metric1: {
-            title: "Worker Status",
-            data: workerMetrics,
-            labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
-            onStatusClick: handleWorkerStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Worker", col2: "Downtime" },
-            data: workerDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/workers/${row.id}`)
-        },
-        metric3: undefined
-    }}
-/>
+			<Section
+				title="Locations"
+				mapData={locationsMapData}
+				metricsData={{
+					metric1: {
+						title: "Location Status",
+						data: locationMetrics,
+						labels: { low: "Online", medium: "Unknown", high: "Offline" },
+						onStatusClick: handleLocationStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: { col1: "Location", col2: "Downtime" },
+						data: locationDowntimeData,
+						maxRows: 5,
+						onRowClick: (row) => navigate(`/locations/${row.id}`)
+					},
+					metric3: undefined,
+					metric4: activeLocations
+						.reduce((acc, l) => {
+							// Find the location type by ID
+							const locationType = locationTypes.find(lt => lt.id === l.location_type_id);
+							const typeName = locationType?.name || "Unknown";
+
+							const found = acc.find(item => item.label === typeName);
+							if (found) {
+								found.value += 1;
+							} else {
+								acc.push({ label: typeName, value: 1 });
+							}
+							return acc;
+						}, [] as { label: string; value: number }[])
+						.sort((a, b) => b.value - a.value)
+						.slice(0, 3)
+				}}
+			/>
+
+
+			<Section
+				title="Workers"
+				mapData={workersMapData}
+				metricsData={{
+					metric1: {
+						title: "Worker Status",
+						data: workerMetrics,
+						labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
+						onStatusClick: handleWorkerStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: { col1: "Worker", col2: "Downtime" },
+						data: workerDowntimeData,
+						maxRows: 5,
+						onRowClick: (row) => navigate(`/workers/${row.id}`)
+					},
+					metric3: undefined,
+					metric4: undefined
+				}}
+			/>
 		</div>
 	)
 }
