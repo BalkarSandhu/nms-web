@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAppSelector } from '@/store/hooks';
 import { DeviceCard } from './DeviceCard';
-import { SquarePen, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

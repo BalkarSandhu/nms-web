@@ -5,7 +5,6 @@ import { InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/store/hooks";
 import { getWorkerTypes } from '../../devices/local_components/add-device-form';
-import { ChevronDown } from "lucide-react";
 
 type Filters = {
   start?: string;
@@ -155,7 +154,7 @@ export default function ReportsFilters({ initial = {}, onGenerate }: Props) {
               }}
               openState={workerId ? locationOpen : false}
               openStateAction={workerId ? setLocationOpen : () => {}}
-              disabled={!workerId}
+              // disabled={!workerId}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { getAuthHeaders } from "@/lib/auth";
 import { useAppSelector } from '@/store/hooks';
-import { EnrichedDevice, useEnrichedDevices } from "../devices/local_components/table";
+import { useEnrichedDevices } from "../devices/local_components/table";
+import { ChartOptions, FontSpec } from 'chart.js'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,7 +16,6 @@ import {
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
 import type { EnrichedWorker } from "@/workers/local-components/table";
-import { be } from "date-fns/locale";
 
 ChartJS.register(
   CategoryScale,
@@ -32,7 +31,7 @@ ChartJS.register(
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   // Get enriched devices directly from the hook - no manual mapping needed!
   const enrichedDevices = useEnrichedDevices();
@@ -217,7 +216,6 @@ export default function ReportsPage() {
       tooltip: {
         callbacks: {
           label: (context: any) => {
-            const label = context.label || '';
             const value = context.parsed || 0;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1);
@@ -230,105 +228,107 @@ export default function ReportsPage() {
 
   // Bar chart configuration for worker utilizations
   const workerUtilizationData = {
-    labels: enrichedWorkers.map(w => w.hostname),
-    datasets: [
-      {
-        label: 'Utilization %',
-        data: enrichedWorkers.map(w => w.utilizationPercent),
-        backgroundColor: enrichedWorkers.map(w => 
-          w.utilizationPercent > 100
-            ? '#EF4444'  // Red if over 100%
-            : w.status?.toLowerCase() === 'online' || w.status?.toLowerCase() === 'active'
-            ? '#10B981'  // Green if online
-            : '#FCA5A5'  // Light red if offline
-        ),
-        borderColor: enrichedWorkers.map(w => 
-          w.utilizationPercent > 100
-            ? '#DC2626'
-            : w.status?.toLowerCase() === 'online' || w.status?.toLowerCase() === 'active'
-            ? '#059669'
-            : '#F87171'
-        ),
-        borderWidth: 2,
-        borderRadius: 8,
-      }
-    ]
-  };
+  labels: enrichedWorkers.map(w => w.hostname),
+  datasets: [
+    {
+      label: 'Utilization %',
+      data: enrichedWorkers.map(w => w.utilizationPercent),
+      backgroundColor: enrichedWorkers.map(w =>
+        w.utilizationPercent! > 100
+          ? '#EF4444'
+          : w.status?.toLowerCase() === 'online' || w.status?.toLowerCase() === 'active'
+          ? '#10B981'
+          : '#FCA5A5'
+      ),
+      borderColor: enrichedWorkers.map(w =>
+        w.utilizationPercent! > 100
+          ? '#DC2626'
+          : w.status?.toLowerCase() === 'online' || w.status?.toLowerCase() === 'active'
+          ? '#059669'
+          : '#F87171'
+      ),
+      borderWidth: 2,
+      borderRadius: 8,
 
-  const workerUtilizationOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'x' as const,
-    barPercentage: 0.2,
-    categoryPercentage: 0.3,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        enabled: true,
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        padding: 3,
-        titleFont: { size: 14, weight: 'bold' },
-        bodyFont: { size: 12 },
-        callbacks: {
-          title: (context: any) => {
-            return context[0]?.label || 'Worker';
-          },
-          label: (context: any) => {
-            const dataIndex = context.dataIndex;
-            const worker = enrichedWorkers[dataIndex];
-            const utilization = context.parsed.y;
-            const status = worker.status?.toLowerCase() === 'online' || worker.status?.toLowerCase() === 'active'
+      // ✅ Dataset-level options
+      barPercentage: 0.2,
+      categoryPercentage: 0.3,
+    },
+  ],
+};
+
+
+
+
+const workerUtilizationOptions: ChartOptions<'bar'> = {
+  responsive: true,
+  maintainAspectRatio: false,
+  indexAxis: 'x',
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      enabled: true,
+      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      padding: 3,
+      titleFont: { size: 14, weight: 'bold' } as Partial<FontSpec>,
+      bodyFont: { size: 12 } as Partial<FontSpec>,
+      callbacks: {
+        title: (context) => context[0]?.label || 'Worker',
+        label: (context) => {
+          const dataIndex = context.dataIndex;
+          const worker = enrichedWorkers[dataIndex];
+          const utilization = context.parsed.y;
+          const status =
+            worker.status?.toLowerCase() === 'online' ||
+            worker.status?.toLowerCase() === 'active'
               ? '🟢 Online'
               : '🔴 Offline';
-            const warning = utilization > 100 ? ' ⚠️ CRITICAL' : '';
-            return [
-              `Utilization: ${utilization}%${warning}`,
-              `Status: ${status}`,
-              `Devices: ${worker.deviceCount}/${worker.max_devices}`
-            ];
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: Math.max(150, Math.max(...enrichedWorkers.map(w => w.utilizationPercent)) + 20),
-        title: {
-          display: true,
-          text: 'Utilization %',
-          font: { size: 14, weight: 'bold' }
-        },
-        ticks: {
-          stepSize: 50,
-          callback: (value: any) => `${value}%`,
-          font: { size: 11 }
-        },
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)'
-        }
-      },
-      x: {
-          beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Worker Name',
-          font: { size: 14, weight: 'bold' }
-        },
-        ticks: {
-          autoSkip: false,
-          maxRotation: 45,
-          minRotation: 0,
-          font: { size: 10 }
-        },
-        grid: {
-          display: false
+          const warning = utilization != null && utilization > 100 ? ' ⚠️ CRITICAL' : '';
+          return [
+            `Utilization: ${utilization}%${warning}`,
+            `Status: ${status}`,
+            `Devices: ${worker.deviceCount}/${worker.max_devices}`
+          ];
         }
       }
     }
-  };
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      max: Math.max(150, Math.max(...enrichedWorkers.map(w => w.utilizationPercent)) + 20),
+      title: {
+        display: true,
+        text: 'Utilization %',
+        font: { size: 14, weight: 'bold' } as Partial<FontSpec>
+      },
+      ticks: {
+        stepSize: 50,
+        callback: (value) => `${value}%`,
+        font: { size: 11 } as Partial<FontSpec>
+      },
+      grid: {
+        color: 'rgba(0, 0, 0, 0.05)'
+      }
+    },
+    x: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Worker Name',
+        font: { size: 14, weight: 'bold' } as Partial<FontSpec>
+      },
+      ticks: {
+        autoSkip: false,
+        maxRotation: 45,
+        minRotation: 0,
+        font: { size: 10 } as Partial<FontSpec>
+      },
+      grid: { display: false }
+    }
+  }
+};
+
 
   return (
     <div className="w-full h-full p-6 bg-gray-50">

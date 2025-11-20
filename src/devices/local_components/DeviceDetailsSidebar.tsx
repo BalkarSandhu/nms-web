@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,20 +18,9 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
     const { locations } = useAppSelector(state => state.locations);
     const { workers } = useAppSelector(state => state.workers);
     
-    const [expandedSections, setExpandedSections] = useState({
-        deviceInfo: false,
-        location: false,
-        worker: false,
-        lastPing: false,
-        connectionHealth: false
-    });
+    
 
-    const toggleSection = (section: keyof typeof expandedSections) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
-        }));
-    };
+    
 
     if (!deviceId) {
         return null;
@@ -73,11 +61,14 @@ export function DeviceDetailsSidebar({ deviceId, onClose }: { deviceId: number |
                             <div className="px-4 pb-4 space-y-3 bg-green-50 rounded-lg-3 border-t text-sm font-medium">
                                 <InfoRow label="Device Type" value={deviceType?.name || 'Unknown'} />
                                 <InfoRow label="Hostname" value={device.hostname || 'N/A'} />
-                                <InfoRow label="Location Name" value={location.name || 'Unknown'} />
-                                <InfoRow label="Lattitude" value={location.lat || 'N/A'} />
-                                <InfoRow label="Longitude " value={location.lng || 'N/A'} />
-                                <InfoRow label="Area" value={worker.hostname || 'Unknown'} />    
-                                <InfoRow label="Status " value={worker.status || 'N/A'} />
+                                <InfoRow label="Location Name" value={location?.name || 'Unknown'} />
+                                <InfoRow label="Latitude" value={location?.lat?.toString() || 'N/A'} />
+                                <InfoRow label="Longitude" value={location?.lng?.toString() || 'N/A'} />
+
+                                <InfoRow label="Area" value={worker?.hostname || 'Unknown'} />
+                                <InfoRow label="Status" value={worker?.status || 'N/A'} />
+
+
                                 <InfoRow 
                                         label="Timestamp" 
                                         value={new Date(device.last_ping).toLocaleString()} 

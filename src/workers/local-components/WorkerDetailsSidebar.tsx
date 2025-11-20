@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { DeviceCard } from '@/locations/local-components/DeviceCard';
-import { ChevronDown, ChevronUp, SquarePen, Trash2, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { fetchWorkers } from '@/store/workerSlice';
+import { fetchWorkerStats } from '@/store/workerSlice';
+import { getAuthHeaders } from '@/lib/auth';
 
 // Worker Details Dialog Component
 export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string | null; onClose: () => void; }) {
@@ -21,7 +24,6 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [showApprovalForm, setShowApprovalForm] = useState(false);
-    const [approvalStatus, setApprovalStatus] = useState('approved');
     const [approvedBy, setApprovedBy] = useState('');
     const [approvalError, setApprovalError] = useState<string | null>(null);
 
@@ -83,14 +85,10 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
         setApprovalError(null);
         try {
             const apiUrl = `${import.meta.env.VITE_NMS_HOST}/workers/${workerId}/approve`;
-            const token = import.meta.env.VITE_AUTH_TOKEN;
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
+                headers:getAuthHeaders(),
                 body: JSON.stringify({
                     approval_status: 'approved',
                     approved_by: approvedBy
@@ -106,6 +104,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
             
             // Refresh workers data
             dispatch(fetchWorkers({}));
+            dispatch(fetchWorkerStats());
             
             setTimeout(() => {
                 onClose();
@@ -141,6 +140,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
             
             // Refresh workers data
             dispatch(fetchWorkers({}));
+            dispatch(fetchWorkerStats());
             
             setTimeout(() => {
                 onClose();

@@ -1,7 +1,6 @@
 import "@/index.css";
 
 //---  lucide icons
-import { X } from "lucide-react";
 
 //-- ShadCN components
 import {
@@ -20,7 +19,6 @@ import {
 import { Button } from "./ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   // DialogDescription,
   // DialogFooter,

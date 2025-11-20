@@ -18,6 +18,7 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
+import Dadhwal from "../assets/Dadhwal.jpg"
 import {
   Sidebar,
   SidebarContent,
@@ -101,8 +102,8 @@ const baseNavItems = [
     isActive: false,
   },
   {
-    title: "Workers",
-    url: "/workers",
+    title: "Areas",
+    url: "/areas",
     icon: Users,
     isActive: false,
   },
@@ -144,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props} className="bg-(--dark) text-(--contrast) border-r-2 border-(--base)">
-      <SidebarHeader className="bg-(--dark) text-(--contrast)">
+    <SidebarHeader className="bg-(--dark) text-(--contrast)">
         <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent className="bg-(--dark) text-(--contrast)">

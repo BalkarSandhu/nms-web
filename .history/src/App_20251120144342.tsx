@@ -16,7 +16,7 @@ import {
 import "@/index.css";
 
 import { LoadingPage } from './components/loading-screen'
-// import { APIProvider } from './contexts/API-Context'
+import { APIProvider } from './contexts/API-Context'
 import { getAuthToken, clearAuthToken, subscribeToAuthChanges, refreshAuthToken } from '@/lib/auth'  // ⬅️ added refreshAuthToken
 
 import Dashboard from '@/dashboard/page'
@@ -392,7 +392,7 @@ function App() {
 
 
       {useLayout ? (
-        // <APIProvider>
+        <APIProvider>
           <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
             <AppSidebar />
             <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
@@ -448,7 +448,7 @@ function App() {
               </div>
             </SidebarInset>
           </SidebarProvider>
-        // </APIProvider>
+        </APIProvider>
       ) : (
         <div className="flex-1 min-w-0 overflow-x-auto">
           <Routes>

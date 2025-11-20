@@ -1,4 +1,3 @@
-
 import BaseCard from "./Base-Card";
 import "@/index.css";
 import { useMemo } from "react";
@@ -56,17 +55,31 @@ export default function MetricGeneral({
     ];
 
     const handleItemClick = (item: MetricItem) => {
-        onItemClick?.(item);
-        if (navigatePath) {
-            const params = new URLSearchParams(searchParams);
-            params.set('label', item.label);
-            navigate(`${navigatePath}?${params.toString()}`);
-        }
-    };
+    onItemClick?.(item);
 
-    // Default icon resolver if not provided
-    // Default icon resolver if not provided
-    const defaultIconResolver = () => "📦";
+    if (navigatePath) {
+        const params = new URLSearchParams(searchParams);
+
+        // Instead of 'label', use device_type_name
+        params.set('device_type_name', item.label);
+
+        navigate(`${navigatePath}?${params.toString()}`);
+    }
+};
+
+    // Built-in icon resolver based on label keywords
+    const defaultIconResolver = (item: MetricItem) => {
+        const label = item.label.toLowerCase();
+        if (label.includes("workstation")) return "🖥️";
+        if (label.includes("ptz") || label.includes("camera")) return "📷";
+        if (label.includes("bullet")) return "📷"; // Bullet camera
+        if (label.includes("sensor")) return "📡";
+        if (label.includes("gateway") || label.includes("router")) return "🌐";
+        if (label.includes("office") || label.includes("building")) return "🏢";
+        if (label.includes("warehouse")) return "🏭";
+        if (label.includes("Coal Dump")) return "🏭";
+        return "📦";
+    };
     const getIcon = iconResolver || defaultIconResolver;
 
     if (sortedData.length === 0) {

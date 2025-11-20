@@ -13,6 +13,8 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  
+  
 }
 
 const initialState: AuthState = {

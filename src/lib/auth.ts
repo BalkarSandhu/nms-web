@@ -242,3 +242,27 @@ export const isDataStale = (lastFetched: number | null, maxAge: number = 5 * 60 
   if (!lastFetched) return true;
   return Date.now() - lastFetched > maxAge;
 };
+
+export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include', // if refresh token is in httpOnly cookie
+    });
+
+    if (!response.ok) {
+      clearAuthToken();
+      return null;
+    }
+
+    const data = await response.json();
+    // assume backend returns { token, expiry }
+    persistAuthToken(data.token, data.expiry);
+
+    return getAuthToken();
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    clearAuthToken();
+    return null;
+  }
+};

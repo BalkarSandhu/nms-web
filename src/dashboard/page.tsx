@@ -14,15 +14,23 @@ import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
 import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
 import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 
+
 type DashboardProps = {
 	isButtonClicked?: boolean;
 	setIsButtonClicked?: (value: boolean) => void;
+}
+
+interface WorkerRow {
+  id: number;
+  name: string;
+  [key: string]: any; // optional, if there are extra properties
 }
 
 export default function Dashboard({ isButtonClicked }: DashboardProps) {
 
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	
 
 	// Get data from Redux store
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
@@ -142,13 +150,18 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const handleDeviceStatusClick = (status: 'online' | 'offline' | 'unknown') => {
 		navigate(`/devices?status=${status === 'online' ? 'online' : 'offline'}`);
 	};
+// 	const handleMetricItemClick = (item: MetricItem) => {
+//     // Navigate to /devices with device_type_name equal to clicked item's label
+//     navigate(`/devices?device_type_name=${encodeURIComponent(item.label)}`);
+// };
+
 
 	const handleLocationStatusClick = (status: 'online' | 'offline' | 'unknown') => {
 		navigate(`/locations?status=${encodeURIComponent(status)}`);
 	};
 
 	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/workers?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
+		navigate(`/areas?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
 	};
 
 
@@ -301,7 +314,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Device", col2: "Downtime" },
 						data: deviceDowntimeData,
 						maxRows: 5,
-						onRowClick: (row) => navigate(`/devices/${row.id}`)
+						onRowClick: (row:WorkerRow) => navigate(`/devices/${row.id}`)
 					},
 					metric3: undefined,
 					metric4: activeDevices
@@ -338,7 +351,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Location", col2: "Downtime" },
 						data: locationDowntimeData,
 						maxRows: 5,
-						onRowClick: (row) => navigate(`/locations/${row.id}`)
+						onRowClick: (row:WorkerRow) => navigate(`/locations/${row.id}`)
 					},
 					metric3: undefined,
 					metric4: activeLocations
@@ -362,11 +375,11 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 
 
 			<Section
-				title="Workers"
+				title="Areas"
 				mapData={workersMapData}
 				metricsData={{
 					metric1: {
-						title: "Worker Status",
+						title: "Area Status",
 						data: workerMetrics,
 						labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
 						onStatusClick: handleWorkerStatusClick
@@ -376,7 +389,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Worker", col2: "Downtime" },
 						data: workerDowntimeData,
 						maxRows: 5,
-						onRowClick: (row) => navigate(`/workers/${row.id}`)
+						onRowClick: (row:WorkerRow) => navigate(`/workers/${row.id}`)
 					},
 					metric3: undefined,
 					metric4: undefined

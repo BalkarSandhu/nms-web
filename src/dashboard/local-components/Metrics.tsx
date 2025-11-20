@@ -5,6 +5,8 @@ import MetricGeneral from "./Metric-4";
 import MetricMapSwitcher from "./Metric-Map-Switcher";
 import { MapViewer } from "./Map-Viewer";
 import type { MapDataPoint } from "./Map-Viewer";
+import { useNavigate } from "react-router-dom";
+
 
 import "@/index.css";
 
@@ -18,6 +20,7 @@ export type MetricsProps = {
 
 export default function Metrics({ metricState, setMetricState, metricsData, mapData = [] }: MetricsProps) {
 
+    const navigate = useNavigate();
     const handlePointClick = (point: MapDataPoint) => {
         console.log('Clicked point:', point);
     };
@@ -26,6 +29,7 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
         console.log('Clicked metric item:', item);
         // Add navigation logic here - e.g., filter by label
         // Example: navigate(`/devices?type=${item.label}`)
+        navigate(`/devices?deviceType=${encodeURIComponent(item.label)}`);
     };
 
     return (

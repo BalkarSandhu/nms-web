@@ -7,18 +7,9 @@ export default function DevicesReportsPage() {
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const getReportConfig = (type: string) => {
-    const configs: any = {
-      devices: {
-        title: 'Devices Status Report',
-        columns: ['S.No', 'Area', 'Location', 'Device IP', 'Device Type', 'Downtime', 'Uptime']
-      }
-    };
-    return configs[type];
-  };
+  
 
   const generateTableHTML = (filters: any) => {
-    const config = getReportConfig('devices');
     const generatedDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',

@@ -7,13 +7,11 @@ import DevicesFilters, { type FilterConfig } from './filters';
 import {
     Table,
     TableBody,
-    TableCaption,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import DevicesModifier from './devices-modifier';
 
 export type EnrichedDevice = {
     id: number;

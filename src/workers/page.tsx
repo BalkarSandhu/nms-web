@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchWorkers } from '@/store/workerSlice';
+import { fetchWorkerStats } from '@/store/workerSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local-components/header';
 import WorkersTable, { type EnrichedWorker } from './local-components/table';
@@ -35,6 +36,7 @@ export default function WorkersPage() {
         // Only fetch if workers are not loaded OR data is stale (older than 5 minutes)
         if (!workers || workers.length === 0 || isDataStale(lastFetched)) {
             dispatch(fetchWorkers({}));
+            dispatch(fetchWorkerStats());
         }
     }, [dispatch, workers, lastFetched]);
 

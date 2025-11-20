@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown} from "lucide-react"
 
 import {
   DropdownMenu,
@@ -46,12 +46,13 @@ export function TeamSwitcher({
             >
               <div className="bg-(--azul) text-(--contrast) flex aspect-square size-8 items-center justify-center rounded-lg">
                 <activeTeam.logo className="size-4" />
+          
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-(--contrast)">{activeTeam.name}</span>
-                <span className="truncate text-xs text-(--contrast) opacity-70">{activeTeam.plan}</span>
+              {/* <span className="truncate text-xs text-(--contrast) opacity-70">{activeTeam.plan}</span> */}
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              {/* <ChevronsUpDown className="ml-auto" /> */}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -60,9 +61,7 @@ export function TeamSwitcher({
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-(--contrast) opacity-70">
-              Teams
-            </DropdownMenuLabel>
+          
             {teams.map((team, index) => (
               <DropdownMenuItem
                 key={team.name}

@@ -38,9 +38,7 @@ interface WorkerStatsResponse {
   total_workers: number;
 }
 
-interface MessageResponse {
-  message: string;
-}
+
 
 // Types for API payloads
 export interface UpdateWorkerPayload {
@@ -88,13 +86,21 @@ interface WorkerState {
   } | null;
   loading: boolean;
   error: string | null;
-  lastFetched: number | null; // Timestamp of last successful fetch
+  lastFetched: number | null;
+  
 }
 
 // Initial state
 const initialState: WorkerState = {
   workers: [],
-  stats: null,
+  stats:{
+     total_workers: 0,
+    active_workers: 0,
+    offline_workers: 0,
+    pending_workers: 0,
+    approved_workers: 0,
+    denied_workers: 0,
+  },
   pagination: null,
   loading: false,
   error: null,
@@ -113,7 +119,7 @@ export const fetchWorkers = createAsyncThunk(
       if (params.approval_status) queryParams.append('approval_status', params.approval_status);
 
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/workers?${queryParams}`,
+        `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to fetch workers');
@@ -146,21 +152,7 @@ export const searchWorkers = createAsyncThunk(
   }
 );
 
-export const fetchWorkerStats = createAsyncThunk(
-  'workers/fetchStats',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/workers/stats`, {
-        headers: getAuthHeaders(),
-      });
-      if (!response.ok) throw new Error('Failed to fetch worker stats');
-      const data: WorkerStatsResponse = await response.json();
-      return data;
-    } catch (error) {
-      return rejectWithValue((error as Error).message);
-    }
-  }
-);
+
 
 export const fetchWorkerById = createAsyncThunk(
   'workers/fetchById',
@@ -240,6 +232,23 @@ export const approveWorker = createAsyncThunk(
     }
   }
 );
+export const fetchWorkerStats = createAsyncThunk(
+  'workers/stats',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_NMS_HOST}/workers/stats`,
+        { headers: getAuthHeaders() }
+      );
+      if (!response.ok) throw new Error('Failed to fetch worker stats');
+      const data: WorkerStatsResponse = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
 
 export const pauseWorker = createAsyncThunk(
   'workers/pause',
