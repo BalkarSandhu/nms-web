@@ -1,11 +1,14 @@
+// ============================================
+// Metric1.tsx - Device/Location/Worker Status
+// ============================================
 import BaseCard from "./Base-Card";
 import "@/index.css";
 import { MenuGroupType } from "./Base-Card";
 
 export interface MetricData {
-    low: number;    // Online
-    medium: number; // Unknown (optional)
-    high: number;   // Offline
+    low: number;
+    medium: number;
+    high: number;
 }
 
 export interface MetricLabels {
@@ -26,7 +29,7 @@ export interface Metric1Props {
 export default function Metric1({ 
     title = "Device Status",
     data = { low: 111, medium: 0, high: 26 },
-    labels = { low: "Online", medium: "Unknown", high: "Offline" },
+    labels = { low: "Online", medium: "Supervised", high: "Offline" },
     className = "",
     menuGroups,
     onStatusClick
@@ -46,6 +49,11 @@ export default function Metric1({
         },
     ];
 
+    // Determine which status to show prominently
+    const hasOnline = data.low > 0;
+    const hasMedium = data.medium > 0;
+    const hasOffline = data.high > 0;
+
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             <div className="flex flex-col gap-2 h-full justify-between py-1">
@@ -55,27 +63,29 @@ export default function Metric1({
                     <div className="text-(--contrast)/40 text-[10px] mt-1 tracking-wide">Total Devices</div>
                 </div>
 
-                {/* Status Rows - ALWAYS show Online and Offline */}
+                {/* All Statuses Stacked Vertically */}
                 <div className="flex flex-col gap-1">
-                    {/* Online */}
-                    <button
-                        onClick={() => onStatusClick?.('online')}
-                        className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--green)/30"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full bg-(--green) shadow-lg shadow-(--green)/50"></div>
-                                <span className="text-(--contrast) font-semibold text-xs">{labels.low}</span>
+                    {/* Show Online if exists */}
+                    {hasOnline && (
+                        <button
+                            onClick={() => onStatusClick?.('online')}
+                            className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--green)/30"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-(--green) shadow-lg shadow-(--green)/50"></div>
+                                    <span className="text-(--contrast) font-semibold text-xs">{labels.low}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-(--contrast) text-xl font-bold tracking-tight">{data.low}</span>
+                                    <span className="text-(--green) text-xs font-bold min-w-[38px] text-right">{onlinePercent}%</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-(--contrast) text-xl font-bold tracking-tight">{data.low}</span>
-                                <span className="text-(--green) text-xs font-bold min-w-[38px] text-right">{onlinePercent}%</span>
-                            </div>
-                        </div>
-                    </button>
+                        </button>
+                    )}
 
-                    {/* Unknown/Medium - Only show if has label and count > 0 */}
-                    {labels.medium && data.medium > 0 && (
+                    {/* Show Medium/Unknown if exists */}
+                    {hasMedium && (
                         <button
                             onClick={() => onStatusClick?.('unknown')}
                             className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--azul)/30"
@@ -93,22 +103,24 @@ export default function Metric1({
                         </button>
                     )}
 
-                    {/* Offline */}
-                    <button
-                        onClick={() => onStatusClick?.('offline')}
-                        className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--red)/30"
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full bg-(--red) shadow-lg shadow-(--red)/50"></div>
-                                <span className="text-(--contrast) font-semibold text-xs">{labels.high}</span>
+                    {/* Show Offline if exists */}
+                    {hasOffline && (
+                        <button
+                            onClick={() => onStatusClick?.('offline')}
+                            className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--red)/30"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-(--red) shadow-lg shadow-(--red)/50"></div>
+                                    <span className="text-(--contrast) font-semibold text-xs">{labels.high}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-(--contrast) text-xl font-bold tracking-tight">{data.high}</span>
+                                    <span className="text-(--red) text-xs font-bold min-w-[38px] text-right">{offlinePercent}%</span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-(--contrast) text-xl font-bold tracking-tight">{data.high}</span>
-                                <span className="text-(--red) text-xs font-bold min-w-[38px] text-right">{offlinePercent}%</span>
-                            </div>
-                        </div>
-                    </button>
+                        </button>
+                    )}
                 </div>
             </div>
         </BaseCard>

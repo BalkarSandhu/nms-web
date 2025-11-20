@@ -3,9 +3,9 @@ import "@/index.css";
 import { MenuGroupType } from "./Base-Card";
 
 export interface MetricData {
-    low: number;    // Online
-    medium: number; // Unknown (optional)
-    high: number;   // Offline
+    low: number;
+    medium: number;
+    high: number;
 }
 
 export interface MetricLabels {
@@ -26,7 +26,7 @@ export interface Metric1Props {
 export default function Metric1({ 
     title = "Device Status",
     data = { low: 111, medium: 0, high: 26 },
-    labels = { low: "Online", medium: "Unknown", high: "Offline" },
+    labels = { low: "Online", medium: "Supervised", high: "Offline" },
     className = "",
     menuGroups,
     onStatusClick
@@ -55,9 +55,9 @@ export default function Metric1({
                     <div className="text-(--contrast)/40 text-[10px] mt-1 tracking-wide">Total Devices</div>
                 </div>
 
-                {/* Status Rows - ALWAYS show Online and Offline */}
+                {/* All Statuses - ALWAYS show all three */}
                 <div className="flex flex-col gap-1">
-                    {/* Online */}
+                    {/* Online - ALWAYS show */}
                     <button
                         onClick={() => onStatusClick?.('online')}
                         className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--green)/30"
@@ -74,7 +74,7 @@ export default function Metric1({
                         </div>
                     </button>
 
-                    {/* Unknown/Medium - Only show if has label and count > 0 */}
+                    {/* Medium/Unknown - Show ONLY if has label and count > 0 */}
                     {labels.medium && data.medium > 0 && (
                         <button
                             onClick={() => onStatusClick?.('unknown')}
@@ -93,7 +93,7 @@ export default function Metric1({
                         </button>
                     )}
 
-                    {/* Offline */}
+                    {/* Offline - ALWAYS show */}
                     <button
                         onClick={() => onStatusClick?.('offline')}
                         className="w-full bg-(--dark)/50 hover:bg-(--dark)/70 rounded-lg px-3 py-2 transition-all border border-transparent hover:border-(--red)/30"

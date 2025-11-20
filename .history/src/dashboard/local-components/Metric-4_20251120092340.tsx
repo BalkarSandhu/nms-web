@@ -89,7 +89,10 @@ export default function Metric4({
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             <div className="flex items-center gap-4 h-full py-2">
                 {/* Left: Total */}
-                
+                <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: '45%' }}>
+                    <div className="text-6xl font-bold text-(--contrast) leading-none tracking-tight">{total}</div>
+                    <div className="text-(--contrast)/40 text-[9px] mt-1 tracking-wide uppercase">Total</div>
+                </div>
 
                 {/* Divider */}
                 <div className="h-full w-px bg-(--contrast)/10"></div>

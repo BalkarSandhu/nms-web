@@ -283,73 +283,87 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 				/>
 				
 			</div>
-			// In your Dashboard.tsx, update the sections like this:
-
-// DEVICES SECTION
-<Section
-    title="Devices"
-    mapData={devicesMapData}
-    metricsData={{
-        metric1: {
-            title: "Device Status",
-            data: deviceMetrics,
-            labels: { low: "Online", medium: "", high: "Offline" },
-            onStatusClick: handleDeviceStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Device", col2: "Downtime" },
-            data: deviceDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/devices/${row.id}`) // Proper navigation
-        },
-        metric3: undefined // Empty for now
-    }}
-/>
-
-// LOCATIONS SECTION
-<Section
-    title="Locations"
-    mapData={locationsMapData}
-    metricsData={{
-        metric1: {
-            title: "Location Status",
-            data: locationMetrics,
-            labels: { low: "Online", medium: "Unknown", high: "Offline" },
-            onStatusClick: handleLocationStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Location", col2: "Downtime" },
-            data: locationDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/locations/${row.id}`)
-        },
-        metric3: undefined
-    }}
-/>
-
-// WORKERS SECTION
-<Section
-    title="Workers"
-    mapData={workersMapData}
-    metricsData={{
-        metric1: {
-            title: "Worker Status",
-            data: workerMetrics,
-            labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
-            onStatusClick: handleWorkerStatusClick
-        },
-        metric2: {
-            title: "Longest Downtime",
-            headers: { col1: "Worker", col2: "Downtime" },
-            data: workerDowntimeData,
-            maxRows: 5,
-            onRowClick: (row) => navigate(`/workers/${row.id}`)
-        },
-        metric3: undefined
-    }}
-/>
+			<Section
+				title="Devices"
+				mapData={devicesMapData}
+				metricsData={{
+					metric1: {
+						title: "Device Status",
+						data: deviceMetrics,
+						labels: {
+							low: "Online",
+							medium: "",
+							high: "Offline"
+						},
+						showLabels: true,
+						onStatusClick: handleDeviceStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: {
+							col1: "Device",
+							col2: "Downtime"
+						},
+						data: deviceDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep linear gauge empty as per requirements
+				}}
+			/>
+			<Section
+				title="Locations"
+				mapData={locationsMapData}
+				metricsData={{
+					metric1: {
+						title: "Location Status",
+						data: locationMetrics,
+						labels: {
+							low: "Online",
+							medium: "Unknown",
+							high: "Offline"
+						},
+						showLabels: true,
+						onStatusClick: handleLocationStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: {
+							col1: "Location",
+							col2: "Downtime"
+						},
+						data: locationDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep linear gauge empty
+				}}
+			/>
+			<Section
+				title="Workers"
+				mapData={workersMapData}
+				metricsData={{
+					metric1: {
+						title: "Worker Status",
+						data: workerMetrics,
+						labels: {
+							low: "ONLINE",
+							medium: "",
+							high: "OFFLINE"
+						},
+						showLabels: true,
+						onStatusClick: handleWorkerStatusClick
+					},
+					metric2: {
+						title: "Longest Downtime",
+						headers: {
+							col1: "Worker",
+							col2: "Downtime"
+						},
+						data: workerDowntimeData,
+						maxRows: 5
+					},
+					metric3: undefined // Keep gauge empty
+				}}
+			/>
 		</div>
 	)
 }
