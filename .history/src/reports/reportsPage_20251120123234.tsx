@@ -1,8 +1,6 @@
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppSelector } from '@/store/hooks';
-// import { useEnrichedDevices } from "../devices/local_components/table";
-
-import type { readDeviceType } from "@/contexts/read-Types";
+import { useEnrichedDevices } from "../devices/local_components/table";
 import { ChartOptions, FontSpec } from 'chart.js'
 import {
   Chart as ChartJS,
@@ -34,6 +32,9 @@ ChartJS.register(
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
+
+  // Get enriched devices directly from the hook - no manual mapping needed!
+  const enrichedDevices = useEnrichedDevices();
   
   // Get workers and devices from Redux
   const workers = useAppSelector(state => state.workers.workers);
@@ -58,19 +59,19 @@ export default function ReportsPage() {
 
   useEffect(() => {
     // Simulate data fetch completion
-    if (devices.length > 0 || workers.length > 0) {
+    if (enrichedDevices.length > 0 || workers.length > 0) {
       setLoading(false);
     }
-  }, [devices, workers]);
+  }, [enrichedDevices, workers]);
 
   const activeDevicesPerWorker = useMemo(() => {
-    if (!devices.length) return [];
+    if (!enrichedDevices.length) return [];
 
     const workerMap: Record<string, { id: string; hostname: string; active: number; total: number }> = {};
 
-    devices.forEach((d) => {
-      const workerId = d.worker.id || "unassigned";
-      const hostname = d.worker.hostname || workerId;
+    enrichedDevices.forEach((d) => {
+      const workerId = d.worker_id || "unassigned";
+      const hostname = d.worker_hostname || workerId;
       
       if (!workerMap[workerId]) {
         workerMap[workerId] = { id: workerId, hostname: hostname, active: 0, total: 0 };
@@ -95,26 +96,26 @@ export default function ReportsPage() {
 
     console.log("📊 Active Devices Per Worker:", result);
     return result;
-  }, [devices]);
+  }, [enrichedDevices]);
 
   // Now uses enriched data directly - no manual mapping!
   const devicesPerType = useMemo(() => {
-    if (!devices.length) return [];
+    if (!enrichedDevices.length) return [];
     const typeMap: Record<string, number> = {};
-    devices.forEach((d) => {
-      const typeName = d.device_type.name || "Unknown";
+    enrichedDevices.forEach((d) => {
+      const typeName = d.device_type_name || "Unknown";
       typeMap[typeName] = (typeMap[typeName] || 0) + 1;
     });
     return Object.entries(typeMap)
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count);
-  }, [devices]);
+  }, [enrichedDevices]);
 
   const metrics = useMemo(() => {
-    const totalDevices = devices.length;
-    const activeDevices = devices.filter((d) => d.status && !d.disabled).length;
+    const totalDevices = enrichedDevices.length;
+    const activeDevices = enrichedDevices.filter((d) => d.status && !d.disabled).length;
     const uniqueWorkers = workers.length;
-    const devicesWithIssues = devices.filter((d) => d.consecutive_failures > 0).length;
+    const devicesWithIssues = enrichedDevices.filter((d) => d.consecutive_failures > 0).length;
 
     return {
       totalDevices,
@@ -123,7 +124,7 @@ export default function ReportsPage() {
       devicesWithIssues,
       healthPercentage: totalDevices > 0 ? Math.round((activeDevices / totalDevices) * 100) : 0,
     };
-  }, [devices, workers]);
+  }, [enrichedDevices, workers]);
 
   // Bar chart configuration for workers
   const workerChartData = {
@@ -345,13 +346,13 @@ const workerUtilizationOptions: ChartOptions<'bar'> = {
         </div>
       )}
 
-      {!loading && devices.length === 0 && workers.length === 0 && (
+      {!loading && enrichedDevices.length === 0 && workers.length === 0 && (
         <div className="bg-gray-100 border border-gray-300 rounded-lg p-8 text-center">
           <p className="text-gray-600 text-lg">No data found</p>
         </div>
       )}
 
-      {(devices.length > 0 || workers.length > 0) && (
+      {(enrichedDevices.length > 0 || workers.length > 0) && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-6">

@@ -56,7 +56,7 @@ export const readDeviceSchema = z.object({
     disabled: z.boolean(),
     ignore: z.boolean(),
     last_ping: z.string(),
-    last_ping_time_taken: z.number().nonnegative(),
+    last_ping_time_taken: z.number(),
     check_interval: z.number(),
     timeout: z.number(),
     snmp_community: z.string().optional(),

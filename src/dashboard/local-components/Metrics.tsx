@@ -27,9 +27,8 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
 
     const handleMetricItemClick = (item: { label: string; value: number }) => {
         console.log('Clicked metric item:', item);
-        // Add navigation logic here - e.g., filter by label
-        // Example: navigate(`/devices?type=${item.label}`)
-        navigate(`/devices?deviceType=${encodeURIComponent(item.label)}`);
+        
+        navigate(`/devices?type=${encodeURIComponent(item.label)}`);
     };
 
     return (

@@ -4,27 +4,26 @@ import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
 import { fetchLocations } from '@/store/locationsSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local_components/header';
-import DevicesTable from './local_components/table';
+import DevicesTable, { type EnrichedDevice } from './local_components/table';
 import { DeviceDetailsSidebar } from './local_components/DeviceDetailsSidebar';
 import { LoadingPage } from '@/components/loading-screen';
 import { exportToCsv, type CsvColumn } from '@/lib/utils';
-import type { readDeviceType } from '@/contexts/read-Types';
 
 export default function DevicesPage() {
     const dispatch = useAppDispatch();
     const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
-    const [exportRows, setExportRows] = useState<readDeviceType[]>([]);
+    const [exportRows, setExportRows] = useState<EnrichedDevice[]>([]);
 
-    const exportColumns = useMemo<CsvColumn<readDeviceType>[]>(() => [
+    const exportColumns = useMemo<CsvColumn<EnrichedDevice>[]>(() => [
         { header: 'S.No', accessor: (_row, index) => index + 1 },
         { header: 'Display Name', accessor: (row) => row.display },
         { header: 'Hostname', accessor: (row) => row.hostname },
         { header: 'IP', accessor: (row) => `${row.ip}:${row.port}` },
-        { header: 'Type', accessor: (row) => row.device_type.name },
+        { header: 'Type', accessor: (row) => row.device_type_name },
         { header: 'Status', accessor: (row) => (row.status ? 'Online' : 'Offline') },
-        { header: 'Location', accessor: (row) => row.location.name ?? 'N/A' },
-        { header: 'Worker', accessor: (row) => row.worker.hostname ?? 'N/A' },
+        { header: 'Location', accessor: (row) => row.location_name ?? 'N/A' },
+        { header: 'Worker', accessor: (row) => row.worker_hostname ?? 'N/A' },
         { header: 'Failures', accessor: (row) => row.consecutive_failures },
     ], []);
 

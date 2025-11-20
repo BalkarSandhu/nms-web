@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { readDeviceType } from '@/contexts/read-Types';
 import { getAuthHeaders } from '@/lib/auth';
 
-
 // Types for Device Type
 export interface DeviceType {
   id: number;
@@ -65,8 +64,6 @@ export interface CreateDevicePayload {
   timeout: number;
   worker_id: string;
 }
-
-
 
 // State interface
 interface DeviceState {

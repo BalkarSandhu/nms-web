@@ -91,10 +91,10 @@ export default function DevicesTable({
 
     // Get unique values for filter options
     const filterOptions = useMemo(() => {
-        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type?.name))].sort();
+        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type.name))].sort();
         const uniqueStatuses = [...new Set(devices.map(dev => dev.status ? 'Online' : 'Offline'))].sort();
-        const uniqueLocations = [...new Set(devices.map(dev => dev.location?.name).filter(Boolean))].sort() as string[];
-        const uniqueWorkers = [...new Set(devices.map(dev => dev.worker?.hostname).filter(Boolean))].sort() as string[];
+        const uniqueLocations = [...new Set(devices.map(dev => dev.location.name).filter(Boolean))].sort() as string[];
+        const uniqueWorkers = [...new Set(devices.map(dev => dev.worker.hostname).filter(Boolean))].sort() as string[];
         const uniqueProtocols = [...new Set(devices.map(dev => dev.protocol.toUpperCase()))].sort();
 
         return {

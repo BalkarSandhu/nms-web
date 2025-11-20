@@ -28,6 +28,10 @@ interface WorkersResponse {
   total_pages: number;
   workers: Worker[];
 }
+interface MessageResponse {
+  message: string;
+}
+
 
 interface WorkerStatsResponse {
   active_workers: number;

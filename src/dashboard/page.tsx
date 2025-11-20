@@ -332,7 +332,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							return acc;
 						}, [] as { label: string; value: number }[])
 						.sort((a, b) => b.value - a.value)
-						.slice(0, 3)
+						.slice(0, 5)
 				}}
 			/>
 

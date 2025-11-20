@@ -61,7 +61,7 @@ export default function MetricGeneral({
         const params = new URLSearchParams(searchParams);
 
         // Instead of 'label', use device_type_name
-        params.set('device_type_name', item.label);
+        params.set('type', item.label);
 
         navigate(`${navigatePath}?${params.toString()}`);
     }

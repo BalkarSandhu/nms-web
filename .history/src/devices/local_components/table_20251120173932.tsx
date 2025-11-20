@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { useAppSelector } from '@/store/hooks';
 import DevicesFilters, { type FilterConfig } from './filters';
-import {type readDeviceType} from '@/contexts/read-Types';
+import {type readDeviceTypes} from '@/contexts/read-Types';
 
 
 import {
@@ -15,6 +15,59 @@ import {
     TableRow,
 } from "@/components/ui/table"
 
+export type EnrichedDevice = {
+    id: number;
+    hostname: string;
+    ip: string;
+    port: number;
+    display: string;
+    status: boolean;
+    protocol: string;
+    device_type_id: number;
+    location_id: number;
+    worker_id: string;
+    imei: string;
+    last_ping: string;
+    last_ping_time_taken: number;
+    consecutive_failures: number;
+    check_interval: number;
+    timeout: number;
+    disabled: boolean;
+    created_at: string;
+    updated_at: string;
+    status_reason: string;
+    device_type_name: string;
+    location_name?: string;
+    worker_hostname?: string;
+};
+
+export const useEnrichedDevices = (): EnrichedDevice[] => {
+    const { devices, deviceTypes } = useAppSelector(state => state.devices);
+    const { locations } = useAppSelector(state => state.locations);
+    const { workers } = useAppSelector(state => state.workers);
+
+    return useMemo(() => {
+        return devices.map((device) => {
+            const deviceType = deviceTypes.find(dt => dt.id === device.device_type_id);
+            const device_type_name = deviceType?.name || 'Unknown';
+
+            const location = locations.find(l => l.id === device.location_id);
+            const location_name = location?.name;
+
+            const worker_id = (device as any).worker_id || '';
+            const worker = workers.find(w => w.id === worker_id);
+            const worker_hostname = worker?.hostname;
+
+            return {
+                ...device,
+                worker_id,
+                device_type_name,
+                location_name,
+                worker_hostname,
+            };
+        });
+    }, [devices, deviceTypes, locations, workers]);
+};
 
 // Helper function to parse URL parameters into filters
 const parseUrlFilters = (searchParams: URLSearchParams): Record<string, string> => {
@@ -58,9 +111,9 @@ export default function DevicesTable({
 }: { 
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
-    onDataChange?: (rows: readDeviceType[]) => void;
+    onDataChange?: (rows: EnrichedDevice[]) => void;
 }) {
-    const { devices } = useAppSelector(state => state.devices);
+    const { devices, deviceTypes } = useAppSelector(state => state.devices);
     const [searchParams] = useSearchParams();
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedDeviceId || null);
     
@@ -91,10 +144,10 @@ export default function DevicesTable({
 
     // Get unique values for filter options
     const filterOptions = useMemo(() => {
-        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type?.name))].sort();
+        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type.name))].sort();
         const uniqueStatuses = [...new Set(devices.map(dev => dev.status ? 'Online' : 'Offline'))].sort();
-        const uniqueLocations = [...new Set(devices.map(dev => dev.location?.name).filter(Boolean))].sort() as string[];
-        const uniqueWorkers = [...new Set(devices.map(dev => dev.worker?.hostname).filter(Boolean))].sort() as string[];
+        const uniqueLocations = [...new Set(devices.map(dev => dev.location.name).filter(Boolean))].sort() as string[];
+        const uniqueWorkers = [...new Set(devices.map(dev => dev.worker.hostname).filter(Boolean))].sort() as string[];
         const uniqueProtocols = [...new Set(devices.map(dev => dev.protocol.toUpperCase()))].sort();
 
         return {
