@@ -5,7 +5,6 @@ import { useEnrichedDevices } from "../../devices/local_components/table";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
 
-
 export interface DeviceTypeData {
     type: string;
     count: number;
@@ -67,8 +66,8 @@ export default function Metric4({
 
     const getIcon = (typeName: string) => {
         const name = typeName.toLowerCase();
-        if (name.includes('PTZ') || name.includes('PTZ')) return "📹";
-        if (name.includes('Workstation') || name.includes('WorkStation')) return "🔐";
+        if (name.includes('ptz')) return "📹";
+        if (name.includes('workstation')) return "🔐";
         if (name.includes('sensor')) return "📡";
         if (name.includes('gateway') || name.includes('router')) return "🌐";
         if (name.includes('office') || name.includes('building')) return "🏢";
@@ -89,14 +88,18 @@ export default function Metric4({
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             <div className="flex items-center gap-4 h-full py-2">
-                {/* Left: Total */}
                 
+                {/* Left: Total Count */}
+                <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: '45%' }}>
+                    <div className="text-6xl font-bold text-(--contrast) leading-none tracking-tight">{total}</div>
+                    <div className="text-(--contrast)/40 text-[9px] mt-1 tracking-wide uppercase">Total</div>
+                </div>
 
                 {/* Divider */}
                 <div className="h-full w-px bg-(--contrast)/10"></div>
 
-                {/* Right: Type List */}
-                <div className="flex flex-col gap-1 flex-1 overflow-y-auto" style={{ maxHeight: '120px' }}>
+                {/* Right Section: Type List */}
+                <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto" style={{ maxHeight: '120px' }}>
                     {data.slice(0, 6).map((item) => {
                         const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
                         return (
@@ -110,8 +113,8 @@ export default function Metric4({
                                     <span className="text-(--contrast) text-xs font-medium truncate">{item.type}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    <span className="text-(--contrast) text-sm font-bold">{item.count}</span>
-                                    <span className="text-(--contrast)/60 text-[9px] font-medium min-w-[28px] text-right">{percentage}%</span>
+                                    <span className="text-(--contrast) text-lg font-bold">{item.count}</span>
+                                    <span className="text-(--contrast)/60 text-[10px] font-bold min-w-[28px] text-right">{percentage}%</span>
                                 </div>
                             </button>
                         );

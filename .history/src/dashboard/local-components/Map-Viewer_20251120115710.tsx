@@ -176,7 +176,6 @@ export const MapViewer = ({
     green: '#4CB944',
   });
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Calculate mean center when data changes
   const meanCenter = useMemo(() => {
@@ -184,42 +183,39 @@ export const MapViewer = ({
     return calculateMeanCenter(data);
   }, [data, autoZoomToDensity]);
 
-  // Auto-zoom to mean center when map loads with delay to show transition
+  // Auto-zoom to mean center when map loads
   useEffect(() => {
     if (
       mapRef.current &&
       meanCenter &&
       autoZoomToDensity &&
       !hasAutoZoomed &&
-      data.length > 0 &&
-      isInitialLoad
+      data.length > 0
     ) {
       const map = mapRef.current.getMap();
       
-      const performZoom = () => {
-        // Wait a bit to show the initial zoomed out view
-        setTimeout(() => {
+      // Wait for map to be fully loaded
+      if (map.loaded()) {
+        map.flyTo({
+          center: meanCenter.center,
+          zoom: meanCenter.zoom,
+          duration: 1500,
+          essential: true
+        });
+        setHasAutoZoomed(true);
+      } else {
+        map.once('load', () => {
           map.flyTo({
             center: meanCenter.center,
             zoom: meanCenter.zoom,
-            duration: 2000, // 2 seconds for smooth transition
+            duration: 1500,
             essential: true
           });
           setHasAutoZoomed(true);
-          setIsInitialLoad(false);
-        }, 800); // Show zoomed out view for 800ms before transitioning
-      };
-      
-      // Wait for map to be fully loaded
-      if (map.loaded()) {
-        performZoom();
-      } else {
-        map.once('load', () => {
-          performZoom();
         });
       }
     }
-  }, [meanCenter, autoZoomToDensity, hasAutoZoomed, data.length, isInitialLoad]);
+  }, [meanCenter, autoZoomToDensity, hasAutoZoomed, data.length]);
 
   // Handle filter updates from popup
   useEffect(() => {

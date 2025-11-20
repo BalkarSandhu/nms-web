@@ -5,7 +5,6 @@ import { useEnrichedDevices } from "../../devices/local_components/table";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
 
-
 export interface DeviceTypeData {
     type: string;
     count: number;
@@ -20,8 +19,8 @@ export interface Metric4Props {
     navigatePath?: string;
 }
 
-export default function Metric4({ 
-    title = "Devices by Type",
+export default function Metric5({ 
+    title = "Locations by Type",
     className = "",
     menuGroups,
     onTypeClick,

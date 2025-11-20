@@ -5,6 +5,16 @@ import { useEnrichedDevices } from "../../devices/local_components/table";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
 
+export interface MetricData {
+    low: number;
+    medium: number;
+    high: number;
+}
+export interface MetricLabels {
+    low?: string;
+    medium?: string;
+    high?: string;
+}
 
 export interface DeviceTypeData {
     type: string;

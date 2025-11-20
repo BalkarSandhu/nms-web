@@ -70,11 +70,33 @@ export interface MapViewerProps {
   pointsZoomThreshold?: number;
   mapFlavor?: 'dark' | 'light';
   autoZoomToDensity?: boolean;
+  densityRadius?: number;
 }
 
-// Function to calculate the geographic center (mean) of all points
-const calculateMeanCenter = (
-  data: MapDataPoint[]
+// Helper function to calculate distance between two points (Haversine formula)
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// Function to find the highest density area
+const findHighestDensityCenter = (
+  data: MapDataPoint[],
+  radiusKm: number = 50
 ): { center: [number, number]; zoom: number } | null => {
   if (data.length === 0) return null;
   
@@ -85,60 +107,36 @@ const calculateMeanCenter = (
     };
   }
 
-  // Calculate mean longitude and latitude
-  let sumLon = 0;
-  let sumLat = 0;
-  
+  let maxDensity = 0;
+  let densestPoint = data[0];
+
+  // For each point, count how many other points are within the radius
   data.forEach((point) => {
-    sumLon += point.coordinates[0];
-    sumLat += point.coordinates[1];
+    let density = 0;
+    data.forEach((otherPoint) => {
+      const distance = calculateDistance(
+        point.coordinates[1],
+        point.coordinates[0],
+        otherPoint.coordinates[1],
+        otherPoint.coordinates[0]
+      );
+      if (distance <= radiusKm) {
+        density++;
+      }
+    });
+
+    if (density > maxDensity) {
+      maxDensity = density;
+      densestPoint = point;
+    }
   });
 
-  const meanLon = sumLon / data.length;
-  const meanLat = sumLat / data.length;
-
-  // Calculate the spread of points to determine appropriate zoom
-  // Find the bounding box of all points
-  let minLon = data[0].coordinates[0];
-  let maxLon = data[0].coordinates[0];
-  let minLat = data[0].coordinates[1];
-  let maxLat = data[0].coordinates[1];
-
-  data.forEach((point) => {
-    minLon = Math.min(minLon, point.coordinates[0]);
-    maxLon = Math.max(maxLon, point.coordinates[0]);
-    minLat = Math.min(minLat, point.coordinates[1]);
-    maxLat = Math.max(maxLat, point.coordinates[1]);
-  });
-
-  // Calculate the span in degrees
-  const lonSpan = maxLon - minLon;
-  const latSpan = maxLat - minLat;
-  const maxSpan = Math.max(lonSpan, latSpan);
-
-  // Calculate zoom level based on span
-  // Smaller span = zoom in more
-  let zoomLevel: number;
-  if (maxSpan > 10) {
-    zoomLevel = 5;
-  } else if (maxSpan > 5) {
-    zoomLevel = 6;
-  } else if (maxSpan > 2) {
-    zoomLevel = 7;
-  } else if (maxSpan > 1) {
-    zoomLevel = 8;
-  } else if (maxSpan > 0.5) {
-    zoomLevel = 9;
-  } else if (maxSpan > 0.2) {
-    zoomLevel = 10;
-  } else if (maxSpan > 0.1) {
-    zoomLevel = 11;
-  } else {
-    zoomLevel = 12;
-  }
+  // Calculate appropriate zoom level based on density
+  // More points nearby = zoom in more
+  const zoomLevel = Math.min(12, 8 + Math.log2(maxDensity));
 
   return {
-    center: [meanLon, meanLat],
+    center: densestPoint.coordinates,
     zoom: zoomLevel
   };
 };
@@ -165,6 +163,7 @@ export const MapViewer = ({
   pointsZoomThreshold = 6,
   mapFlavor = 'dark',
   autoZoomToDensity = true,
+  densityRadius = 50,
 }: MapViewerProps) => {
   const mapRef = useRef<MapRef>(null);
   const [currentZoom, setCurrentZoom] = useState(zoom);
@@ -176,50 +175,46 @@ export const MapViewer = ({
     green: '#4CB944',
   });
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Calculate mean center when data changes
-  const meanCenter = useMemo(() => {
+  // Calculate density center when data changes
+  const densityCenter = useMemo(() => {
     if (!autoZoomToDensity || data.length === 0) return null;
-    return calculateMeanCenter(data);
-  }, [data, autoZoomToDensity]);
+    return findHighestDensityCenter(data, densityRadius);
+  }, [data, autoZoomToDensity, densityRadius]);
 
-  // Auto-zoom to mean center when map loads with delay to show transition
+  // Auto-zoom to density center when map loads
   useEffect(() => {
     if (
       mapRef.current &&
-      meanCenter &&
+      densityCenter &&
       autoZoomToDensity &&
       !hasAutoZoomed &&
-      data.length > 0 &&
-      isInitialLoad
+      data.length > 0
     ) {
       const map = mapRef.current.getMap();
       
-      const performZoom = () => {
-        // Wait a bit to show the initial zoomed out view
-        setTimeout(() => {
+      // Wait for map to be fully loaded
+      if (map.loaded()) {
+        map.flyTo({
+          center: densityCenter.center,
+          zoom: densityCenter.zoom,
+          duration: 1500,
+          essential: true
+        });
+        setHasAutoZoomed(true);
+      } else {
+        map.once('load', () => {
           map.flyTo({
-            center: meanCenter.center,
-            zoom: meanCenter.zoom,
-            duration: 2000, // 2 seconds for smooth transition
+            center: densityCenter.center,
+            zoom: densityCenter.zoom,
+            duration: 1500,
             essential: true
           });
           setHasAutoZoomed(true);
-          setIsInitialLoad(false);
-        }, 800); // Show zoomed out view for 800ms before transitioning
-      };
-      
-      // Wait for map to be fully loaded
-      if (map.loaded()) {
-        performZoom();
-      } else {
-        map.once('load', () => {
-          performZoom();
         });
       }
     }
-  }, [meanCenter, autoZoomToDensity, hasAutoZoomed, data.length, isInitialLoad]);
+  }, [densityCenter, autoZoomToDensity, hasAutoZoomed, data.length]);
 
   // Handle filter updates from popup
   useEffect(() => {
@@ -243,9 +238,7 @@ export const MapViewer = ({
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
-    // Use the environment variable or fallback to a working public source
-    const pmtilesUrl = import.meta.env.VITE_MAP_SOURCE || 
-                       'https://build.protomaps.com/20230901.pmtiles';
+    const pmtilesUrl = 'https://protomaps.github.io/PMTiles/protomaps(vector)ODbL_firenze.pmtiles';
     
     const customLayers: any[] = [
       {
@@ -287,34 +280,6 @@ export const MapViewer = ({
         }
       },
       {
-        id: 'landcover',
-        type: 'fill',
-        source: 'india-tiles',
-        'source-layer': 'landcover',
-        paint: {
-          'fill-color': [
-            'match',
-            ['get', 'class'],
-            'grass', mapFlavor === 'dark' ? '#2a4d2e' : '#d8e6c9',
-            'wood', mapFlavor === 'dark' ? '#1a3d2e' : '#b8d6b9',
-            'scrub', mapFlavor === 'dark' ? '#2a3d2e' : '#c8d6c9',
-            mapFlavor === 'dark' ? '#2a3d2e' : '#c8d6c9'
-          ],
-          'fill-opacity': 0.4
-        }
-      },
-      {
-        id: 'buildings',
-        type: 'fill',
-        source: 'india-tiles',
-        'source-layer': 'buildings',
-        minzoom: 13,
-        paint: {
-          'fill-color': mapFlavor === 'dark' ? '#3a3a3a' : '#d8d8d8',
-          'fill-opacity': 1
-        }
-      },
-      {
         id: 'roads-minor',
         type: 'line',
         source: 'india-tiles',
@@ -323,30 +288,6 @@ export const MapViewer = ({
         paint: {
           'line-color': mapFlavor === 'dark' ? '#3a3a3a' : '#ffffff',
           'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 14, 2, 18, 4],
-          'line-opacity': 0.7
-        }
-      },
-      {
-        id: 'roads-major',
-        type: 'line',
-        source: 'india-tiles',
-        'source-layer': 'roads',
-        filter: ['in', 'class', 'primary', 'secondary', 'tertiary'],
-        paint: {
-          'line-color': mapFlavor === 'dark' ? '#4a4a4a' : '#ffd700',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 3, 16, 8],
-          'line-opacity': 0.8
-        }
-      },
-      {
-        id: 'boundaries',
-        type: 'line',
-        source: 'india-tiles',
-        'source-layer': 'boundaries',
-        paint: {
-          'line-color': mapFlavor === 'dark' ? '#666666' : '#999999',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1, 8, 2, 12, 3],
-          'line-dasharray': [3, 2],
           'line-opacity': 0.7
         }
       },
@@ -453,11 +394,11 @@ export const MapViewer = ({
 
   // Determine initial view state
   const initialViewState = useMemo(() => {
-    if (autoZoomToDensity && meanCenter) {
+    if (autoZoomToDensity && densityCenter) {
       return {
-        longitude: meanCenter.center[0],
-        latitude: meanCenter.center[1],
-        zoom: meanCenter.zoom
+        longitude: densityCenter.center[0],
+        latitude: densityCenter.center[1],
+        zoom: densityCenter.zoom
       };
     }
     return {
@@ -465,7 +406,7 @@ export const MapViewer = ({
       latitude: centerCoordinates[1],
       zoom: zoom
     };
-  }, [autoZoomToDensity, meanCenter, centerCoordinates, zoom]);
+  }, [autoZoomToDensity, densityCenter, centerCoordinates, zoom]);
 
   return (
     <div className={`w-full h-full rounded overflow-hidden ${className}`}>

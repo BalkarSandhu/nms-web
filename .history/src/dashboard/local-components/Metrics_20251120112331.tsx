@@ -8,12 +8,11 @@ import type { MapDataPoint } from "./Map-Viewer";
 
 import "@/index.css";
 
-
 export type MetricsProps = {
     metricState?: boolean;
     setMetricState?: (state: boolean) => void;
     metricsData?: any;
-    mapData?: MapDataPoint[]; // Real map data from Redux
+    mapData?: MapDataPoint[];
 }
 
 export default function Metrics({ metricState, setMetricState, metricsData, mapData = [] }: MetricsProps) {
@@ -22,10 +21,8 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
         console.log('Clicked point:', point);
     };
 
-    const handleTypeClick = (type: string) => {
-        console.log('Clicked device type:', type);
-        // Add navigation logic here - e.g., filter devices by type
-        // Example: navigate(`/devices?type=${type}`)
+    const handleCategoryClick = (type: string) => {
+        console.log('Clicked category:', type);
     };
 
     return (
@@ -33,28 +30,31 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
             {!metricState ? (
                 <div className="w-full h-full max-h-[165px] flex flex-row gap-2 justify-center items-center overflow-hidden">
                     {metricsData?.metric1 && (
-                        <Metric1
-                            {...metricsData.metric1}
+                        <Metric1 {...metricsData.metric1} />
+                    )}
+                    
+                    {/* Device Types */}
+                    {metricsData?.metric4 && (
+                        <Metric4
+                            title="Devices by Type"
+                            data={metricsData.metric4.data}
+                            onCategoryClick={handleCategoryClick}
                         />
                     )}
                     
-                    <Metric4 
-                        title="Devices by Type"
-                        onTypeClick={handleTypeClick}
-                    />
                     {metricsData?.metric2 && (
                         <Metric2 {...metricsData.metric2} />
                     )}
-                    {metricsData?.metric3 && (
-                        <Metric3  />
-                    )}
                     
+                    {metricsData?.metric3 && (
+                        <Metric3 />
+                    )}
                 </div>
             ) : (
                 <div className="w-full bg-(--dark) h-full rounded-xl min-h-[300px] w-max-[80vw] overflow-hidden">
                     <MapViewer
                         data={mapData}
-                        centerCoordinates={[78.9629, 20.5937]} // Center of India
+                        centerCoordinates={[78.9629, 20.5937]}
                         zoom={4}
                         showLabels={false}
                         pointSize={12}

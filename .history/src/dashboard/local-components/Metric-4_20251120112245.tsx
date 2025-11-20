@@ -1,51 +1,32 @@
 import BaseCard from "./Base-Card";
 import "@/index.css";
-import { useMemo } from "react";
-import { useEnrichedDevices } from "../../devices/local_components/table";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
 
-
-export interface DeviceTypeData {
+export interface CategoryData {
     type: string;
     count: number;
+    icon?: string;
 }
 
 export interface Metric4Props {
     title?: string;
+    data?: CategoryData[];
     className?: string;
     menuGroups?: MenuGroupType[];
-    onTypeClick?: (type: string) => void;
-    customData?: DeviceTypeData[];
-    navigatePath?: string;
+    onCategoryClick?: (type: string) => void;
+    showIcons?: boolean;
+    maxItems?: number;
 }
 
 export default function Metric4({ 
-    title = "Devices by Type",
+    title = "Category Breakdown",
+    data = [],
     className = "",
     menuGroups,
-    onTypeClick,
-    customData,
-    navigatePath = "/devices"
+    onCategoryClick,
+    showIcons = true,
+    maxItems = 6
 }: Metric4Props) {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    
-    const enrichedDevices = customData ? [] : useEnrichedDevices();
-    
-    const data = useMemo(() => {
-        if (customData) return customData;
-        
-        if (!enrichedDevices.length) return [];
-        const typeMap: Record<string, number> = {};
-        enrichedDevices.forEach((d) => {
-            const typeName = d.device_type_name || "Unknown";
-            typeMap[typeName] = (typeMap[typeName] || 0) + 1;
-        });
-        return Object.entries(typeMap)
-            .map(([type, count]) => ({ type, count }))
-            .sort((a, b) => b.count - a.count);
-    }, [enrichedDevices, customData]);
 
     const total = data.reduce((sum, item) => sum + item.count, 0);
 
@@ -58,21 +39,18 @@ export default function Metric4({
         },
     ];
 
-    const handleTypeClick = (type: string) => {
-        onTypeClick?.(type);
-        const params = new URLSearchParams(searchParams);
-        params.set('type', type);
-        navigate(`${navigatePath}?${params.toString()}`);
-    };
-
-    const getIcon = (typeName: string) => {
+    const getDefaultIcon = (typeName: string) => {
         const name = typeName.toLowerCase();
-        if (name.includes('PTZ') || name.includes('PTZ')) return "📹";
-        if (name.includes('Workstation') || name.includes('WorkStation')) return "🔐";
+        if (name.includes('ptz') || name.includes('camera')) return "📹";
+        if (name.includes('workstation') || name.includes('computer')) return "🔐";
         if (name.includes('sensor')) return "📡";
         if (name.includes('gateway') || name.includes('router')) return "🌐";
         if (name.includes('office') || name.includes('building')) return "🏢";
         if (name.includes('warehouse')) return "🏭";
+        if (name.includes('location')) return "📍";
+        if (name.includes('worker') || name.includes('employee')) return "👷";
+        if (name.includes('manager')) return "👔";
+        if (name.includes('engineer')) return "🔧";
         return "📦";
     };
 
@@ -80,7 +58,7 @@ export default function Metric4({
         return (
             <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
                 <div className="flex items-center justify-center h-full">
-                    <span className="text-(--contrast)/40 text-xs">No type data</span>
+                    <span className="text-(--contrast)/40 text-xs">No data available</span>
                 </div>
             </BaseCard>
         );
@@ -89,24 +67,29 @@ export default function Metric4({
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             <div className="flex items-center gap-4 h-full py-2">
-                {/* Left: Total */}
-                
+                {/* Left: Total Count */}
+                <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: '35%' }}>
+                    <div className="text-6xl font-bold text-(--contrast) leading-none tracking-tight">{total}</div>
+                    <div className="text-(--contrast)/40 text-[9px] mt-1 tracking-wide uppercase">Total</div>
+                </div>
 
                 {/* Divider */}
                 <div className="h-full w-px bg-(--contrast)/10"></div>
 
-                {/* Right: Type List */}
+                {/* Right: Category List */}
                 <div className="flex flex-col gap-1 flex-1 overflow-y-auto" style={{ maxHeight: '120px' }}>
-                    {data.slice(0, 6).map((item) => {
+                    {data.slice(0, maxItems).map((item) => {
                         const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                        const icon = item.icon || getDefaultIcon(item.type);
+                        
                         return (
                             <button
                                 key={item.type}
-                                onClick={() => handleTypeClick(item.type)}
+                                onClick={() => onCategoryClick?.(item.type)}
                                 className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-(--contrast)/5 transition-colors"
                             >
                                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    <span className="text-sm">{getIcon(item.type)}</span>
+                                    {showIcons && <span className="text-sm">{icon}</span>}
                                     <span className="text-(--contrast) text-xs font-medium truncate">{item.type}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">

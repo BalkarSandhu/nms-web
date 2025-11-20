@@ -5,6 +5,16 @@ import { useEnrichedDevices } from "../../devices/local_components/table";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
 
+export interface MetricData {
+    low: number;
+    medium: number;
+    high: number;
+}
+export interface MetricLabels {
+    low?: string;
+    medium?: string;
+    high?: string;
+}
 
 export interface DeviceTypeData {
     type: string;
@@ -22,12 +32,19 @@ export interface Metric4Props {
 
 export default function Metric4({ 
     title = "Devices by Type",
+    data={}
     className = "",
     menuGroups,
     onTypeClick,
     customData,
     navigatePath = "/devices"
 }: Metric4Props) {
+    const mergedHigh = data.high + data.medium;
+
+    const total = data.low + mergedHigh; // medium consumed into high
+    const onlinePercent = total > 0 ? Math.round((data.low / total) * 100) : 0;
+    const offlinePercent = total > 0 ? Math.round((mergedHigh / total) * 100) : 0;
+
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     

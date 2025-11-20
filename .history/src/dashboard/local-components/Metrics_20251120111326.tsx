@@ -37,7 +37,9 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
                             {...metricsData.metric1}
                         />
                     )}
-                    
+                    {metricsData?.metric4 && (
+                        <Metric4 {...metricsData.metric2} />
+                    )}
                     <Metric4 
                         title="Devices by Type"
                         onTypeClick={handleTypeClick}
