@@ -239,12 +239,11 @@ export const MapViewer = ({
     const computedStyle = getComputedStyle(root);
     
     setColors({
-    red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
-    azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
-    green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
-    blue: computedStyle.getPropertyValue('--blue').trim() || '#246EB9',
-  });
-}, []);
+      red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
+      azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
+      green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
+    });
+  }, []);
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
@@ -578,7 +577,7 @@ export const MapViewer = ({
                     <span className="text-gray-400 text-xs">{item.field}:</span>
                     <span 
                       className="text-xs font-medium"
-                      style={{ color:'#ffffff' }}
+                      style={{ color: colors[item.colour] || '#ffffff' }}
                     >
                       {item.value}
                     </span>

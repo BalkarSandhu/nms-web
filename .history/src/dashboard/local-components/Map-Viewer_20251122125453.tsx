@@ -167,12 +167,11 @@ export const MapViewer = ({
   const [hoveredPoint, setHoveredPoint] = useState<MapDataPoint | null>(null);
   const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
-  const [colors, setColors] = useState<{ red: string; azul: string; green: string; blue?: string }>({
-  red: '#D52941',
-  azul: '#246EB9',
-  green: '#4CB944',
-  blue: '#246EB9', // Add blue as fallback
-});
+  const [colors, setColors] = useState<{ red: string; azul: string; green: string }>({
+    red: '#D52941',
+    azul: '#246EB9',
+    green: '#4CB944',
+  });
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -239,12 +238,11 @@ export const MapViewer = ({
     const computedStyle = getComputedStyle(root);
     
     setColors({
-    red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
-    azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
-    green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
-    blue: computedStyle.getPropertyValue('--blue').trim() || '#246EB9',
-  });
-}, []);
+      red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
+      azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
+      green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
+    });
+  }, []);
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
@@ -578,7 +576,7 @@ export const MapViewer = ({
                     <span className="text-gray-400 text-xs">{item.field}:</span>
                     <span 
                       className="text-xs font-medium"
-                      style={{ color:'#ffffff' }}
+                      style={{ color: colors[item.colour] || '#ffffff' }}
                     >
                       {item.value}
                     </span>

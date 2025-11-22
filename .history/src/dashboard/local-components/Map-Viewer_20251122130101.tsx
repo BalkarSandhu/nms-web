@@ -577,8 +577,8 @@ export const MapViewer = ({
                   <div key={idx} className="flex justify-between items-center py-1">
                     <span className="text-gray-400 text-xs">{item.field}:</span>
                     <span 
-                      className="text-xs font-medium"
-                      style={{ color:'#ffffff' }}
+                      className="text-xs font-medium color-white"
+                      
                     >
                       {item.value}
                     </span>

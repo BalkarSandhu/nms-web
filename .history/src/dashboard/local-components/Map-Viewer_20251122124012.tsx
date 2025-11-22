@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import Map, { Source, Layer, Marker } from 'react-map-gl/maplibre';
+import Map, { Source, Layer, Marker, Popup } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import type { FeatureCollection, Point } from 'geojson';
@@ -167,12 +167,11 @@ export const MapViewer = ({
   const [hoveredPoint, setHoveredPoint] = useState<MapDataPoint | null>(null);
   const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
-  const [colors, setColors] = useState<{ red: string; azul: string; green: string; blue?: string }>({
-  red: '#D52941',
-  azul: '#246EB9',
-  green: '#4CB944',
-  blue: '#246EB9', // Add blue as fallback
-});
+  const [colors, setColors] = useState<{ red: string; azul: string; green: string }>({
+    red: '#D52941',
+    azul: '#246EB9',
+    green: '#4CB944',
+  });
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -239,12 +238,11 @@ export const MapViewer = ({
     const computedStyle = getComputedStyle(root);
     
     setColors({
-    red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
-    azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
-    green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
-    blue: computedStyle.getPropertyValue('--blue').trim() || '#246EB9',
-  });
-}, []);
+      red: computedStyle.getPropertyValue('--red').trim() || '#D52941',
+      azul: computedStyle.getPropertyValue('--azul').trim() || '#246EB9',
+      green: computedStyle.getPropertyValue('--green').trim() || '#4CB944',
+    });
+  }, []);
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
@@ -558,6 +556,14 @@ export const MapViewer = ({
           {/* Device Information */}
           <div className="space-y-2">
 
+            <div className="flex justify-between items-center py-2 border-b border-white/5">
+              <span className="text-gray-400 text-sm">Location:</span>
+              <span className="text-white text-sm font-medium">
+                {hoveredPoint.coordinates[1].toFixed(4)}, {hoveredPoint.coordinates[0].toFixed(4)}
+              </span>
+            </div>
+
+            {/* Additional Data */}
             {hoveredPoint.additionalData && Object.keys(hoveredPoint.additionalData).length > 0 && (
               <div className="mt-3 pt-3 border-t border-white/10">
                 <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">Additional Info</div>
@@ -578,7 +584,7 @@ export const MapViewer = ({
                     <span className="text-gray-400 text-xs">{item.field}:</span>
                     <span 
                       className="text-xs font-medium"
-                      style={{ color:'#ffffff' }}
+                      style={{ color: colors[item.colour] || '#ffffff' }}
                     >
                       {item.value}
                     </span>

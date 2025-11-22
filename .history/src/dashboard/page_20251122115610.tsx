@@ -337,7 +337,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Device", col2: "Downtime" },
 						data: deviceDowntimeData,
 						maxRows: 5,
-						onRowClick: (row: WorkerRow) => navigate(`/devices/${row.id}`)
+						onRowClick: row => navigate(`/devices/${row.id}`)
 					},
 
 

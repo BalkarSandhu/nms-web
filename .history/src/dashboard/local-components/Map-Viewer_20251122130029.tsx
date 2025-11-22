@@ -578,7 +578,7 @@ export const MapViewer = ({
                     <span className="text-gray-400 text-xs">{item.field}:</span>
                     <span 
                       className="text-xs font-medium"
-                      style={{ color:'#ffffff' }}
+                      // style={{ color: colors[item.co] || '#ffffff' }}
                     >
                       {item.value}
                     </span>
