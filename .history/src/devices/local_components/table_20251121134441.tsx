@@ -207,7 +207,7 @@ export default function DevicesTable({
                                     </div>
                                 </TableCell>
                                 <TableCell className={`text-sm ${localSelectedId === device.id ? 'text-blue-100' : 'text-gray-600'}`}>
-                                    {device.worker?.hostname || 'N/A'}
+                                    {device.worker.hostname || 'N/A'}
                                 </TableCell>
                                 <TableCell className={localSelectedId === device.id ? 'text-white' : ''}>
                                     {device.location.name || 'N/A'}

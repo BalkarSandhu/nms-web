@@ -212,7 +212,7 @@ export default function LocationsTable({
                         <TableHead>Status</TableHead>
                         <TableHead>Project</TableHead>
                         <TableHead>Area</TableHead>
-                        {/* <TableHead>Worker</TableHead> */}
+                        <TableHead>Worker</TableHead>
                         <TableHead className="text-right">Devices</TableHead>
                         {/* No header for modifier */}
                         <TableHead className="w-8"></TableHead>
@@ -250,7 +250,9 @@ export default function LocationsTable({
                                 </TableCell>
                                 <TableCell>{location.project}</TableCell>
                                 <TableCell>{location.area}</TableCell>
-                                
+                                <TableCell className="text-sm text-gray-600">
+                                    {location.worker_hostname|| 'N/A'}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex flex-col items-end text-xs">
                                         <span className="text-green-600 font-medium">
