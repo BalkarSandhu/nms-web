@@ -85,6 +85,7 @@ const calculateMeanCenter = (
     };
   }
 
+  // Calculate mean longitude and latitude
   let sumLon = 0;
   let sumLat = 0;
   
@@ -96,6 +97,8 @@ const calculateMeanCenter = (
   const meanLon = sumLon / data.length;
   const meanLat = sumLat / data.length;
 
+  // Calculate the spread of points to determine appropriate zoom
+  // Find the bounding box of all points
   let minLon = data[0].coordinates[0];
   let maxLon = data[0].coordinates[0];
   let minLat = data[0].coordinates[1];
@@ -108,10 +111,13 @@ const calculateMeanCenter = (
     maxLat = Math.max(maxLat, point.coordinates[1]);
   });
 
+  // Calculate the span in degrees
   const lonSpan = maxLon - minLon;
   const latSpan = maxLat - minLat;
   const maxSpan = Math.max(lonSpan, latSpan);
 
+  // Calculate zoom level based on span
+  // Smaller span = zoom in more
   let zoomLevel: number;
   if (maxSpan > 10) {
     zoomLevel = 5;
@@ -136,8 +142,6 @@ const calculateMeanCenter = (
     zoom: zoomLevel
   };
 };
-
-type FilterType = 'all' | 'online' | 'offline';
 
 export const MapViewer = ({
   data = [],
@@ -166,7 +170,6 @@ export const MapViewer = ({
   const [currentZoom, setCurrentZoom] = useState(zoom);
   const [hoveredPoint, setHoveredPoint] = useState<MapDataPoint | null>(null);
   const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
-  const [statusFilter, setStatusFilter] = useState<FilterType>('all');
   const [colors, setColors] = useState<{ red: string; azul: string; green: string }>({
     red: '#D52941',
     azul: '#246EB9',
@@ -175,45 +178,39 @@ export const MapViewer = ({
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Filter data based on status filter
-  const filteredData = useMemo(() => {
-    if (statusFilter === 'all') return data;
-    if (statusFilter === 'online') return data.filter(point => point.category === 'green');
-    if (statusFilter === 'offline') return data.filter(point => point.category === 'red');
-    return data;
-  }, [data, statusFilter]);
-
   // Calculate mean center when data changes
   const meanCenter = useMemo(() => {
-    if (!autoZoomToDensity || filteredData.length === 0) return null;
-    return calculateMeanCenter(filteredData);
-  }, [filteredData, autoZoomToDensity]);
+    if (!autoZoomToDensity || data.length === 0) return null;
+    return calculateMeanCenter(data);
+  }, [data, autoZoomToDensity]);
 
-  // Auto-zoom to mean center when map loads
+  // Auto-zoom to mean center when map loads with delay to show transition
   useEffect(() => {
     if (
       mapRef.current &&
       meanCenter &&
       autoZoomToDensity &&
       !hasAutoZoomed &&
-      filteredData.length > 0 &&
+      data.length > 0 &&
       isInitialLoad
     ) {
       const map = mapRef.current.getMap();
       
       const performZoom = () => {
+        // Wait a bit to show the initial zoomed out view
         setTimeout(() => {
           map.flyTo({
             center: meanCenter.center,
             zoom: meanCenter.zoom,
-            duration: 2000,
+            duration: 2000, // 2 seconds for smooth transition
             essential: true
           });
           setHasAutoZoomed(true);
           setIsInitialLoad(false);
-        }, 800);
+        }, 800); // Show zoomed out view for 800ms before transitioning
       };
       
+      // Wait for map to be fully loaded
       if (map.loaded()) {
         performZoom();
       } else {
@@ -222,7 +219,7 @@ export const MapViewer = ({
         });
       }
     }
-  }, [meanCenter, autoZoomToDensity, hasAutoZoomed, filteredData.length, isInitialLoad]);
+  }, [meanCenter, autoZoomToDensity, hasAutoZoomed, data.length, isInitialLoad]);
 
   // Handle filter updates from popup
   useEffect(() => {
@@ -246,6 +243,7 @@ export const MapViewer = ({
 
   // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
+    // Use the environment variable or fallback to a working public source
     const pmtilesUrl = import.meta.env.VITE_MAP_SOURCE || 
                        'https://build.protomaps.com/20230901.pmtiles';
     
@@ -393,18 +391,18 @@ export const MapViewer = ({
   ], [bounds]);
 
   const groupedData = useMemo(() => ({
-    red: filteredData.filter((point) => point.category === 'red'),
-    azul: filteredData.filter((point) => point.category === 'azul'),
-    green: filteredData.filter((point) => point.category === 'green'),
-  }), [filteredData]);
+    red: data.filter((point) => point.category === 'red'),
+    azul: data.filter((point) => point.category === 'azul'),
+    green: data.filter((point) => point.category === 'green'),
+  }), [data]);
 
   const showHeatmap = currentZoom <= heatmapZoomThreshold;
   const showPoints = currentZoom > pointsZoomThreshold;
 
   const connectionsGeoJSON = useMemo(() => {
     const features = connections.map(conn => {
-      const fromPoint = filteredData.find(p => p.id === conn.from);
-      const toPoint = filteredData.find(p => p.id === conn.to);
+      const fromPoint = data.find(p => p.id === conn.from);
+      const toPoint = data.find(p => p.id === conn.to);
       
       if (!fromPoint || !toPoint) return null;
       
@@ -429,7 +427,7 @@ export const MapViewer = ({
       type: 'FeatureCollection' as const,
       features: features as any[]
     };
-  }, [connections, filteredData]);
+  }, [connections, data]);
 
   const handleMove = useCallback((evt: any) => {
     setCurrentZoom(evt.viewState.zoom);
@@ -453,6 +451,7 @@ export const MapViewer = ({
     }))
   });
 
+  // Determine initial view state
   const initialViewState = useMemo(() => {
     if (autoZoomToDensity && meanCenter) {
       return {
@@ -468,143 +467,8 @@ export const MapViewer = ({
     };
   }, [autoZoomToDensity, meanCenter, centerCoordinates, zoom]);
 
-  const getStatusCounts = useMemo(() => {
-    return {
-      all: data.length,
-      online: data.filter(p => p.category === 'green').length,
-      offline: data.filter(p => p.category === 'red').length,
-    };
-  }, [data]);
-
   return (
-    <div className={`w-full h-full rounded overflow-hidden relative ${className}`}>
-      {/* Filter Controls - Top Left */}
-      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-white/10">
-        <div className="text-white text-sm font-semibold ">Device Status</div>
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-1 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
-            <input
-              type="radio"
-              name="status-filter"
-              value="all"
-              checked={statusFilter === 'all'}
-              onChange={() => setStatusFilter('all')}
-              className="w-4 h-4 accent-blue-500"
-            />
-            <span className="text-white text-sm">All Devices ({getStatusCounts.all})</span>
-          </label>
-          
-          <label className="flex items-center gap-2 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
-            <input
-              type="radio"
-              name="status-filter"
-              value="online"
-              checked={statusFilter === 'online'}
-              onChange={() => setStatusFilter('online')}
-              className="w-4 h-4 accent-green-500"
-            />
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-white text-sm">Online ({getStatusCounts.online})</span>
-            </div>
-          </label>
-          
-          <label className="flex items-center gap-2 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
-            <input
-              type="radio"
-              name="status-filter"
-              value="offline"
-              checked={statusFilter === 'offline'}
-              onChange={() => setStatusFilter('offline')}
-              className="w-4 h-4 accent-red-500"
-            />
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-white text-sm">Offline ({getStatusCounts.offline})</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Device Details Panel - Top Right */}
-      {hoveredPoint && (
-        <div className="absolute top-4 right-4 z-10 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-2xl border border-white/20 min-w-[280px] max-w-[350px]">
-          {/* Header with status indicator */}
-          <div className="flex items-start justify-between mb-3 pb-3 border-b border-white/10">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <div 
-                  className="w-3 h-3 rounded-full animate-pulse"
-                  style={{ backgroundColor: colors[hoveredPoint.category] }}
-                ></div>
-                <h3 className="text-white font-bold text-lg truncate">{hoveredPoint.name}</h3>
-              </div>
-              <p className="text-gray-400 text-xs">
-                {hoveredPoint.category === 'green' ? 'Online' : hoveredPoint.category === 'red' ? 'Offline' : 'Unknown'}
-              </p>
-            </div>
-            <button
-              onClick={() => setHoveredPoint(null)}
-              className="text-gray-400 hover:text-white transition-colors ml-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Device Information */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-gray-400 text-sm">Device ID:</span>
-              <span className="text-white text-sm font-medium">{hoveredPoint.id}</span>
-            </div>
-            
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-gray-400 text-sm">Value:</span>
-              <span className="text-white text-sm font-medium">{hoveredPoint.value}</span>
-            </div>
-
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-gray-400 text-sm">Location:</span>
-              <span className="text-white text-sm font-medium">
-                {hoveredPoint.coordinates[1].toFixed(4)}, {hoveredPoint.coordinates[0].toFixed(4)}
-              </span>
-            </div>
-
-            {/* Additional Data */}
-            {hoveredPoint.additionalData && Object.keys(hoveredPoint.additionalData).length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">Additional Info</div>
-                {Object.entries(hoveredPoint.additionalData).map(([key, value]) => (
-                  <div key={key} className="flex justify-between items-center py-1">
-                    <span className="text-gray-400 text-xs capitalize">{key.replace(/_/g, ' ')}:</span>
-                    <span className="text-white text-xs">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Popup Data if available */}
-            {hoveredPoint.popupData && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                {hoveredPoint.popupData.data.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center py-1">
-                    <span className="text-gray-400 text-xs">{item.field}:</span>
-                    <span 
-                      className="text-xs font-medium"
-                      style={{ color: colors[item.colour] || '#ffffff' }}
-                    >
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+    <div className={`w-full h-full rounded overflow-hidden ${className}`}>
       <Map
         ref={mapRef}
         style={{ width: '100%', height: '100%' }}
@@ -695,7 +559,7 @@ export const MapViewer = ({
           </>
         )}
 
-       {showPoints && connections.length > 0 && (
+        {showPoints && connections.length > 0 && (
           <Source id="connections" type="geojson" data={connectionsGeoJSON}>
             <Layer
               id="connections-glow"
@@ -735,7 +599,7 @@ export const MapViewer = ({
           </Source>
         )}
 
-        {showPoints && filteredData.map(point => (
+        {showPoints && data.map(point => (
           <Marker
             key={point.id}
             longitude={point.coordinates[0]}
@@ -754,7 +618,7 @@ export const MapViewer = ({
                 boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
               }}
               title={point.name}
-              onMouseEnter={() => setHoveredPoint(point)}
+              onMouseEnter={() => point.popupData && setHoveredPoint(point)}
               onMouseLeave={() => setHoveredPoint(null)}
             >
               {showLabels && currentZoom > 15 && (
@@ -768,6 +632,23 @@ export const MapViewer = ({
             </div>
           </Marker>
         ))}
+
+        {hoveredPoint && hoveredPoint.popupData && (
+          <Popup
+            longitude={hoveredPoint.coordinates[0]}
+            latitude={hoveredPoint.coordinates[1]}
+            anchor="bottom"
+            onClose={() => setHoveredPoint(null)}
+            closeButton={false}
+            closeOnClick={false}
+            offset={15}
+          >
+            <div className="p-2 text-sm">
+              <div className="font-semibold">{hoveredPoint.name}</div>
+              <div className="text-xs text-gray-500">Value: {hoveredPoint.value}</div>
+            </div>
+          </Popup>
+        )}
       </Map>
     </div>
   );

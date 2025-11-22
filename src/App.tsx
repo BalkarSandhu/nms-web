@@ -1,4 +1,4 @@
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
@@ -16,8 +16,7 @@ import {
 import "@/index.css";
 
 import { LoadingPage } from './components/loading-screen'
-// import { APIProvider } from './contexts/API-Context'
-import { getAuthToken, clearAuthToken, subscribeToAuthChanges, refreshAuthToken } from '@/lib/auth'  // ⬅️ added refreshAuthToken
+import { getAuthToken, clearAuthToken, subscribeToAuthChanges, refreshAuthToken } from '@/lib/auth'
 
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
@@ -32,12 +31,14 @@ import WorkersPage from './workers/page'
 
 function App() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [isButtonClicked, setIsButtonClicked] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
 
   const expiryTimeoutRef = useRef<number | null>(null)
+  const isInitialMount = useRef(true)
 
   const clearExpiryTimer = useCallback(() => {
     if (expiryTimeoutRef.current) {
@@ -49,19 +50,30 @@ function App() {
   const handleTokenInvalid = useCallback(() => {
     clearAuthToken()
     setIsAuthenticated(false)
-  }, [])
+    navigate('/login')
+  }, [navigate])
 
-  // ⬇️ UPDATED: scheduleExpiryTimer now refreshes token instead of just invalidating
   const scheduleExpiryTimer = useCallback(
     (expiresAt?: number | null) => {
       clearExpiryTimer()
       if (!expiresAt) return
 
-      const bufferMs = 5_000 // proactively refresh 5s early
+      // Refresh 5 minutes before expiry
+      const bufferMs = 5 * 60 * 1000
       const msUntilExpiry = expiresAt - Date.now() - bufferMs
 
       if (msUntilExpiry <= 0) {
-        refreshAuthToken().catch(handleTokenInvalid)
+        // Token expires soon or already expired, try refresh immediately
+        refreshAuthToken()
+          .then(refreshed => {
+            if (refreshed) {
+              setIsAuthenticated(true)
+              scheduleExpiryTimer(refreshed.expiresAt ?? null)
+            } else {
+              handleTokenInvalid()
+            }
+          })
+          .catch(handleTokenInvalid)
         return
       }
 
@@ -78,14 +90,21 @@ function App() {
     [clearExpiryTimer, handleTokenInvalid]
   )
 
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       clearExpiryTimer()
     }
   }, [clearExpiryTimer])
 
+  // Initial auth check on mount - ALWAYS runs but checks isInitialMount inside
   useEffect(() => {
     const checkAuthStatus = async () => {
+      // Only run once on initial mount
+      if (!isInitialMount.current) return
+      isInitialMount.current = false
+
+      // Auth bypass for development
       if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
         setIsLoading(false)
         setIsInitialized(true)
@@ -93,6 +112,7 @@ function App() {
         return
       }
 
+      // Check for valid token
       const validToken = getAuthToken()
       if (validToken) {
         setIsLoading(false)
@@ -102,18 +122,22 @@ function App() {
         return
       }
 
+      // No token - check if system is initialized
       try {
         const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`)
         if (!response.ok) {
           setIsLoading(false)
           setIsAuthenticated(false)
+          setIsInitialized(true)
           return
         }
         const data: { initialized: boolean; message: string; user_count: number } = await response.json()
         setIsInitialized(data.initialized)
         setIsAuthenticated(false)
       } catch (error) {
+        console.error("Error checking auth status:", error)
         setIsAuthenticated(false)
+        setIsInitialized(true)
       } finally {
         setIsLoading(false)
       }
@@ -150,17 +174,13 @@ function App() {
       if (event.type === 'logout') {
         clearExpiryTimer()
         setIsAuthenticated(false)
+        navigate('/login')
         return
       }
-      if (event.type === 'refresh') {
+      if (event.type === 'refresh' || event.type === 'login') {
         setIsAuthenticated(true)
         scheduleExpiryTimer(event.expiresAt ?? null)
         return
-      }
-      const tokenState = getAuthToken()
-      if (tokenState) {
-        setIsAuthenticated(true)
-        scheduleExpiryTimer(tokenState.expiresAt ?? null)
       }
     })
 
@@ -168,287 +188,143 @@ function App() {
       unsubscribe?.()
       clearExpiryTimer()
     }
-  }, [scheduleExpiryTimer, clearExpiryTimer])
-
-  
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      // If auth bypass is enabled, set initialized and authenticated
-      if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-        setIsLoading(false);
-        setIsInitialized(true);
-        setIsAuthenticated(true);
-        return;
-      }
-
-      const validToken = getAuthToken();
-
-      // If user has a valid token, they're authenticated
-      if (validToken) {
-        setIsLoading(false);
-        setIsInitialized(true);
-        setIsAuthenticated(true);
-        scheduleExpiryTimer(validToken.expiresAt ?? null)
-        return;
-      }
-
-      // No valid token - check if system is initialized
-      try {
-        const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`);
-
-        if (!response.ok) {
-          console.error("Failed to check auth status");
-          setIsLoading(false);
-          setIsAuthenticated(false);
-          return;
-        }
-
-        const data: { initialized: boolean; message: string; user_count: number } = await response.json();
-        setIsInitialized(data.initialized);
-        setIsAuthenticated(false);
-      } catch (error) {
-        console.error("Error checking auth status:", error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthStatus();
-  }, [scheduleExpiryTimer]);
-
-  // Re-validate token on every route change
-  useEffect(() => {
-    // Skip validation for auth bypass mode
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      setIsAuthenticated(true);
-      return;
-    }
-
-    const tokenState = getAuthToken();
-
-    if (!tokenState) {
-      if (isAuthenticated) {
-        setIsAuthenticated(false);
-        clearExpiryTimer();
-      }
-      return;
-    }
-
-    scheduleExpiryTimer(tokenState.expiresAt ?? null);
-
-    if (!isAuthenticated) {
-      setIsAuthenticated(true);
-    }
-  }, [location.pathname, isAuthenticated, clearExpiryTimer, scheduleExpiryTimer]);
+  }, [scheduleExpiryTimer, clearExpiryTimer, navigate])
 
   // Listen for visibility/focus changes to refresh auth state
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      return;
+      return
     }
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return;
+        return
       }
 
-      const tokenState = getAuthToken();
-
+      const tokenState = getAuthToken()
       if (!tokenState) {
-        handleTokenInvalid();
-        clearExpiryTimer();
-        return;
+        handleTokenInvalid()
+        return
       }
 
-      scheduleExpiryTimer(tokenState.expiresAt ?? null);
+      scheduleExpiryTimer(tokenState.expiresAt ?? null)
       if (!isAuthenticated) {
-        setIsAuthenticated(true);
+        setIsAuthenticated(true)
       }
-    };
+    }
 
-    window.addEventListener('focus', handleVisibility);
-    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
-      window.removeEventListener('focus', handleVisibility);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [handleTokenInvalid, clearExpiryTimer, scheduleExpiryTimer, isAuthenticated]);
+      window.removeEventListener('focus', handleVisibility)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [handleTokenInvalid, scheduleExpiryTimer, isAuthenticated])
 
-  // Sync auth updates across tabs/windows
+  // Handle navigation based on auth state
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges((event) => {
-      if (event.type === 'logout') {
-        clearExpiryTimer();
-        setIsAuthenticated(false);
-        return;
-      }
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
+      return
+    }
 
-      const tokenState = getAuthToken();
-      if (tokenState) {
-        setIsAuthenticated(true);
-        scheduleExpiryTimer(tokenState.expiresAt ?? null);
-      }
-    });
+    const currentPath = location.pathname
 
-    return () => {
-      unsubscribe?.();
-      clearExpiryTimer();
-    };
-  }, [scheduleExpiryTimer, clearExpiryTimer]);
+    // User is authenticated
+    if (isAuthenticated) {
+      if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
+        navigate('/dashboard', { replace: true })
+      }
+      return
+    }
+
+    // User is NOT authenticated
+    if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
+      navigate(isInitialized ? '/login' : '/register', { replace: true })
+      return
+    }
+
+    if (currentPath === '/') {
+      navigate(isInitialized ? '/login' : '/register', { replace: true })
+    }
+  }, [isAuthenticated, isInitialized, location.pathname, navigate])
 
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
     const path = location.pathname
-    // Pages that should NOT use layout
-    if (path.startsWith('/register') || path.startsWith("/login")) {
-      return false;
-    }
-    // All other pages use layout by default
-    return true;
+    return !path.startsWith('/register') && !path.startsWith("/login")
   }
 
   // Get the current page name from the route
   const getPageName = () => {
     const path = location.pathname
-    if (path === '/dashboard') {
-      return 'Dashboard';
+    const routes: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/register': 'Register',
+      '/settings': 'Settings',
+      '/devices': 'Devices',
+      '/reports': 'Reports',
+      '/locations': 'Locations',
+      '/areas': 'Areas',
+      '/field-technicians': 'Field Technicians',
     }
-    if (path === '/register') {
-      return 'Register';
-    }
-    if (path === '/settings') {
-      return 'Settings';
-    }
-    if (path === '/devices') {
-      return 'Devices';
-    }
-    if (path === '/reports') {
-      return 'Reports';
-    }
-    if (path === '/locations') {
-      return 'Locations';
-    }
-    if (path === '/areas') {
-      return 'Areas';
-    }
-    if (path === '/field-technicians') {
-      return 'Field Technicians';
-    }
-    return 'Home'
+    return routes[path] || 'Home'
   }
 
   const useLayout = shouldUseLayout()
 
   // Show loading screen while checking authentication
   if (isLoading) {
-    return <LoadingPage />;
-  }
-
-  // Redirect logic based on authentication and initialization status
-  const getRedirectPath = () => {
-    // If auth bypass is enabled, never redirect
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      return null;
-    }
-
-    const currentPath = location.pathname;
-
-    // User is authenticated
-    if (isAuthenticated) {
-      // Redirect away from login/register to dashboard
-      if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
-        return '/dashboard';
-      }
-      // Allow access to protected routes
-      return null;
-    }
-
-    // User is NOT authenticated
-    // If trying to access protected routes, redirect to login/register
-    if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
-      return isInitialized ? '/login' : '/register';
-    }
-
-    // On root path, redirect based on initialization
-    if (currentPath === '/') {
-      return isInitialized ? '/login' : '/register';
-    }
-
-    // Already on login/register, no redirect needed
-    return null;
-  };
-
-  const redirectPath = getRedirectPath();
-
-  if (redirectPath) {
-    window.location.href = redirectPath;
-    return <LoadingPage />;
+    return <LoadingPage />
   }
 
   return (
     <div className="flex min-h-screen w-full overflow-hidden bg-(--dark)">
-
-
       {useLayout ? (
-        // <APIProvider>
-          <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
-            <AppSidebar />
-            <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
-              <div className="flex h-full w-full flex-col overflow-hidden">
-                <header className="sticky top-0 z-50 h-12 shrink-0 items-center gap-2 border-none \
-                                   transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 \
-                                   w-full" style={{ backgroundColor: 'var(--dark)' }}>
-                  <div className="flex sticky top-0  items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
-                    <SidebarTrigger className="-ml-1 text-(--contrast)" />
-
-
-                    <Separator
-                      orientation="vertical"
-                      className="mr-2 data-[orientation=vertical]:h-4 bg-(--contrast)"
-                    />
-
-
-
-                    <Breadcrumb className='w-full'>
-                      <BreadcrumbList className='text-(--contrast)'>
-                        <BreadcrumbItem className="hidden md:block">
-                          <BreadcrumbLink href="/dashboard" >
-                            { }
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          <BreadcrumbPage className="text-(--contrast)">{getPageName()}</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      </BreadcrumbList>
-                    </Breadcrumb>
-
-
-                  </div>
-                </header>
-
-
-                <div className="flex-1 min-w-0 overflow-x-auto">
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/devices" element={<DevicesPage />} />
-                    <Route path="/reports" element={<ReportsPage />} />
-                    <Route path="/reports/devices" element={<DevicesReportsPage />} />
-                    <Route path="/reports/locations" element={<LocationsReportsPage />} />
-                    <Route path="/reports/workers" element={<WorkersReportsPage />} />
-                    <Route path="/locations" element={<LocationsPage />} />
-                    <Route path="/areas" element={<WorkersPage />} />
-                    <Route path="/field-technicians" element={<WorkersPage />} />
-                  </Routes>
+        <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
+          <AppSidebar />
+          <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
+            <div className="flex h-full w-full flex-col overflow-hidden">
+              <header className="sticky top-0 z-50 h-12 shrink-0 items-center gap-2 border-none \
+                                 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 \
+                                 w-full" style={{ backgroundColor: 'var(--dark)' }}>
+                <div className="flex sticky top-0  items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
+                  <SidebarTrigger className="-ml-1 text-(--contrast)" />
+                  <Separator
+                    orientation="vertical"
+                    className="mr-2 data-[orientation=vertical]:h-4 bg-(--contrast)"
+                  />
+                  <Breadcrumb className='w-full'>
+                    <BreadcrumbList className='text-(--contrast)'>
+                      <BreadcrumbItem className="hidden md:block">
+                        <BreadcrumbLink href="/dashboard" />
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-(--contrast)">{getPageName()}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
                 </div>
+              </header>
+              <div className="flex-1 min-w-0 overflow-x-auto">
+                <Routes>
+                  <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/devices" element={<DevicesPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/reports/devices" element={<DevicesReportsPage />} />
+                  <Route path="/reports/locations" element={<LocationsReportsPage />} />
+                  <Route path="/reports/workers" element={<WorkersReportsPage />} />
+                  <Route path="/locations" element={<LocationsPage />} />
+                  <Route path="/areas" element={<WorkersPage />} />
+                  <Route path="/field-technicians" element={<WorkersPage />} />
+                </Routes>
               </div>
-            </SidebarInset>
-          </SidebarProvider>
-        // </APIProvider>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
       ) : (
         <div className="flex-1 min-w-0 overflow-x-auto">
           <Routes>

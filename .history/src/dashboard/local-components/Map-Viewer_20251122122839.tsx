@@ -479,10 +479,10 @@ export const MapViewer = ({
   return (
     <div className={`w-full h-full rounded overflow-hidden relative ${className}`}>
       {/* Filter Controls - Top Left */}
-      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-white/10">
-        <div className="text-white text-sm font-semibold ">Device Status</div>
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-1 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
+      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/10">
+        <div className="text-white text-sm font-semibold mb-2">Device Status</div>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
             <input
               type="radio"
               name="status-filter"
@@ -695,82 +695,4 @@ export const MapViewer = ({
           </>
         )}
 
-       {showPoints && connections.length > 0 && (
-          <Source id="connections" type="geojson" data={connectionsGeoJSON}>
-            <Layer
-              id="connections-glow"
-              type="line"
-              paint={{
-                'line-color': ['get', 'color'],
-                'line-width': [
-                  'interpolate',
-                  ['linear'],
-                  ['zoom'],
-                  6, ['*', ['get', 'width'], 1.5],
-                  10, ['*', ['get', 'width'], 2],
-                  15, ['*', ['get', 'width'], 3]
-                ],
-                'line-opacity': 0.2,
-                'line-blur': 4
-              }}
-              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-            />
-            <Layer
-              id="connections-layer"
-              type="line"
-              paint={{
-                'line-color': ['get', 'color'],
-                'line-width': [
-                  'interpolate',
-                  ['linear'],
-                  ['zoom'],
-                  6, ['*', ['get', 'width'], 0.5],
-                  10, ['get', 'width'],
-                  15, ['*', ['get', 'width'], 1.5]
-                ],
-                'line-opacity': 0.8
-              }}
-              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-            />
-          </Source>
-        )}
-
-        {showPoints && filteredData.map(point => (
-          <Marker
-            key={point.id}
-            longitude={point.coordinates[0]}
-            latitude={point.coordinates[1]}
-            anchor="center"
-            onClick={() => onPointClick?.(point)}
-          >
-            <div 
-              className="relative cursor-pointer hover:scale-110 transition-transform"
-              style={{
-                width: pointSize,
-                height: pointSize,
-                borderRadius: '50%',
-                backgroundColor: colors[point.category],
-                border: '2px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-              }}
-              title={point.name}
-              onMouseEnter={() => setHoveredPoint(point)}
-              onMouseLeave={() => setHoveredPoint(null)}
-            >
-              {showLabels && currentZoom > 15 && (
-                <div 
-                  className="absolute left-full ml-2 whitespace-nowrap text-xs font-medium"
-                  style={{ color: colors[point.category] }}
-                >
-                  {point.name}
-                </div>
-              )}
-            </div>
-          </Marker>
-        ))}
-      </Map>
-    </div>
-  );
-};
-
-export default MapViewer;
+       

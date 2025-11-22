@@ -38,7 +38,7 @@ export default function BaseCard({ title, menuGroups, children, className = "" }
     return (
         <div className={`w-full h-full max-h-[165px] bg-(--dark)
                         rounded-lg p-2 flex flex-col gap-2 overflow-hidden ${className}`}>
-            <div className="w-full h-[25px] flex flex-row justify-between items-center shrink-0">
+            <div className="w-full h-[25px] flex flex-row justify-between items-center shrink-0 overflow-hidden">
                 <span className="text-(--contrast) text-sm align-left font-semibold">{title}</span>
 
                 <DropdownMenu>

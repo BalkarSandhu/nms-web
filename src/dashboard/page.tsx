@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
 import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
 import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
+import { AlertTriangle } from 'lucide-react';
 
 
 type DashboardProps = {
@@ -89,7 +90,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		high: offlineDevices.length // Offline (red)
 	};
 
-	// Devices with longest downtime (offline devices sorted by updated_at)
+	// Devices with Critical (offline devices sorted by updated_at)
 	const deviceDowntimeData = offlineDevices
 		.map(d => ({
 			id: d.id,
@@ -112,7 +113,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		high: offlineLocations.length // Offline (red)
 	};
 
-	// Locations with longest downtime
+	// Locations with Critical
 	const locationDowntimeData = [...offlineLocations, ...unknownLocations]
 		.map(l => ({
 			id: l.id,
@@ -134,7 +135,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		high: offlineWorkersList.length // Offline (red)
 	};
 
-	// Workers with longest downtime
+	// Workers with Critical
 	const workerDowntimeData = offlineWorkersList
 		.map(w => ({
 			id: w.id,
@@ -309,13 +310,37 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						labels: { low: "Online", medium: "", high: "Offline" },
 						onStatusClick: handleDeviceStatusClick
 					},
+
 					metric2: {
-						title: "Longest Downtime",
+						title: (
+							<div className="flex items-center gap-2">
+								<AlertTriangle 
+									size={20} 
+									className="text-yellow-400 alert-vibrate"
+								/>
+
+								<span className="
+									bg-red-600 
+									text-white 
+									px-2 
+									py-0.5 
+									rounded-md 
+									text-sm 
+									font-bold 
+									alert-shine 
+									alert-vibrate
+								">
+									Critical
+								</span>
+							</div>
+						),
 						headers: { col1: "Device", col2: "Downtime" },
 						data: deviceDowntimeData,
 						maxRows: 5,
-						onRowClick: (row:WorkerRow) => navigate(`/devices/${row.id}`)
+						onRowClick: row => navigate(`/devices/${row.id}`)
 					},
+
+
 					metric3: undefined,
 					metric4: activeDevices
 						.reduce((acc, d) => {
@@ -347,7 +372,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						onStatusClick: handleLocationStatusClick
 					},
 					metric2: {
-						title: "Longest Downtime",
+						title: "Critical",
 						headers: { col1: "Location", col2: "Downtime" },
 						data: locationDowntimeData,
 						maxRows: 5,
@@ -385,7 +410,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						onStatusClick: handleWorkerStatusClick
 					},
 					metric2: {
-						title: "Longest Downtime",
+						title: "Critical",
 						headers: { col1: "Worker", col2: "Downtime" },
 						data: workerDowntimeData,
 						maxRows: 5,

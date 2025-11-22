@@ -1,8 +1,7 @@
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppSelector } from '@/store/hooks';
 // import { useEnrichedDevices } from "../devices/local_components/table";
 
-import type { readDeviceType } from "@/contexts/read-Types";
 import { ChartOptions, FontSpec } from 'chart.js'
 import {
   Chart as ChartJS,

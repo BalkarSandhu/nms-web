@@ -13,8 +13,6 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  
-  
 }
 
 const initialState: AuthState = {
@@ -37,6 +35,13 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       clearAuthToken();
+      
+      // Clear persisted Redux state
+      try {
+        localStorage.removeItem('redux-auth-state');
+      } catch (error) {
+        console.warn('Failed to clear persisted auth state:', error);
+      }
     },
   },
 });

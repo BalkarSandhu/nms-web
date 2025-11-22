@@ -66,7 +66,8 @@ const decodeJwtPayload = (token: string): JwtPayload | null => {
 const isExpired = (payload: JwtPayload | null): boolean => {
   if (!payload || typeof payload.exp !== 'number') return false;
   const now = Math.floor(Date.now() / 1000);
-  return payload.exp <= now;
+  // Add 60 second buffer to prevent premature expiration
+  return payload.exp <= (now + 60);
 };
 
 const persistTokenMetadata = (token: string, expiresAt: number | null) => {
@@ -106,7 +107,6 @@ const broadcastAuthChange = (event: AuthChangeEvent) => {
   const payload = JSON.stringify({ ...event, timestamp: Date.now() });
   try {
     localStorage.setItem(AUTH_SYNC_EVENT, payload);
-    // Remove the key to ensure subsequent events fire
     localStorage.removeItem(AUTH_SYNC_EVENT);
   } catch (error) {
     console.warn('Unable to broadcast auth change via storage', error);
@@ -126,16 +126,26 @@ const coerceExpiry = (expiry?: string | number | null): number | null => {
 
 const buildExpiryDate = (expiresAt: number | null): Date => {
   if (expiresAt) return new Date(expiresAt);
-  // Fallback to 1 hour from now if backend did not provide an expiry
-  return new Date(Date.now() + 60 * 60 * 1000);
+  // Fallback to 24 hours from now if backend did not provide an expiry
+  return new Date(Date.now() + 24 * 60 * 60 * 1000);
 };
 
 /**
  * Persist token across cookie + storage for reliability.
  */
 export const persistAuthToken = (token: string, expiry?: string) => {
-  const expiresAt = coerceExpiry(expiry);
+  const payload = decodeJwtPayload(token);
+  
+  // Use JWT exp claim if available, otherwise use provided expiry
+  let expiresAt: number | null = null;
+  if (payload && typeof payload.exp === 'number') {
+    expiresAt = payload.exp * 1000; // Convert seconds to milliseconds
+  } else {
+    expiresAt = coerceExpiry(expiry);
+  }
+  
   const expiresDate = buildExpiryDate(expiresAt);
+  
   writeCookie(TOKEN_COOKIE, token, expiresDate);
   persistTokenMetadata(token, expiresDate.getTime());
   broadcastAuthChange({ type: 'login', expiresAt: expiresDate.getTime() });
@@ -190,25 +200,49 @@ export const getAuthToken = (): ValidAuthToken | null => {
     return { token: 'bypass-token', payload: {}, expiresAt: null };
   }
 
+  // First try to get from cookie
   let token = readCookie(TOKEN_COOKIE);
+  let expiresAt: number | null = null;
+  
+  // If not in cookie, try localStorage
   if (!token) {
     const stored = readPersistedToken();
     if (!stored) return null;
+    
     token = stored.token;
-    // Rehydrate cookie for subsequent requests
-    writeCookie(TOKEN_COOKIE, token, buildExpiryDate(stored.expiresAt));
+    expiresAt = stored.expiresAt;
+    
+    // Rehydrate cookie from localStorage
+    if (expiresAt) {
+      writeCookie(TOKEN_COOKIE, token, new Date(expiresAt));
+    }
   }
 
   if (!token) return null;
 
   const payload = decodeJwtPayload(token);
-  if (!payload || isExpired(payload)) {
+  if (!payload) {
     clearAuthToken();
     return null;
   }
 
-  const expiresAt = typeof payload.exp === 'number' ? payload.exp * 1000 : null;
-  persistTokenMetadata(token, expiresAt);
+  // Check if token is expired
+  if (isExpired(payload)) {
+    clearAuthToken();
+    return null;
+  }
+
+  // Get expiry from JWT payload
+  if (typeof payload.exp === 'number') {
+    expiresAt = payload.exp * 1000;
+  }
+
+  // Ensure token is persisted in both locations
+  if (expiresAt) {
+    persistTokenMetadata(token, expiresAt);
+    writeCookie(TOKEN_COOKIE, token, new Date(expiresAt));
+  }
+
   return { token, payload, expiresAt };
 };
 
@@ -243,11 +277,15 @@ export const isDataStale = (lastFetched: number | null, maxAge: number = 5 * 60 
   return Date.now() - lastFetched > maxAge;
 };
 
+/**
+ * Refresh authentication token
+ */
 export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
   try {
     const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/refresh`, {
       method: 'POST',
-      credentials: 'include', // if refresh token is in httpOnly cookie
+      credentials: 'include',
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -256,10 +294,17 @@ export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
     }
 
     const data = await response.json();
-    // assume backend returns { token, expiry }
+    
+    // Persist the new token
     persistAuthToken(data.token, data.expiry);
+    
+    // Broadcast refresh event
+    const newToken = getAuthToken();
+    if (newToken) {
+      broadcastAuthChange({ type: 'refresh', expiresAt: newToken.expiresAt });
+    }
 
-    return getAuthToken();
+    return newToken;
   } catch (error) {
     console.error("Token refresh failed:", error);
     clearAuthToken();

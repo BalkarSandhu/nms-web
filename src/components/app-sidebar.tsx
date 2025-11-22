@@ -18,7 +18,6 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
-import Dadhwal from "../assets/Dadhwal.jpg"
 import {
   Sidebar,
   SidebarContent,

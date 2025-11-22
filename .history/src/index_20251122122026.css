@@ -201,15 +201,6 @@
   backdrop-filter: blur(2px);
   transition: background 0.3s;
 }
-.metric-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.metric-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-}
-
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.45);

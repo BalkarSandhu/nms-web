@@ -3,6 +3,7 @@ import "@/index.css";
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
+import {Video,MountainSnow,Computer,HardDrive,DoorClosed,Weight} from "lucide-react";
 
 // General data type for metric items
 export interface MetricItem {
@@ -70,14 +71,18 @@ export default function MetricGeneral({
     // Built-in icon resolver based on label keywords
     const defaultIconResolver = (item: MetricItem) => {
         const label = item.label.toLowerCase();
-        if (label.includes("workstation")) return "🖥️";
-        if (label.includes("ptz") || label.includes("camera")) return "📷";
-        if (label.includes("bullet")) return "📷"; // Bullet camera
+        if (label.includes("workstation")) return <Computer size={16} color="white" />; // Workstation
+        if (label.includes("ptz") || label.includes("camera")) return <Video size={16} color="white" />; // PTZ or camera
+        if (label.includes("bullet")) return <Video size={16} color="white"/>; // Bullet camera
         if (label.includes("sensor")) return "📡";
+        if(label.includes("dome")) return <Video size={16} color="white"/>; // Dome camera
         if (label.includes("gateway") || label.includes("router")) return "🌐";
         if (label.includes("office") || label.includes("building")) return "🏢";
         if (label.includes("warehouse")) return "🏭";
-        if (label.includes("Coal Dump")) return "🏭";
+        if (label.includes("coal dump")) return <MountainSnow size={16} color="white"/>;
+        if(label.includes("nvr")) return <HardDrive size={16} color="white"/>;
+        if(label.includes("static location")) return <DoorClosed size={16} color="white"/>;
+        if(label.includes("weighbridge")) return <Weight size={16} color="white"/>;
         return "📦";
     };
     const getIcon = iconResolver || defaultIconResolver;

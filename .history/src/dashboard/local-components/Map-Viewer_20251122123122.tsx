@@ -479,7 +479,7 @@ export const MapViewer = ({
   return (
     <div className={`w-full h-full rounded overflow-hidden relative ${className}`}>
       {/* Filter Controls - Top Left */}
-      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-white/10">
+      <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-white/10">
         <div className="text-white text-sm font-semibold ">Device Status</div>
         <div className="flex flex-col gap-1">
           <label className="flex items-center gap-1 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">

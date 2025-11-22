@@ -329,7 +329,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
                                 {expandedSections.assignedDevices ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
                             </div>
                             {expandedSections.assignedDevices && (
-                                <div className=" metric-scroll px-4 pb-4 border-t max-h-96 overflow-y-auto">
+                                <div className="px-4 pb-4 border-t max-h-96 overflow-y-auto">
                                     {workerDevices.length === 0 ? (
                                         <p className="text-xs text-gray-500 text-center py-8">No devices assigned to this worker</p>
                                     ) : (
