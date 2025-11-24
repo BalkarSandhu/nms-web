@@ -16,7 +16,7 @@ import {
 import "@/index.css";
 
 import { LoadingPage } from './components/loading-screen'
-import { getAuthToken, clearAuthToken, subscribeToAuthChanges } from '@/lib/auth'
+import { getAuthToken, clearAuthToken, subscribeToAuthChanges, extractTokenFromUrl, completeUrlTokenAuth } from '@/lib/auth'
 
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
@@ -96,7 +96,41 @@ function App() {
         return
       }
 
-      // Check for valid token
+      // Check for URL token first
+      const urlToken = extractTokenFromUrl()
+      if (urlToken) {
+        try {
+          console.log('URL token detected, authenticating...')
+          const { user, workerId } = await completeUrlTokenAuth(urlToken)
+          console.log('URL token authentication successful', { user, workerId })
+          
+          // Remove token from URL for security
+          const url = new URL(window.location.href)
+          url.searchParams.delete('token')
+          window.history.replaceState({}, '', url.toString())
+          
+          setIsLoading(false)
+          setIsInitialized(true)
+          setIsAuthenticated(true)
+          
+          // Get the new token and schedule expiry
+          const validToken = getAuthToken()
+          if (validToken) {
+            scheduleExpiryTimer(validToken.expiresAt ?? null)
+          }
+          
+          return
+        } catch (error) {
+          console.error('URL token authentication failed:', error)
+          // Remove token from URL even on failure
+          const url = new URL(window.location.href)
+          url.searchParams.delete('token')
+          window.history.replaceState({}, '', url.toString())
+          // Fall through to regular auth check
+        }
+      }
+
+      // Check for valid token (regular login)
       const validToken = getAuthToken()
       if (validToken) {
         setIsLoading(false)

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId } from '@/lib/auth';
 
 // Types for Worker
 export interface Worker {
@@ -122,8 +122,10 @@ export const fetchWorkers = createAsyncThunk(
       if (params.status) queryParams.append('status', params.status);
       if (params.approval_status) queryParams.append('approval_status', params.approval_status);
 
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`,
+        url,
         { headers: getAuthHeaders() }
       );
       
@@ -150,8 +152,10 @@ export const searchWorkers = createAsyncThunk(
       if (params.page) queryParams.append('page', params.page.toString());
       if (params.page_size) queryParams.append('page_size', params.page_size.toString());
 
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers/search?${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/workers/search?${queryParams}`,
+        url,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to search workers');
@@ -169,8 +173,9 @@ export const fetchWorkerById = createAsyncThunk(
   'workers/fetchById',
   async (id: string, { rejectWithValue }) => {
     try {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/workers/${id}`);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/workers/${id}`,
+        url,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to fetch worker');
@@ -247,8 +252,9 @@ export const fetchWorkerStats = createAsyncThunk(
   'workers/stats',
   async (_, { rejectWithValue }) => {
     try {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/workers/stats`);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/workers/stats`,
+        url,
         { headers: getAuthHeaders() }
       );
       
