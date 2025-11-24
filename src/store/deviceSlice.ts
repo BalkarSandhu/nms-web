@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { readDeviceType } from '@/contexts/read-Types';
-import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId } from '@/lib/auth';
 
 
 // Types for Device Type
@@ -115,7 +115,8 @@ export const fetchDevicesPaginated = createAsyncThunk(
   'devices/fetchPaginated',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch devices');
@@ -131,7 +132,8 @@ export const fetchAllDevices = createAsyncThunk(
   'devices/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/all`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices/all`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       
@@ -153,7 +155,8 @@ export const fetchDevices = createAsyncThunk(
   'devices/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       if (!response.ok) throw new Error('Failed to fetch all devices');
@@ -204,7 +207,8 @@ export const fetchDeviceTypes = createAsyncThunk(
   'devices/fetchTypes',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/types`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices/types`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       
@@ -378,7 +382,8 @@ export const fetchDeviceStatistics = createAsyncThunk (
   'devices/statistics',
   async (_, { rejectWithValue}) => {
     try{
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/statistics`,
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices/statistics`);
+      const response = await fetch(url,
         {
           headers: getAuthHeaders(),
         }

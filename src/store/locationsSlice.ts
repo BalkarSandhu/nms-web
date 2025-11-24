@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId } from '@/lib/auth';
 
 // Types for Location
 export interface Location {
@@ -92,7 +92,8 @@ export const fetchLocations = createAsyncThunk(
   'locations/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/locations`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       
@@ -139,8 +140,10 @@ export const fetchLocationsByBounds = createAsyncThunk(
         min_lng: params.min_lng.toString(),
         max_lng: params.max_lng.toString(),
       });
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations/bounds?${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/locations/bounds?${queryParams}`,
+        url,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to fetch locations by bounds');
@@ -161,8 +164,10 @@ export const fetchLocationsCount = createAsyncThunk(
       if (params.area) queryParams.append('area', params.area);
       if (params.location_type_id) queryParams.append('location_type_id', params.location_type_id.toString());
       
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations/count?${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/locations/count?${queryParams}`,
+        url,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to fetch locations count');
@@ -178,7 +183,8 @@ export const fetchLocationTypes = createAsyncThunk(
   'locations/fetchTypes',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/locations/types`, {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations/types`);
+      const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
       
@@ -223,8 +229,9 @@ export const fetchLocationById = createAsyncThunk(
   'locations/fetchById',
   async (id: number, { rejectWithValue }) => {
     try {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations?id=${id}`);
       const response = await fetch(
-        `${import.meta.env.VITE_NMS_HOST}/locations?id=${id}`,
+        url,
         { headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to fetch location');

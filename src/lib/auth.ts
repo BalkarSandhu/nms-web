@@ -21,6 +21,7 @@ export type AuthChangeEvent = {
 };
 
 const TOKEN_COOKIE = 'token';
+const WORKER_ID_COOKIE = 'worker_id';
 const AUTH_SYNC_EVENT = 'nms-auth-sync';
 const SAMESITE_POLICY = 'Lax';
 
@@ -277,4 +278,151 @@ export const authenticatedFetch = async (
   }
 
   return response;
+};
+
+/**
+ * Extract token from URL query parameter
+ */
+export const extractTokenFromUrl = (): string | null => {
+  if (!isBrowser) return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('token');
+};
+
+/**
+ * Store worker_id in cookie
+ */
+export const persistWorkerId = (workerId: string | number) => {
+  if (!hasDocument) return;
+  // Store worker_id in cookie for 1 year
+  const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  const cookieString = `${WORKER_ID_COOKIE}=${workerId}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${getSecureFlag()}`;
+  document.cookie = cookieString;
+};
+
+/**
+ * Get worker_id from cookie
+ */
+export const getWorkerId = (): string | null => {
+  return readCookie(WORKER_ID_COOKIE);
+};
+
+/**
+ * Build URL with worker_id parameter if available
+ * Appends worker_id as a query parameter if it exists in cookies
+ */
+export const buildUrlWithWorkerId = (baseUrl: string): string => {
+  const workerId = getWorkerId();
+  if (!workerId) return baseUrl;
+  
+  const url = new URL(baseUrl, window.location.origin);
+  url.searchParams.append('worker_id', workerId);
+  
+  return url.toString();
+};
+
+/**
+ * Clear worker_id from cookie
+ */
+export const clearWorkerId = () => {
+  deleteCookie(WORKER_ID_COOKIE);
+};
+
+/**
+ * Response type for token-based login
+ */
+export type TokenLoginResponse = {
+  token: string;
+  user: {
+    id: number;
+    username: string;
+    role: string;
+    is_active: boolean;
+    has_api_key: boolean;
+    created_at: string;
+    updated_at: string;
+    last_login: string;
+    token_expiry: string;
+  };
+};
+
+/**
+ * Response type for worker assignment
+ */
+export type WorkerAssignmentResponse = {
+  assignments: Array<{
+    worker_id: number;
+    assigned_at: string;
+  }>;
+};
+
+/**
+ * Authenticate using URL token
+ * Exchanges URL token for JWT token and stores it
+ */
+export const authenticateWithUrlToken = async (urlToken: string): Promise<TokenLoginResponse> => {
+  const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/token-login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token: urlToken }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to authenticate with URL token');
+  }
+
+  const data: TokenLoginResponse = await response.json();
+  
+  // Store the JWT token
+  persistAuthToken(data.token, data.user.token_expiry);
+  
+  return data;
+};
+
+/**
+ * Fetch worker assignment for a user
+ */
+export const fetchWorkerAssignment = async (userId: number): Promise<number> => {
+  const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/users/${userId}/assignments`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch worker assignment');
+  }
+
+  const data: WorkerAssignmentResponse = await response.json();
+  
+  if (!data.assignments || data.assignments.length === 0) {
+    throw new Error('No worker assignment found for user');
+  }
+
+  const workerId = data.assignments[0].worker_id;
+  persistWorkerId(workerId);
+  
+  return workerId;
+};
+
+/**
+ * Complete URL token authentication flow
+ * 1. Authenticate with URL token to get JWT
+ * 2. Fetch worker assignment for the user
+ * Returns user data and worker_id
+ */
+export const completeUrlTokenAuth = async (urlToken: string): Promise<{
+  user: TokenLoginResponse['user'];
+  workerId: number;
+}> => {
+  // Step 1: Authenticate with URL token
+  const loginResponse = await authenticateWithUrlToken(urlToken);
+  
+  // Step 2: Fetch worker assignment
+  const workerId = await fetchWorkerAssignment(loginResponse.user.id);
+  
+  return {
+    user: loginResponse.user,
+    workerId,
+  };
 };
