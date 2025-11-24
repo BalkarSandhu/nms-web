@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAuthHeaders } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
 
 // Types for Location
 export interface Location {
@@ -95,6 +95,13 @@ export const fetchLocations = createAsyncThunk(
       const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/locations`, {
         headers: getAuthHeaders(),
       });
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch locations');
       const data: Location[] = await response.json();
       return data;
@@ -174,6 +181,13 @@ export const fetchLocationTypes = createAsyncThunk(
       const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/locations/types`, {
         headers: getAuthHeaders(),
       });
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch location types');
       const data: LocationType[] = await response.json();
       return data;

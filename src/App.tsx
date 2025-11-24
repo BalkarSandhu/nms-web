@@ -16,7 +16,7 @@ import {
 import "@/index.css";
 
 import { LoadingPage } from './components/loading-screen'
-import { getAuthToken, clearAuthToken, subscribeToAuthChanges, refreshAuthToken } from '@/lib/auth'
+import { getAuthToken, clearAuthToken, subscribeToAuthChanges } from '@/lib/auth'
 
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
@@ -58,33 +58,17 @@ function App() {
       clearExpiryTimer()
       if (!expiresAt) return
 
-      // Refresh 5 minutes before expiry
-      const bufferMs = 5 * 60 * 1000
-      const msUntilExpiry = expiresAt - Date.now() - bufferMs
+      const msUntilExpiry = expiresAt - Date.now()
 
       if (msUntilExpiry <= 0) {
-        // Token expires soon or already expired, try refresh immediately
-        refreshAuthToken()
-          .then(refreshed => {
-            if (refreshed) {
-              setIsAuthenticated(true)
-              scheduleExpiryTimer(refreshed.expiresAt ?? null)
-            } else {
-              handleTokenInvalid()
-            }
-          })
-          .catch(handleTokenInvalid)
+        // Token already expired, logout immediately
+        handleTokenInvalid()
         return
       }
 
-      expiryTimeoutRef.current = window.setTimeout(async () => {
-        const refreshed = await refreshAuthToken()
-        if (!refreshed) {
-          handleTokenInvalid()
-        } else {
-          setIsAuthenticated(true)
-          scheduleExpiryTimer(refreshed.expiresAt ?? null)
-        }
+      // Schedule logout when token expires (no refresh since backend doesn't support it)
+      expiryTimeoutRef.current = window.setTimeout(() => {
+        handleTokenInvalid()
       }, msUntilExpiry)
     },
     [clearExpiryTimer, handleTokenInvalid]
@@ -228,6 +212,11 @@ function App() {
       return
     }
 
+    // Show loading during auth state determination
+    if (isLoading) {
+      return
+    }
+
     const currentPath = location.pathname
 
     // User is authenticated
@@ -247,7 +236,7 @@ function App() {
     if (currentPath === '/') {
       navigate(isInitialized ? '/login' : '/register', { replace: true })
     }
-  }, [isAuthenticated, isInitialized, location.pathname, navigate])
+  }, [isAuthenticated, isInitialized, location.pathname, navigate, isLoading])
 
   // Determine if the current page should use the layout
   const shouldUseLayout = () => {
