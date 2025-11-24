@@ -250,6 +250,7 @@ export const handle401Unauthorized = () => {
   if (isBrowser && window.location.pathname !== '/login') {
     window.location.href = '/login';
   }
+  
 };
 
 /**

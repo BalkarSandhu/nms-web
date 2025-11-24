@@ -84,7 +84,7 @@ import {
 const baseNavItems = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    url: "/",
     icon: LayoutDashboard,
     isActive: false,
   },
