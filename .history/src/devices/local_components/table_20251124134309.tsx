@@ -175,7 +175,7 @@ export default function DevicesTable({
     const filteredDevices = useMemo(() => {
         console.log('Applying filters:', filters);
         const result = devices.filter(device => {
-            if (filters.type && device.device_type?.name !== filters.type) return false;
+            if (filters.type && device.device_type.name !== filters.type) return false;
             if (filters.status && (device.status ? 'Online' : 'Offline') !== filters.status) return false;
             if (filters.location && device.location?.name !== filters.location) return false;
             if (filters.worker && device.worker.hostname !== filters.worker) return false;
@@ -289,7 +289,7 @@ export default function DevicesTable({
                                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                 : 'bg-gray-100 text-gray-700 border border-gray-200'
                                         }`}>
-                                            {device.device_type?.name}
+                                            {device.device_type.name}
                                         </span>
                                     </TableCell>
                                     

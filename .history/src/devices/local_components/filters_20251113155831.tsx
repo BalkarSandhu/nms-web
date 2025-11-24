@@ -153,7 +153,7 @@ function FilterComboBox({ label, filterValue, setFilterValue, filterOptions }: F
     const [search, setSearch] = React.useState("");
     
     const filteredOptions = filterOptions.filter(option =>
-        option.label?.toLowerCase().includes(search.toLowerCase())
+        option.label.toLowerCase().includes(search.toLowerCase())
     );
     
     return (

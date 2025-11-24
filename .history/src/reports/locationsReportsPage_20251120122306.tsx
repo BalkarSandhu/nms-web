@@ -2,12 +2,11 @@ import ReportsFilters from "./local-components/ReportsFilters";
 import { useState } from "react";
 import { Printer, Download } from "lucide-react";
 
-export default function DevicesReportsPage() {
+export default function LocationsReportsPage() {
   const [lastFilters, setLastFilters] = useState(null as any);
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  
 
   const generateTableHTML = (filters: any) => {
     const generatedDate = new Date().toLocaleDateString('en-US', {
@@ -16,7 +15,7 @@ export default function DevicesReportsPage() {
       day: 'numeric'
     });
 
-    const tableRows = reportData?.devices?.map((device: any) => `
+    const tableRows = reportData?.locations?.map((device: any) => `
       <tr>
         <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">${device.sno}</td>
         <td style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">${device.area}</td>
@@ -32,7 +31,7 @@ export default function DevicesReportsPage() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Devices Status Report</title>
+          <title>Locations Status Report</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; color: #333; }
@@ -71,7 +70,7 @@ export default function DevicesReportsPage() {
           <div class="page">
             <div class="header">
               <h1>Report System</h1>
-              <h2>Devices Status Report</h2>
+              <h2>Locations Status Report</h2>
             </div>
 
             <div class="report-info">
@@ -80,7 +79,7 @@ export default function DevicesReportsPage() {
                   <span>Generated On:</span> ${generatedDate}
                 </div>
                 <div class="report-info-item">
-                  <span>Report Type:</span> Devices
+                  <span>Report Type:</span> Locations
                 </div>
               </div>
             </div>
@@ -110,7 +109,7 @@ export default function DevicesReportsPage() {
             <div class="summary-section">
               <h3>Executive Summary</h3>
               <div class="summary-box">
-                <p>This report contains detailed information about devices. Total Records: ${reportData?.devices?.length || 0}</p>
+                <p>This report contains detailed information about locations. Total Records: ${reportData?.locations?.length || 0}</p>
               </div>
             </div>
 
@@ -121,7 +120,7 @@ export default function DevicesReportsPage() {
           <div class="page">
             <div class="page-header-2">
               <div>
-                <h2>Devices Status Report</h2>
+                <h2>Locations Status Report</h2>
                 <p>${generatedDate}</p>
               </div>
               <div class="page-indicator">Page 2 of 2</div>
@@ -160,14 +159,14 @@ export default function DevicesReportsPage() {
     const element = document.createElement('a');
     const file = new Blob([htmlContent], { type: 'text/html' });
     element.href = URL.createObjectURL(file);
-    element.download = `devices-report-${Date.now()}.html`;
+    element.download = `locations-report-${Date.now()}.html`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
     URL.revokeObjectURL(element.href);
   };
 
-  const handleDevicesGenerate = (filters: any) => {
+  const handleLocationsGenerate = (filters: any) => {
     console.log('Generate report with', filters);
     setLastFilters(filters);
     setLoading(true);
@@ -175,8 +174,12 @@ export default function DevicesReportsPage() {
     // Simulate API call - replace with actual API
     setTimeout(() => {
       const mockData = {
-        devices: [
-       
+        locations: [
+          { sno: 1, area: "North Zone", location: "Building A", deviceIp: "192.168.1.10", deviceType: "Router", downtime: "2h 15m", uptime: "99.2%" },
+          { sno: 2, area: "South Zone", location: "Building B", deviceIp: "192.168.1.15", deviceType: "Switch", downtime: "0h 45m", uptime: "99.7%" },
+          { sno: 3, area: "East Zone", location: "Building C", deviceIp: "192.168.1.20", deviceType: "Firewall", downtime: "5h 30m", uptime: "97.8%" },
+          { sno: 4, area: "West Zone", location: "Building D", deviceIp: "192.168.1.25", deviceType: "Router", downtime: "1h 20m", uptime: "99.5%" },
+          { sno: 5, area: "Central Zone", location: "Main Campus", deviceIp: "192.168.1.30", deviceType: "Switch", downtime: "0h 10m", uptime: "99.9%" },
         ]
       };
       setReportData(mockData);
@@ -189,7 +192,7 @@ export default function DevicesReportsPage() {
       <div className="p-4">
   {/* HEADER ROW */}
   <div className="flex justify-between items-center mb-4">
-    <label className="text-lg font-semibold">Devices Report</label>
+    <label className="text-lg font-semibold">Locations Report</label>
 
     <div className="flex gap-3">
       <button
@@ -208,7 +211,7 @@ export default function DevicesReportsPage() {
     </div>
   </div>
 
-  <ReportsFilters onGenerate={handleDevicesGenerate} />
+  <ReportsFilters onGenerate={handleLocationsGenerate} />
 </div>
 
 
@@ -239,7 +242,7 @@ export default function DevicesReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {reportData.devices?.map((device: any, index: number) => (
+                {reportData.locations?.map((device: any, index: number) => (
                   <tr key={device.sno} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                     <td className="px-4 py-3 border-b border-gray-200">{device.sno}</td>
                     <td className="px-4 py-3 border-b border-gray-200">{device.area}</td>

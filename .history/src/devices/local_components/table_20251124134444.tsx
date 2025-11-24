@@ -289,7 +289,7 @@ export default function DevicesTable({
                                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                 : 'bg-gray-100 text-gray-700 border border-gray-200'
                                         }`}>
-                                            {device.device_type?.name}
+                                            {device.device_type.name}
                                         </span>
                                     </TableCell>
                                     
