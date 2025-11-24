@@ -337,7 +337,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Device", col2: "Downtime" },
 						data: deviceDowntimeData,
 						maxRows: 5,
-						onRowClick: row => navigate(`/devices/${row.id}`)
+						onRowClick: (row: WorkerRow) => navigate(`/devices?id=${row.id}`)
 					},
 
 
@@ -394,7 +394,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							return acc;
 						}, [] as { label: string; value: number }[])
 						.sort((a, b) => b.value - a.value)
-						.slice(0, 3)
+						.slice(0, 5)
 				}}
 			/>
 

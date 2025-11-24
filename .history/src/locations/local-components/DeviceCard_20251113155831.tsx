@@ -35,14 +35,14 @@ export function DeviceCard({ device }: { device: any; }) {
                         <span className="text-gray-500">IP:</span>
                         <span className="text-gray-900 font-mono">{device.ip}</span>
                     </div>
-                    {/* <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-xs">
                         <span className="text-gray-500">Port:</span>
                         <span className="text-gray-900">{device.port}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                         <span className="text-gray-500">Protocol:</span>
                         <span className="text-gray-900 uppercase">{device.protocol}</span>
-                    </div> */}
+                    </div>
                     {device.imei && (
                         <div className="flex justify-between text-xs">
                             <span className="text-gray-500">IMEI:</span>

@@ -84,7 +84,7 @@ export default function MetricGeneral({
         if(label.includes("static location")) return <DoorClosed size={16} color="white"/>;
         if(label.includes("weighbridge")) return <Weight size={16} color="white"/>;
         if(label.includes("route")) return <Route size={16} color="white"/>;
-        if(label.includes("checkpost")) return <Construction size={16} color="white"/>;
+        if(label.includes("check post")) return <Construction size={16} color="white"/>;
         return "📦";
     };
     const getIcon = iconResolver || defaultIconResolver;
