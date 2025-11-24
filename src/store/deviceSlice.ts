@@ -152,7 +152,7 @@ export const fetchAllDevices = createAsyncThunk(
   }
 );
 export const fetchDevices = createAsyncThunk(
-  'devices/fetchAll',
+  'devices/fetch',
   async (_, { rejectWithValue }) => {
     try {
       const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/devices`);
@@ -300,6 +300,21 @@ const deviceSlice = createSlice({
         state.lastFetched = Date.now(); // Track when data was fetched
       })
       .addCase(fetchAllDevices.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch devices
+      .addCase(fetchDevices.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDevices.fulfilled, (state, action) => {
+        state.loading = false;
+        state.devices = action.payload.devices;
+        state.paginationMeta = null;
+        state.lastFetched = Date.now();
+      })
+      .addCase(fetchDevices.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

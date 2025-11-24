@@ -10,10 +10,7 @@ export default function Header({ onExport, exportDisabled }: HeaderProps) {
 
     return (
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-            <div>
-                
-                
-            </div>
+            <span className="font-semibold text-[24px] text-(--base)">Areas</span>
             
             <div className="flex gap-2 h-fit w-fit">
                 <Popover>

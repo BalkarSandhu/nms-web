@@ -23,7 +23,7 @@ export default function Header({ onExport, exportDisabled }: HeaderProps) {
     return (
         <div className="flex w-full h-9 overflow-auto bg-(--contrast) items-center justify-between">
             
-
+            <span className="font-semibold text-[24px] text-(--base)">Locations</span>
 
             <div className="flex gap-2 h-fit w-fit">
                 <Popover>

@@ -28,6 +28,7 @@ import LocationsReportsPage from './reports/locationsReportsPage'
 import WorkersReportsPage from './reports/workersReportsPage'
 import LocationsPage from './locations/page'
 import WorkersPage from './workers/page'
+import DeviceInfoPage from './device-info/page'
 
 function App() {
   const location = useLocation()
@@ -290,6 +291,7 @@ function App() {
       '/locations': 'Locations',
       '/areas': 'Areas',
       '/field-technicians': 'Field Technicians',
+      '/device-info': 'Device Info',
     }
     return routes[path] || 'Home'
   }
@@ -343,6 +345,7 @@ function App() {
                   <Route path="/locations" element={<LocationsPage />} />
                   <Route path="/areas" element={<WorkersPage />} />
                   <Route path="/field-technicians" element={<WorkersPage />} />
+                  <Route path="/device-info" element={<DeviceInfoPage />} />
                 </Routes>
               </div>
             </div>
@@ -359,6 +362,7 @@ function App() {
             <Route path="/locations" element={<LocationsPage />} />
             <Route path="/areas" element={<WorkersPage />} />
             <Route path="/field-technicians" element={<WorkersPage />} />
+            <Route path="/device-info" element={<DeviceInfoPage />} />
           </Routes>
         </div>
       )}

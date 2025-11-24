@@ -56,7 +56,7 @@ export default function WorkersPage() {
     }
 
     return (
-        <div className="flex h-full">
+        <div className="p-4 flex gap-4 bg-(--contrast) min-h-[90vh] max-h-full w-full">
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
