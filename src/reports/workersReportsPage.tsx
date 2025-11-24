@@ -184,7 +184,7 @@ export default function WorkersReportsPage() {
       <div className="p-4">
   {/* HEADER ROW */}
   <div className="flex justify-between items-center mb-4">
-    <label className="text-lg font-semibold">Workers Report</label>
+    <label className="text-lg font-semibold">Area Report</label>
 
     <div className="flex gap-3">
       <button

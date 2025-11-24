@@ -1,13 +1,11 @@
-import ReportsFilters from "./local-components/ReportsFilters";
 import { useState } from "react";
 import { Printer, Download } from "lucide-react";
+import ReportsFilters from "./local-components/ReportsFilters";
 
 export default function DevicesReportsPage() {
   const [lastFilters, setLastFilters] = useState(null as any);
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-
-  
 
   const generateTableHTML = (filters: any) => {
     const generatedDate = new Date().toLocaleDateString('en-US', {
@@ -97,12 +95,12 @@ export default function DevicesReportsPage() {
                   <div class="filter-item-value">${filters?.endDateTime || 'N/A'}</div>
                 </div>
                 <div>
-                  <div class="filter-item-label">Block</div>
-                  <div class="filter-item-value">${filters?.block || 'N/A'}</div>
+                  <div class="filter-item-label">Worker</div>
+                  <div class="filter-item-value">${filters?.workerName || 'N/A'}</div>
                 </div>
                 <div>
                   <div class="filter-item-label">Location</div>
-                  <div class="filter-item-value">${filters?.location || 'N/A'}</div>
+                  <div class="filter-item-value">${filters?.locationName || 'N/A'}</div>
                 </div>
               </div>
             </div>
@@ -113,8 +111,6 @@ export default function DevicesReportsPage() {
                 <p>This report contains detailed information about devices. Total Records: ${reportData?.devices?.length || 0}</p>
               </div>
             </div>
-
-            
           </div>
 
           <!-- Page 2: Data Table -->
@@ -143,8 +139,6 @@ export default function DevicesReportsPage() {
                 ${tableRows}
               </tbody>
             </table>
-
-            
           </div>
         </body>
       </html>
@@ -152,10 +146,18 @@ export default function DevicesReportsPage() {
   };
 
   const handlePrint = () => {
+    if (!reportData) {
+      alert("Please generate a report first");
+      return;
+    }
     window.print();
   };
 
   const handleDownloadPDF = () => {
+    if (!reportData) {
+      alert("Please generate a report first");
+      return;
+    }
     const htmlContent = generateTableHTML(lastFilters);
     const element = document.createElement('a');
     const file = new Blob([htmlContent], { type: 'text/html' });
@@ -167,65 +169,88 @@ export default function DevicesReportsPage() {
     URL.revokeObjectURL(element.href);
   };
 
-  const handleDevicesGenerate = (filters: any) => {
+  const handleDevicesGenerate = async (filters: any) => {
     console.log('Generate report with', filters);
     setLastFilters(filters);
     setLoading(true);
 
-    // Simulate API call - replace with actual API
-    setTimeout(() => {
-      const mockData = {
-        devices: [
-       
-        ]
-      };
-      setReportData(mockData);
+    try {
+      // Replace with your actual API call
+      const response = await fetch('/api/reports/devices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startDateTime: filters.startDateTime,
+          endDateTime: filters.endDateTime,
+          workerId: filters.workerId,
+          locationId: filters.locationId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const data = await response.json();
+      setReportData(data);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('Failed to generate report. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="p-4">
-      <div className="p-4">
-  {/* HEADER ROW */}
-  <div className="flex justify-between items-center mb-4">
-    <label className="text-lg font-semibold">Devices Report</label>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* Header Section */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          {/* <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Devices Report</h1> */}
+          <div className="flex gap-3">
+            <button
+              onClick={handlePrint}
+              disabled={!reportData}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              <Printer size={12} />
+              
+            </button>
 
-    <div className="flex gap-3">
-      <button
-        onClick={handlePrint}
-        className="w-fit h-fit py-1 px-3 text-white flex bg-(--azul) rounded-[10px] items-center hover:bg-(--azul)/90"
-      >
-        <Printer size={18} />
-      </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={!reportData}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              <Download size={12} />
+            
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <button
-        onClick={handleDownloadPDF}
-        className="w-fit h-fit py-1 px-3 text-white flex bg-(--green)/90 rounded-[10px] items-center hover:bg-(--green)"
-      >
-        <Download size={18} />
-      </button>
-    </div>
-  </div>
+      {/* Filters Section */}
+      <ReportsFilters onGenerate={handleDevicesGenerate} />
 
-  <ReportsFilters onGenerate={handleDevicesGenerate} />
-</div>
-
-
+      {/* Loading State */}
       {loading && (
-        <div className="p-4 text-center">
-          <p className="text-gray-600">Loading report data...</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-center">
+          <p className="text-blue-700 font-medium flex items-center justify-center gap-2">
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading report data...
+          </p>
         </div>
       )}
 
-      {reportData && (
-        <div className="p-2">
-          
-          
-
-
-          {/* Data Table */}
-          <div className="overflow-x-auto border rounded-lg">
+      {/* Report Data Table */}
+      {reportData && !loading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-900 text-white">
@@ -239,34 +264,58 @@ export default function DevicesReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {reportData.devices?.map((device: any, index: number) => (
-                  <tr key={device.sno} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.sno}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.area}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.location}</td>
-                    <td className="px-4 py-3 border-b border-gray-200 font-mono text-xs">{device.deviceIp}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                        {device.deviceType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 border-b border-gray-200 text-red-600 font-medium">{device.downtime}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">
-                      <span className={`font-semibold ${
-                        parseFloat(device.uptime) >= 99.5 ? 'text-green-600' :
-                        parseFloat(device.uptime) >= 98 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
-                        {device.uptime}
-                      </span>
+                {reportData.devices && reportData.devices.length > 0 ? (
+                  reportData.devices.map((device: any, index: number) => (
+                    <tr key={device.sno} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="px-4 py-3 border-b border-gray-200">{device.sno}</td>
+                      <td className="px-4 py-3 border-b border-gray-200">{device.area}</td>
+                      <td className="px-4 py-3 border-b border-gray-200">{device.location}</td>
+                      <td className="px-4 py-3 border-b border-gray-200 font-mono text-xs">{device.deviceIp}</td>
+                      <td className="px-4 py-3 border-b border-gray-200">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                          {device.deviceType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-b border-gray-200 text-red-600 font-medium">{device.downtime}</td>
+                      <td className="px-4 py-3 border-b border-gray-200">
+                        <span className={`font-semibold ${
+                          parseFloat(device.uptime) >= 99.5 ? 'text-green-600' :
+                          parseFloat(device.uptime) >= 98 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {device.uptime}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      No devices found for the selected filters
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
-          
+          {/* Summary Footer */}
+          {reportData.devices && reportData.devices.length > 0 && (
+            <div className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+              <p className="text-sm text-gray-700">
+                <span className="font-semibold">Total Records:</span> {reportData.devices.length}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!reportData && !loading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-dashed p-12 text-center">
+          <p className="text-gray-500 text-lg">
+            Select filters and click "Generate Report" to view device data
+          </p>
         </div>
       )}
     </div>
