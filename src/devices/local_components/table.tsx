@@ -165,8 +165,8 @@ export default function DevicesTable({
             options: filterOptions.locations,
         },
         {
-            label: "Worker",
-            key: "worker",
+            label: "Area",
+            key: "area",
             options: filterOptions.workers,
         }
     ];

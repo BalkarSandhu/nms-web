@@ -429,7 +429,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 					},
 					metric2: {
 						title: "Critical",
-						headers: { col1: "Worker", col2: "Downtime" },
+						headers: { col1: "Area", col2: "Downtime" },
 						data: workerDowntimeData,
 						maxRows: 5,
 						onRowClick: (row:WorkerRow) => navigate(`/workers/${row.id}`)

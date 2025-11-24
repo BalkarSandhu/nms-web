@@ -318,8 +318,8 @@ export default function AddDeviceForm() {
         </div>
       )}
       <InputField
-        label="Worker"
-        placeholder="Select Worker"
+        label="Area"
+        placeholder="Select Area"
         type="combobox"
         comboboxOptions={workerTypeOptions.map((w) => w.hostname)}
         stateValue={workerType}

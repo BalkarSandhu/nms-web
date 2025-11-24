@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { readDeviceType } from '@/contexts/read-Types';
-import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId, isDataStale } from '@/lib/auth';
+import type { RootState } from './store';
 
 
 // Types for Device Type
@@ -149,6 +150,22 @@ export const fetchAllDevices = createAsyncThunk(
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const state = getState() as RootState;
+      const { devices, lastFetched, loading } = state.devices;
+
+      if (loading) {
+        return false;
+      }
+
+      if (devices.length > 0 && !isDataStale(lastFetched)) {
+        return false;
+      }
+
+      return true;
+    },
   }
 );
 export const fetchDevices = createAsyncThunk(
@@ -165,6 +182,22 @@ export const fetchDevices = createAsyncThunk(
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const state = getState() as RootState;
+      const { devices, lastFetched, loading } = state.devices;
+
+      if (loading) {
+        return false;
+      }
+
+      if (devices.length > 0 && !isDataStale(lastFetched)) {
+        return false;
+      }
+
+      return true;
+    },
   }
 );
 

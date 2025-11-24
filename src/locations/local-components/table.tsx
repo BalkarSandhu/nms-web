@@ -213,12 +213,7 @@ export default function LocationsTable({
             label: "Area",
             key: "area",
             options: filterOptions.areas,
-        },
-        {
-            label: "Worker",
-            key: "worker",
-            options: filterOptions.workers,
-        },
+        }
     ];
 
     // Apply filters to locations
