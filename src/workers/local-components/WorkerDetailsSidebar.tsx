@@ -122,7 +122,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
         setStatusMessage(null);
         try {
             const apiUrl = `${import.meta.env.VITE_NMS_HOST}/workers/${workerId}/deny`;
-            const token = import.meta.env.VITE_AUTH_TOKEN;
+            const token = import.meta.env.VITE_AUTH_BEARER_TOKEN;
             
             const response = await fetch(apiUrl, {
                 method: 'POST',

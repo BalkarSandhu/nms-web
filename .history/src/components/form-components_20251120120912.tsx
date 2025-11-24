@@ -85,7 +85,7 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
               role="combobox"
               aria-expanded={openState}
               className={cn(
-            "w-full max-w-[600px] justify-between bg-(--contrast)/80 border-(--dark) hover:text-(--contrast)",
+                "w-full justify-between bg-(--contrast)/80 border-(--dark)  hover:text-(--contrast)",
                 stateValue ? "text-(--contrast)" : "text-(--contrast)/50"
               )}
             >

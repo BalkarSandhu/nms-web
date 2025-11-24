@@ -20,7 +20,6 @@ export interface Metric2Props {
 
 export default function Metric2({
     title = "Critical",
-    headers = { col1: "Device", col2: "Downtime" },
     data = [],
     maxRows = 5,
     className = "",

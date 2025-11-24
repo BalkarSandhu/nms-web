@@ -171,11 +171,7 @@ export default function WorkersReportsPage() {
     setTimeout(() => {
       const mockData = {
         workers: [
-          { sno: 1, area: "North Zone", location: "Building A", deviceIp: "192.168.1.10", deviceType: "Router", downtime: "2h 15m", uptime: "99.2%" },
-          { sno: 2, area: "South Zone", location: "Building B", deviceIp: "192.168.1.15", deviceType: "Switch", downtime: "0h 45m", uptime: "99.7%" },
-          { sno: 3, area: "East Zone", location: "Building C", deviceIp: "192.168.1.20", deviceType: "Firewall", downtime: "5h 30m", uptime: "97.8%" },
-          { sno: 4, area: "West Zone", location: "Building D", deviceIp: "192.168.1.25", deviceType: "Router", downtime: "1h 20m", uptime: "99.5%" },
-          { sno: 5, area: "Central Zone", location: "Main Campus", deviceIp: "192.168.1.30", deviceType: "Switch", downtime: "0h 10m", uptime: "99.9%" },
+          
         ]
       };
       setReportData(mockData);
@@ -188,7 +184,7 @@ export default function WorkersReportsPage() {
       <div className="p-4">
   {/* HEADER ROW */}
   <div className="flex justify-between items-center mb-4">
-    <label className="text-lg font-semibold">Workers Report</label>
+    <label className="text-lg font-semibold">Area Report</label>
 
     <div className="flex gap-3">
       <button

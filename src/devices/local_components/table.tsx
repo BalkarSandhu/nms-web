@@ -64,8 +64,7 @@ const getDeviceIdFromUrl = (searchParams: URLSearchParams): number | null => {
 export default function DevicesTable({ 
     onRowClick, 
     selectedDeviceId,
-    onDataChange,
-    onModalClose
+    onDataChange
 }: { 
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
@@ -73,7 +72,7 @@ export default function DevicesTable({
     onModalClose?: () => void;
 }) {
     const { devices } = useAppSelector(state => state.devices);
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedDeviceId || null);
     const [hasProcessedUrlId, setHasProcessedUrlId] = useState(false);
     
@@ -176,9 +175,9 @@ export default function DevicesTable({
     const filteredDevices = useMemo(() => {
         console.log('Applying filters:', filters);
         const result = devices.filter(device => {
-            if (filters.type && device.device_type.name !== filters.type) return false;
+            if (filters.type && device.device_type?.name !== filters.type) return false;
             if (filters.status && (device.status ? 'Online' : 'Offline') !== filters.status) return false;
-            if (filters.location && device.location.name !== filters.location) return false;
+            if (filters.location && device.location?.name !== filters.location) return false;
             if (filters.worker && device.worker.hostname !== filters.worker) return false;
             if (filters.protocol && device.protocol.toUpperCase() !== filters.protocol) return false;
             return true;
@@ -198,14 +197,7 @@ export default function DevicesTable({
     };
 
     // Handle closing modal - clear URL parameter
-    const handleCloseModal = () => {
-        // Remove the 'id' parameter from URL
-        const params = new URLSearchParams(searchParams);
-        params.delete('id');
-        setSearchParams(params);
-        setLocalSelectedId(null);
-        onModalClose?.();
-    };
+    
 
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">
@@ -223,7 +215,6 @@ export default function DevicesTable({
                             <TableHead className="w-[20%] font-semibold text-gray-700">Device Name</TableHead>
                             <TableHead className="w-[12%] font-semibold text-gray-700">IP Address</TableHead>
                             <TableHead className="w-[15%] font-semibold text-gray-700">Area</TableHead>
-                            <TableHead className="w-[18%] font-semibold text-gray-700">Site Location</TableHead>
                             <TableHead className="w-[15%] font-semibold text-gray-700">Type</TableHead>
                             <TableHead className="w-[15%] font-semibold text-gray-700 text-center">Status</TableHead>
                         </TableRow>
@@ -290,19 +281,7 @@ export default function DevicesTable({
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell className="break-words overflow-hidden">
-                                        <div className="flex items-center gap-1.5 overflow-hidden">
-                                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span className={`text-sm ${
-                                                localSelectedId === device.id ? 'text-blue-800' : 'text-gray-700'
-                                            }`} title={device.location?.name || 'N/A'}>
-                                                {device.location?.name || 'N/A'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
+                                    
                                     
                                     <TableCell className="wrap-break-word overflow-hidden">
                                         <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${

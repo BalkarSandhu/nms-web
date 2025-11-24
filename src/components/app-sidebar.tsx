@@ -113,8 +113,8 @@ const baseNavItems = [
   isActive: false,
   items: [
     { title: "Device Reports", url: "/reports/devices" },
-    { title: "Locations Report", url: "/reports/locations" },
-    { title: "Workers Report", url: "/reports/workers" },
+    { title: "Location Reports", url: "/reports/locations" },
+    { title: "Area Reports", url: "/reports/workers" },
   ],
 }
 
