@@ -21,8 +21,8 @@ export default function LoginPage() {
         console.log('Register result:', result);
         
         if (result.success) {
-            console.log('Navigating to /dashboard');
-            navigate('/dashboard');
+            console.log('Navigating to Dashboard');
+            navigate('/');
         } else {
             console.error('Registration failed:', result.message);
             setErrorMsg(result.message || 'Regsitration failed');

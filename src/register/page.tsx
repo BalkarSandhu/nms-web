@@ -23,7 +23,7 @@ export default function RegisterPage() {
             console.log('Register result:', result);
             
             if (result.success) {
-                console.log('Navigating to /dashboard');
+                console.log('Navigating to /');
                 navigate('/login');
             } else {
                 console.error('Registration failed:', result.message);

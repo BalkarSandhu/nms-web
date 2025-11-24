@@ -257,7 +257,7 @@ function App() {
     // User is authenticated
     if (isAuthenticated) {
       if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
-        navigate('/dashboard', { replace: true })
+        navigate('/', { replace: true })
       }
       return
     }
@@ -283,7 +283,7 @@ function App() {
   const getPageName = () => {
     const path = location.pathname
     const routes: Record<string, string> = {
-      '/dashboard': 'Dashboard',
+      '/': 'Dashboard',
       '/register': 'Register',
       '/settings': 'Settings',
       '/devices': 'Devices',
@@ -322,7 +322,7 @@ function App() {
                   <Breadcrumb className='w-full'>
                     <BreadcrumbList className='text-(--contrast)'>
                       <BreadcrumbItem className="hidden md:block">
-                        <BreadcrumbLink href="/dashboard" />
+                        <BreadcrumbLink href="/" />
                       </BreadcrumbItem>
                       <BreadcrumbSeparator className="hidden md:block" />
                       <BreadcrumbItem>
@@ -334,7 +334,7 @@ function App() {
               </header>
               <div className="flex-1 min-w-0 overflow-x-auto">
                 <Routes>
-                  <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+                  <Route path="/" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/devices" element={<DevicesPage />} />
@@ -354,7 +354,7 @@ function App() {
       ) : (
         <div className="flex-1 min-w-0 overflow-x-auto">
           <Routes>
-            <Route path="/dashboard" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
+            <Route path="/" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/devices" element={<DevicesPage />} />
