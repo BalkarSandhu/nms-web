@@ -376,7 +376,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Location", col2: "Downtime" },
 						data: locationDowntimeData,
 						maxRows: 5,
-						onRowClick: (row:WorkerRow) => navigate(`/locations?id=${row.id}`)
+						onRowClick: (row:WorkerRow) => navigate(`/locations/${row.id}`)
 					},
 					metric3: undefined,
 					metric4: activeLocations
@@ -394,7 +394,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							return acc;
 						}, [] as { label: string; value: number }[])
 						.sort((a, b) => b.value - a.value)
-						.slice(0, 5)
+						.slice(0, 3)
 				}}
 			/>
 

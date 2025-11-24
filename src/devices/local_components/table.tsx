@@ -51,18 +51,31 @@ const parseUrlFilters = (searchParams: URLSearchParams): Record<string, string> 
     return init;
 };
 
+// Helper function to get device ID from URL
+const getDeviceIdFromUrl = (searchParams: URLSearchParams): number | null => {
+    const idParam = searchParams.get('id');
+    if (idParam) {
+        const id = parseInt(idParam, 10);
+        return isNaN(id) ? null : id;
+    }
+    return null;
+};
+
 export default function DevicesTable({ 
     onRowClick, 
     selectedDeviceId,
-    onDataChange
+    onDataChange,
+    onModalClose
 }: { 
     onRowClick?: (deviceId: number) => void;
     selectedDeviceId?: number | null;
     onDataChange?: (rows: readDeviceType[]) => void;
+    onModalClose?: () => void;
 }) {
     const { devices } = useAppSelector(state => state.devices);
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedDeviceId || null);
+    const [hasProcessedUrlId, setHasProcessedUrlId] = useState(false);
     
     // Initialize filters from URL parameters
     const [filters, setFilters] = useState<Record<string, string>>(() => {
@@ -83,6 +96,35 @@ export default function DevicesTable({
             console.error('Error parsing search params:', e);
         }
     }, [searchParams]);
+
+    // Separate useEffect to handle device ID from URL
+    useEffect(() => {
+        try {
+            // Check if there's an 'id' parameter in the URL and auto-select that device
+            const deviceIdFromUrl = getDeviceIdFromUrl(searchParams);
+            console.log('Device ID from URL:', deviceIdFromUrl);
+            
+            if (deviceIdFromUrl !== null && !hasProcessedUrlId) {
+                setLocalSelectedId(deviceIdFromUrl);
+                onRowClick?.(deviceIdFromUrl);
+                setHasProcessedUrlId(true);
+                
+                // Scroll to the selected device row after a short delay to ensure DOM is ready
+                setTimeout(() => {
+                    const element = document.querySelector(`[data-device-id="${deviceIdFromUrl}"]`);
+                    console.log('Found element to scroll to:', element);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
+            } else if (deviceIdFromUrl === null && hasProcessedUrlId) {
+                // URL was cleared, reset the flag
+                setHasProcessedUrlId(false);
+            }
+        } catch (e) {
+            console.error('Error handling device ID from URL:', e);
+        }
+    }, [searchParams, onRowClick, hasProcessedUrlId]);
 
     // Update local selected ID when prop changes
     useEffect(() => {
@@ -133,7 +175,7 @@ export default function DevicesTable({
     // Apply filters to devices
     const filteredDevices = useMemo(() => {
         console.log('Applying filters:', filters);
-        return devices.filter(device => {
+        const result = devices.filter(device => {
             if (filters.type && device.device_type.name !== filters.type) return false;
             if (filters.status && (device.status ? 'Online' : 'Offline') !== filters.status) return false;
             if (filters.location && device.location.name !== filters.location) return false;
@@ -141,6 +183,8 @@ export default function DevicesTable({
             if (filters.protocol && device.protocol.toUpperCase() !== filters.protocol) return false;
             return true;
         });
+        console.log(`Filtered ${result.length} devices out of ${devices.length}`);
+        return result;
     }, [devices, filters]);
 
     useEffect(() => {
@@ -153,6 +197,16 @@ export default function DevicesTable({
         onRowClick?.(deviceId);
     };
 
+    // Handle closing modal - clear URL parameter
+    const handleCloseModal = () => {
+        // Remove the 'id' parameter from URL
+        const params = new URLSearchParams(searchParams);
+        params.delete('id');
+        setSearchParams(params);
+        setLocalSelectedId(null);
+        onModalClose?.();
+    };
+
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">
             <DevicesFilters 
@@ -162,16 +216,16 @@ export default function DevicesTable({
             />
 
             <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-fixed w-full">
                     <TableHeader className="bg-gray-50 sticky top-0 z-10">
                         <TableRow className="border-b-2 border-gray-200">
-                            <TableHead className="w-[50px] font-semibold text-gray-700 text-center">No.</TableHead>
-                            <TableHead className="min-w-[200px] font-semibold text-gray-700">Device Name</TableHead>
-                            <TableHead className="min-w-[120px] font-semibold text-gray-700">IP Address</TableHead>
-                            <TableHead className="min-w-[120px] font-semibold text-gray-700">Area</TableHead>
-                            <TableHead className="min-w-[150px] font-semibold text-gray-700">Site Location</TableHead>
-                            <TableHead className="min-w-[100px] font-semibold text-gray-700">Type</TableHead>
-                            <TableHead className="w-[90px] font-semibold text-gray-700 text-center">Status</TableHead>
+                            <TableHead className="w-[5%] font-semibold text-gray-700 text-center">No.</TableHead>
+                            <TableHead className="w-[20%] font-semibold text-gray-700">Device Name</TableHead>
+                            <TableHead className="w-[12%] font-semibold text-gray-700">IP Address</TableHead>
+                            <TableHead className="w-[15%] font-semibold text-gray-700">Area</TableHead>
+                            <TableHead className="w-[18%] font-semibold text-gray-700">Site Location</TableHead>
+                            <TableHead className="w-[15%] font-semibold text-gray-700">Type</TableHead>
+                            <TableHead className="w-[15%] font-semibold text-gray-700 text-center">Status</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -190,7 +244,8 @@ export default function DevicesTable({
                         ) : (
                             filteredDevices.map((device, index) => (
                                 <TableRow 
-                                    key={device.id} 
+                                    key={device.id}
+                                    data-device-id={device.id}
                                     className={`cursor-pointer transition-all duration-150 border-b border-gray-100 ${
                                         localSelectedId === device.id 
                                             ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500' 
@@ -203,8 +258,8 @@ export default function DevicesTable({
                                     </TableCell>
                                     
                                     <TableCell className="font-medium">
-                                        <div className="flex flex-col">
-                                            <span className={`text-sm font-semibold truncate max-w-[200px] ${
+                                        <div className="flex flex-col break-words overflow-hidden">
+                                            <span className={`text-sm font-semibold ${
                                                 localSelectedId === device.id ? 'text-blue-900' : 'text-gray-900'
                                             }`} title={device.display}>
                                                 {device.display}
@@ -212,8 +267,8 @@ export default function DevicesTable({
                                         </div>
                                     </TableCell>
 
-                                    <TableCell>
-                                        <span className={`text-xs font-mono px-2 py-1 rounded ${
+                                    <TableCell className="break-words overflow-hidden">
+                                        <span className={`text-xs font-mono px-2 py-1 rounded inline-block ${
                                             localSelectedId === device.id 
                                                 ? 'bg-blue-100 text-blue-800' 
                                                 : 'bg-gray-100 text-gray-700'
@@ -222,12 +277,12 @@ export default function DevicesTable({
                                         </span>
                                     </TableCell>
                                     
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5">
-                                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <TableCell className="break-words overflow-hidden">
+                                        <div className="flex items-center gap-1.5 overflow-hidden">
+                                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                             </svg>
-                                            <span className={`text-sm truncate max-w-[100px] ${
+                                            <span className={`text-sm ${
                                                 localSelectedId === device.id ? 'text-blue-800' : 'text-gray-700'
                                             }`} title={device.worker?.hostname || 'N/A'}>
                                                 {device.worker?.hostname || 'N/A'}
@@ -235,13 +290,13 @@ export default function DevicesTable({
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5">
+                                    <TableCell className="break-words overflow-hidden">
+                                        <div className="flex items-center gap-1.5 overflow-hidden">
                                             <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
-                                            <span className={`text-sm break-words max-w-[140px] ${
+                                            <span className={`text-sm ${
                                                 localSelectedId === device.id ? 'text-blue-800' : 'text-gray-700'
                                             }`} title={device.location.name || 'N/A'}>
                                                 {device.location.name || 'N/A'}
@@ -249,8 +304,8 @@ export default function DevicesTable({
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell>
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                                    <TableCell className="break-words overflow-hidden">
+                                        <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
                                             localSelectedId === device.id 
                                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                 : 'bg-gray-100 text-gray-700 border border-gray-200'
@@ -261,7 +316,7 @@ export default function DevicesTable({
                                     
                                     <TableCell className="text-center">
                                         <div className="flex items-center justify-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full ${
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                                                 device.status ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                                             }`}></span>
                                             <span className={`text-xs font-semibold ${

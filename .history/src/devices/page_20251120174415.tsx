@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
 import { fetchLocations } from '@/store/locationsSlice';
@@ -13,7 +12,6 @@ import type { readDeviceType } from '@/contexts/read-Types';
 
 export default function DevicesPage() {
     const dispatch = useAppDispatch();
-    const [searchParams, setSearchParams] = useSearchParams();
     const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
     const [exportRows, setExportRows] = useState<readDeviceType[]>([]);
@@ -35,22 +33,18 @@ export default function DevicesPage() {
         exportToCsv('devices.csv', exportRows, exportColumns);
     };
 
-    // Handle modal close - clear URL parameter
-    const handleModalClose = () => {
-        const params = new URLSearchParams(searchParams);
-        params.delete('id');
-        setSearchParams(params);
-        setSelectedDeviceId(null);
-    };
-
     useEffect(() => {
         // Only fetch if devices are not loaded OR data is stale (older than 5 minutes)
-        if (!devices.length || isDataStale(lastFetched)) {
+        if (!devices || isDataStale(lastFetched)) {
             dispatch(fetchAllDevices());
+        }
+        if(isDataStale(lastFetched)) {
             dispatch(fetchLocations());
+        }
+        if(isDataStale(lastFetched)) {
             dispatch(fetchDeviceTypes());
         }
-    }, [dispatch, devices.length, lastFetched]);
+    }, [dispatch, devices, lastFetched]);
 
     if (loading && devices.length === 0) {
         return <LoadingPage />;
@@ -73,7 +67,7 @@ export default function DevicesPage() {
             <div className="flex-1 flex flex-col overflow-hidden p-2 w-8/10">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
                 <DevicesTable 
-                    onRowClick={setSelectedDeviceId}
+                    onRowClick={(deviceId: number) => setSelectedDeviceId(deviceId)}
                     selectedDeviceId={selectedDeviceId}
                     onDataChange={setExportRows}
                 />
@@ -82,7 +76,7 @@ export default function DevicesPage() {
             {/* Sidebar */}
             <DeviceDetailsSidebar 
                 deviceId={selectedDeviceId}
-                onClose={handleModalClose}
+                onClose={() => setSelectedDeviceId(null)}
             />
         </div>
     );

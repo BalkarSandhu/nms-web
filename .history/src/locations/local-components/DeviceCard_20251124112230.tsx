@@ -51,7 +51,7 @@ export function DeviceCard({ device }: { device: any; }) {
                     )}
                     {device.last_ping && (
                         <div className="flex justify-between text-xs">
-                            <span className="text-gray-500">Last Ping:</span>
+                            <span className="text-gray-500">Last Updated:</span>
                             <span className="text-gray-900">{new Date(device.last_ping).toLocaleTimeString()}</span>
                         </div>
                     )}

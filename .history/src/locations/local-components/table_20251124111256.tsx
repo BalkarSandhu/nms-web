@@ -260,6 +260,7 @@ export default function LocationsTable({
                             <TableHead className="w-[20%] font-semibold text-gray-700">Name</TableHead>
                             <TableHead className="w-[15%] font-semibold text-gray-700">Type</TableHead>
                             <TableHead className="w-[12%] font-semibold text-gray-700">Status</TableHead>
+                            <TableHead className="w-[15%] font-semibold text-gray-700">Project</TableHead>
                             <TableHead className="w-[15%] font-semibold text-gray-700">Area</TableHead>
                             <TableHead className="w-[13%] font-semibold text-gray-700 text-right">Devices</TableHead>
                             <TableHead className="w-[5%]"></TableHead>
@@ -321,7 +322,13 @@ export default function LocationsTable({
                                         </span>
                                     </TableCell>
                                     
-                                    
+                                    <TableCell className="break-words overflow-hidden">
+                                        <span className={`text-sm ${
+                                            localSelectedId === location.id ? 'text-blue-800' : 'text-gray-700'
+                                        }`} title={location.project}>
+                                            {location.project}
+                                        </span>
+                                    </TableCell>
                                     
                                     <TableCell className="break-words overflow-hidden">
                                         <span className={`text-sm ${

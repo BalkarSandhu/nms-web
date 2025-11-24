@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { isDataStale } from '@/lib/auth';
 
@@ -13,7 +12,6 @@ import { exportToCsv, type CsvColumn } from '@/lib/utils';
 
 export default function LocationsPage() {
     const dispatch = useAppDispatch();
-    const [searchParams, setSearchParams] = useSearchParams();
     const { locations, loading, error, lastFetched } = useAppSelector(state => state.locations);
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
     const [exportRows, setExportRows] = useState<EnrichedLocation[]>([]);
@@ -36,21 +34,12 @@ export default function LocationsPage() {
         exportToCsv('locations.csv', exportRows, exportColumns);
     };
 
-    // Handle modal close - clear URL parameter
-    const handleModalClose = () => {
-        const params = new URLSearchParams(searchParams);
-        params.delete('id');
-        setSearchParams(params);
-        setSelectedLocationId(null);
-    };
-
     useEffect(() => {
         // Only fetch if locations are not loaded OR data is stale (older than 5 minutes)
-        // FIXED: Check locations.length instead of !locations (empty array is truthy!)
-        if (!locations.length || isDataStale(lastFetched)) {
+        if (!locations || isDataStale(lastFetched)) {
             dispatch(fetchLocations());
         }
-    }, [dispatch, locations.length, lastFetched]);
+    }, [dispatch, locations, lastFetched]);
 
     return (
         <div className="p-4 flex gap-4 bg-(--contrast) min-h-[90vh] max-h-full w-full">
@@ -70,10 +59,7 @@ export default function LocationsPage() {
             </div>
 
             {/*Details Dialog Modal*/}
-            <LocationDetailsSidebar 
-                locationId={selectedLocationId} 
-                onClose={handleModalClose} 
-            />
+            <LocationDetailsSidebar locationId={selectedLocationId} onClose={() => setSelectedLocationId(null)} />
         </div>
     );
 }

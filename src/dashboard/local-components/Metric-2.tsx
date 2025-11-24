@@ -52,12 +52,12 @@ export default function Metric2({
         <BaseCard title={title} menuGroups={menuGroups} className={className}>
             <div className="flex flex-col w-full h-full py-1">
                 {/* Headers */}
-                <div className="grid grid-cols-[1fr,auto] gap-4 pb-1.5 mb-1 border-b border-(--contrast)/10">
+                {/* <div className="grid grid-cols-[1fr,auto] gap-4 pb-1.5 mb-1 border-b border-(--contrast)/10">
                     <span className="text-(--contrast)/50 text-[9px] font-semibold uppercase tracking-wider">
                         {headers.col1}
                     </span>
         
-                </div>
+                </div> */}
 
                 {/* Rows */}
                 <div className="flex flex-col overflow-y-auto flex-1">

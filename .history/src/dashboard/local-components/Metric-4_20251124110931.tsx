@@ -3,7 +3,7 @@ import "@/index.css";
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
-import {Video,MountainSnow,Computer,HardDrive,DoorClosed,Weight,Route,Construction} from "lucide-react";
+import {Video,MountainSnow,Computer,HardDrive,DoorClosed,Weight,Route} from "lucide-react";
 
 // General data type for metric items
 export interface MetricItem {
@@ -84,7 +84,6 @@ export default function MetricGeneral({
         if(label.includes("static location")) return <DoorClosed size={16} color="white"/>;
         if(label.includes("weighbridge")) return <Weight size={16} color="white"/>;
         if(label.includes("route")) return <Route size={16} color="white"/>;
-        if(label.includes("checkpost")) return <Construction size={16} color="white"/>;
         return "📦";
     };
     const getIcon = iconResolver || defaultIconResolver;
