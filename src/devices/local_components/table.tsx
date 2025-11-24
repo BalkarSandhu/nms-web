@@ -298,19 +298,19 @@ export default function DevicesTable({
                                             </svg>
                                             <span className={`text-sm ${
                                                 localSelectedId === device.id ? 'text-blue-800' : 'text-gray-700'
-                                            }`} title={device.location.name || 'N/A'}>
-                                                {device.location.name || 'N/A'}
+                                            }`} title={device.location?.name || 'N/A'}>
+                                                {device.location?.name || 'N/A'}
                                             </span>
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell className="break-words overflow-hidden">
+                                    <TableCell className="wrap-break-word overflow-hidden">
                                         <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
                                             localSelectedId === device.id 
                                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                                 : 'bg-gray-100 text-gray-700 border border-gray-200'
                                         }`}>
-                                            {device.device_type.name}
+                                            {device.device_type?.name}
                                         </span>
                                     </TableCell>
                                     
