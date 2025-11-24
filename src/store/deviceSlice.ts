@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { readDeviceType } from '@/contexts/read-Types';
-import { getAuthHeaders } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
 
 
 // Types for Device Type
@@ -66,12 +66,26 @@ export interface CreateDevicePayload {
   worker_id: string;
 }
 
+// device statistics
+interface DeviceStatistics {
+  active_devices: number,
+  device_type_stats: {
+    [type:string]: number
+  },
+  offline_devices: number,
+  online_devices: number,
+  protocol_stats: {
+     [protocol: string]: number 
+    },
+  total_devices: number
 
+}
 
 // State interface
 interface DeviceState {
   devices: readDeviceType[];
   deviceTypes: DeviceType[];
+  deviceStatistics: DeviceStatistics;
   paginationMeta: PaginatedDevicesResponse['meta'] | null;
   loading: boolean;
   error: string | null;
@@ -82,6 +96,14 @@ interface DeviceState {
 const initialState: DeviceState = {
   devices: [],
   deviceTypes: [],
+  deviceStatistics:{
+    online_devices:0,
+    offline_devices:0,
+    active_devices:0,
+    protocol_stats:{},
+    total_devices:0,
+    device_type_stats:{}
+  },
   paginationMeta: null,
   loading: false,
   error: null,
@@ -112,6 +134,13 @@ export const fetchAllDevices = createAsyncThunk(
       const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/all`, {
         headers: getAuthHeaders(),
       });
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch all devices');
       const data: AllDevicesResponse = await response.json();
       return data;
@@ -178,6 +207,13 @@ export const fetchDeviceTypes = createAsyncThunk(
       const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/types`, {
         headers: getAuthHeaders(),
       });
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch device types');
       const data: DeviceTypesResponse = await response.json();
       return data;
@@ -186,6 +222,7 @@ export const fetchDeviceTypes = createAsyncThunk(
     }
   }
 );
+
 
 export const createDeviceType = createAsyncThunk(
   'devices/createType',
@@ -329,9 +366,40 @@ const deviceSlice = createSlice({
       .addCase(deleteDeviceType.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Handle device statistics fetch
+      .addCase(fetchDeviceStatistics.fulfilled, (state, action) => {
+        state.deviceStatistics = action.payload;
       });
   },
 });
+
+export const fetchDeviceStatistics = createAsyncThunk (
+  'devices/statistics',
+  async (_, { rejectWithValue}) => {
+    try{
+      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/devices/statistics`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+
+      if(!response.ok) throw new Error ('Failed to fetch device statistics')
+
+      const data: DeviceStatistics = await response.json();
+      return data;
+
+    }catch (error){
+      return rejectWithValue((error as Error).message)
+    }
+  }
+);
 
 export const { clearError } = deviceSlice.actions;
 export default deviceSlice.reducer;

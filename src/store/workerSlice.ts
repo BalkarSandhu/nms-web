@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getAuthHeaders } from '@/lib/auth';
+import { getAuthHeaders, handle401Unauthorized } from '@/lib/auth';
 
 // Types for Worker
 export interface Worker {
@@ -126,6 +126,13 @@ export const fetchWorkers = createAsyncThunk(
         `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`,
         { headers: getAuthHeaders() }
       );
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch workers');
       const data: WorkersResponse = await response.json();
       return data;
@@ -244,6 +251,13 @@ export const fetchWorkerStats = createAsyncThunk(
         `${import.meta.env.VITE_NMS_HOST}/workers/stats`,
         { headers: getAuthHeaders() }
       );
+      
+      // Handle 401 globally
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      
       if (!response.ok) throw new Error('Failed to fetch worker stats');
       const data: WorkerStatsResponse = await response.json();
       return data;

@@ -10,7 +10,7 @@ import Filters from "./local-components/Filters";
 
 // Redux imports
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
+import { fetchAllDevices, fetchDeviceTypes, fetchDeviceStatistics } from "@/store/deviceSlice";
 import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
 import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 import { AlertTriangle } from 'lucide-react';
@@ -27,11 +27,10 @@ interface WorkerRow {
   [key: string]: any; // optional, if there are extra properties
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
 
+export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
-	
 
 	// Get data from Redux store
 	const { devices: reduxDevices } = useAppSelector(state => state.devices);
@@ -39,12 +38,16 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const { workers: reduxWorkers } = useAppSelector(state => state.workers);
 	const { deviceTypes } = useAppSelector(state => state.devices);
 	const { locationTypes } = useAppSelector(state => state.locations);
+	const { loading, deviceStatistics: reduxDevicesStatistics } = useAppSelector(state => state.devices);
 
 	// Fetch all data when component mounts
 	useEffect(() => {
 		// Fetch devices and device types
 		dispatch(fetchAllDevices());
 		dispatch(fetchDeviceTypes());
+
+		// Fetch device statistics
+		dispatch(fetchDeviceStatistics());
 
 		// Fetch locations and location types
 		dispatch(fetchLocations());
@@ -59,6 +62,18 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const activeDevices = reduxDevices;
 	const activeLocations = reduxLocations;
 	const activeWorkers = reduxWorkers;
+	const deviceStats = reduxDevicesStatistics;
+
+	// Loading check for device statistics
+	
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center justify-center h-full w-full">
+				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+				<span className="text-white text-lg">Loading device statistics...</span>
+			</div>
+		);
+	}
 
 	// Note: Removed blocking loading check to allow UI to render immediately
 	// Data will populate as API calls complete in parallel
@@ -81,13 +96,16 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	};
 
 	// DEVICES METRICS
-	const onlineDevices = activeDevices.filter(d => d.status);
+	// const onlineDevices = activeDevices.filter(d => d.status);
 	const offlineDevices = activeDevices.filter(d => !d.status);
 
+	const onlineDevicesCount = deviceStats.online_devices;
+	const offlineDevicesCount = deviceStats.offline_devices;
+
 	const deviceMetrics = {
-		low: onlineDevices.length, // Online (green)
+		low: onlineDevicesCount,// Online (green)
 		medium: 0, // Not used (keep empty as per requirements)
-		high: offlineDevices.length // Offline (red)
+		high: offlineDevicesCount, // Offline (red)
 	};
 
 	// Devices with Critical (offline devices sorted by updated_at)

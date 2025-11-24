@@ -21,7 +21,6 @@ export type AuthChangeEvent = {
 };
 
 const TOKEN_COOKIE = 'token';
-const TOKEN_STORAGE_KEY = 'nms-auth-token';
 const AUTH_SYNC_EVENT = 'nms-auth-sync';
 const SAMESITE_POLICY = 'Lax';
 
@@ -66,41 +65,15 @@ const decodeJwtPayload = (token: string): JwtPayload | null => {
 const isExpired = (payload: JwtPayload | null): boolean => {
   if (!payload || typeof payload.exp !== 'number') return false;
   const now = Math.floor(Date.now() / 1000);
-  // Add 60 second buffer to prevent premature expiration
-  return payload.exp <= (now + 60);
+  // Token is expired if exp time has passed
+  return payload.exp <= now;
 };
 
-const persistTokenMetadata = (token: string, expiresAt: number | null) => {
-  if (!isBrowser) return;
-  try {
-    localStorage.setItem(
-      TOKEN_STORAGE_KEY,
-      JSON.stringify({ token, expiresAt })
-    );
-  } catch (error) {
-    console.warn('Unable to persist auth token metadata', error);
-  }
-};
 
-const readPersistedToken = (): { token: string; expiresAt: number | null } | null => {
-  if (!isBrowser) return null;
-  try {
-    const value = localStorage.getItem(TOKEN_STORAGE_KEY);
-    return value ? JSON.parse(value) : null;
-  } catch (error) {
-    console.warn('Unable to read auth token metadata', error);
-    return null;
-  }
-};
 
-const clearPersistedToken = () => {
-  if (!isBrowser) return;
-  try {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch (error) {
-    console.warn('Unable to clear auth token metadata', error);
-  }
-};
+
+
+
 
 const broadcastAuthChange = (event: AuthChangeEvent) => {
   if (!isBrowser) return;
@@ -147,7 +120,6 @@ export const persistAuthToken = (token: string, expiry?: string) => {
   const expiresDate = buildExpiryDate(expiresAt);
   
   writeCookie(TOKEN_COOKIE, token, expiresDate);
-  persistTokenMetadata(token, expiresDate.getTime());
   broadcastAuthChange({ type: 'login', expiresAt: expiresDate.getTime() });
 };
 
@@ -156,7 +128,6 @@ export const persistAuthToken = (token: string, expiry?: string) => {
  */
 export const clearAuthToken = () => {
   deleteCookie(TOKEN_COOKIE);
-  clearPersistedToken();
   broadcastAuthChange({ type: 'logout', expiresAt: null });
 };
 
@@ -200,25 +171,11 @@ export const getAuthToken = (): ValidAuthToken | null => {
     return { token: 'bypass-token', payload: {}, expiresAt: null };
   }
 
-  // First try to get from cookie
-  let token = readCookie(TOKEN_COOKIE);
-  let expiresAt: number | null = null;
-  
-  // If not in cookie, try localStorage
-  if (!token) {
-    const stored = readPersistedToken();
-    if (!stored) return null;
-    
-    token = stored.token;
-    expiresAt = stored.expiresAt;
-    
-    // Rehydrate cookie from localStorage
-    if (expiresAt) {
-      writeCookie(TOKEN_COOKIE, token, new Date(expiresAt));
-    }
-  }
-
+  // Get token from cookie only (no localStorage for security)
+  const token = readCookie(TOKEN_COOKIE);
   if (!token) return null;
+  
+  let expiresAt: number | null = null;
 
   const payload = decodeJwtPayload(token);
   if (!payload) {
@@ -235,12 +192,6 @@ export const getAuthToken = (): ValidAuthToken | null => {
   // Get expiry from JWT payload
   if (typeof payload.exp === 'number') {
     expiresAt = payload.exp * 1000;
-  }
-
-  // Ensure token is persisted in both locations
-  if (expiresAt) {
-    persistTokenMetadata(token, expiresAt);
-    writeCookie(TOKEN_COOKIE, token, new Date(expiresAt));
   }
 
   return { token, payload, expiresAt };
@@ -278,36 +229,52 @@ export const isDataStale = (lastFetched: number | null, maxAge: number = 5 * 60 
 };
 
 /**
- * Refresh authentication token
+ * Refresh authentication token (NOT IMPLEMENTED - backend does not support refresh)
+ * This function is kept for compatibility but will always return null
  */
 export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: getAuthHeaders(),
-    });
+  console.warn('Token refresh is not supported by backend');
+  return null;
+};
 
-    if (!response.ok) {
-      clearAuthToken();
-      return null;
-    }
-
-    const data = await response.json();
-    
-    // Persist the new token
-    persistAuthToken(data.token, data.expiry);
-    
-    // Broadcast refresh event
-    const newToken = getAuthToken();
-    if (newToken) {
-      broadcastAuthChange({ type: 'refresh', expiresAt: newToken.expiresAt });
-    }
-
-    return newToken;
-  } catch (error) {
-    console.error("Token refresh failed:", error);
-    clearAuthToken();
-    return null;
+/**
+ * Global 401 handler - called when any API returns 401
+ * Clears auth and triggers logout across all tabs
+ */
+export const handle401Unauthorized = () => {
+  console.warn('401 Unauthorized detected - clearing auth');
+  clearAuthToken();
+  
+  // Redirect to login if in browser
+  if (isBrowser && window.location.pathname !== '/login') {
+    window.location.href = '/login';
   }
+};
+
+/**
+ * Wrapper for fetch that automatically handles 401 responses
+ * Use this instead of raw fetch for authenticated requests
+ */
+export const authenticatedFetch = async (
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> => {
+  // Ensure auth headers are included
+  const headers = {
+    ...getAuthHeaders(),
+    ...(init?.headers || {}),
+  };
+
+  const response = await fetch(input, {
+    ...init,
+    headers,
+  });
+
+  // Handle 401 globally
+  if (response.status === 401) {
+    handle401Unauthorized();
+    throw new Error('Unauthorized - token invalid or expired');
+  }
+
+  return response;
 };
