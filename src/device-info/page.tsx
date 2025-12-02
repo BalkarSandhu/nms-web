@@ -94,7 +94,7 @@ export default function DeviceInfoPage() {
     }, [deviceInformation]);
 
     return (
-        <div className="flex flex-col gap-4 w-full h-full p-4 bg-(--contrast)">
+        <div className="flex flex-col gap-2 w-full h-full p-4 bg-(--contrast)">
             <Header />
             <div className="flex w-full h-full">
                 <DeviceContent

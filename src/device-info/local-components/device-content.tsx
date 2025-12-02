@@ -16,7 +16,7 @@ export default function DeviceContent(content: DeviceContentProps) {
 
     return (
         <div className="flex flex-col md:flex-row w-full h-full min-w-full gap-2">
-            <div className="flex flex-col gap-2 p-2 w-full h-fit max-w-[400px] max-h-[50vh]  overflow-y-scroll border-b-2 border-(--base)/50 pb-2">
+            <div className="flex flex-col gap-2 p-2 w-full h-fit max-w-[400px] max-h-[90vh]  overflow-y-scroll border-b-2 border-(--base)/50 pb-2">
                 {
                     content.deviceData.map((item, key) => {
                         return <DeviceInfoRow key={key} label={item.label} value={item.value} />
