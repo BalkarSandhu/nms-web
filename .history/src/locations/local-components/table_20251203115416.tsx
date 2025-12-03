@@ -251,7 +251,18 @@ export default function LocationsTable({
                                         </span>
                                     </TableCell>
                                     
-                                    
+                                    <TableCell className="text-center py-2">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                                location.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                                            }`}></span>
+                                            <span className={`text-xs font-semibold ${
+                                                location.status === 'online' ? 'text-green-700' : 'text-red-700'
+                                            }`}>
+                                                {location.status === 'online' ? 'Online' : 'Offline'}
+                                            </span>
+                                        </div>
+                                    </TableCell>
                                     
                                     <TableCell className="py-2">
                                         <div className="flex items-center gap-1.5">
@@ -262,18 +273,6 @@ export default function LocationsTable({
                                                 localSelectedId === location.id ? 'text-blue-800' : 'text-gray-700'
                                             }`} title={location.area}>
                                                 {location.area}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center py-2">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                                location.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                                            }`}></span>
-                                            <span className={`text-xs font-semibold ${
-                                                location.status === 'online' ? 'text-green-700' : 'text-red-700'
-                                            }`}>
-                                                {location.status === 'online' ? 'Online' : 'Offline'}
                                             </span>
                                         </div>
                                     </TableCell>
