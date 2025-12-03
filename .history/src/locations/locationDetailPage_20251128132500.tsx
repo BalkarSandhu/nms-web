@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Activity, Clock, Server, X } from 'lucide-react';
 import MapViewer from '../dashboard/local-components/Map-Viewer';
 import type { MapDataPoint, MapConnection } from '../dashboard/local-components/Map-Viewer';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 export default function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -385,33 +384,8 @@ export default function LocationDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      {
-                        name: 'Devices',
-                        Online: devicesOnline,
-                        Offline: devicesOffline,
-                      }
-                    ]}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="name" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px'
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="Online" fill="#22c55e" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="Offline" fill="#ef4444" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="h-[250px] flex items-center justify-center bg-gray-50 rounded border border-gray-300">
+                <p className="text-gray-400">Graph placeholder</p>
               </div>
             </CardContent>
           </Card>

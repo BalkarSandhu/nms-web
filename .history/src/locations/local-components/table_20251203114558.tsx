@@ -194,12 +194,12 @@ export default function LocationsTable({
                 <Table className="table-fixed w-full">
                     <TableHeader className="bg-gray-50 sticky top-0 z-10">
                         <TableRow className="border-b-2 border-gray-200">
-                            <TableHead className="w-[5%] font-semibold text-gray-700 text-center py-3">No.</TableHead>
-                            <TableHead className="w-[35%] font-semibold text-gray-700 py-3">Location Name</TableHead>
-                            <TableHead className="w-[14%] font-semibold text-gray-700 py-3">Type</TableHead>
-                            <TableHead className="w-[10%] font-semibold text-gray-700 text-center py-3">Status</TableHead>
-                            <TableHead className="w-[16%] font-semibold text-gray-700 py-3">Area</TableHead>
-                            <TableHead className="w-[20%] font-semibold text-gray-700 py-3">Devices</TableHead>
+                            <TableHead className="w-[5%] font-semibold text-gray-700 text-center">No.</TableHead>
+                            <TableHead className="w-[35%] font-semibold text-gray-700">Location Name</TableHead>
+                            <TableHead className="w-[14%] font-semibold text-gray-700">Type</TableHead>
+                            <TableHead className="w-[10%] font-semibold text-gray-700 text-center">Status</TableHead>
+                            <TableHead className="w-[16%] font-semibold text-gray-700">Area</TableHead>
+                            <TableHead className="w-[20%] font-semibold text-gray-700">Devices</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -228,19 +228,21 @@ export default function LocationsTable({
                                     }`}
                                     onClick={() => handleRowClick(location.id)}
                                 >
-                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">
+                                    <TableCell className="text-center text-sm font-medium text-gray-600">
                                         {index + 1}
                                     </TableCell>
                                     
-                                    <TableCell className="font-medium py-2">
-                                        <span className={`text-sm font-semibold ${
-                                            localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'
-                                        }`} title={location.name}>
-                                            {location.name}
-                                        </span>
+                                    <TableCell className="font-medium">
+                                        <div className="flex flex-col break-words overflow-hidden">
+                                            <span className={`text-sm font-semibold ${
+                                                localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'
+                                            }`} title={location.name}>
+                                                {location.name}
+                                            </span>
+                                        </div>
                                     </TableCell>
                                     
-                                    <TableCell className="py-2">
+                                    <TableCell className="break-words overflow-hidden">
                                         <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
                                             localSelectedId === location.id 
                                                 ? 'bg-blue-100 text-blue-800 border border-blue-200' 
@@ -250,7 +252,7 @@ export default function LocationsTable({
                                         </span>
                                     </TableCell>
                                     
-                                    <TableCell className="text-center py-2">
+                                    <TableCell className="text-center">
                                         <div className="flex items-center justify-center gap-1.5">
                                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                                                 location.status === 'online' ? 'bg-green-500 animate-pulse' : 
@@ -268,8 +270,8 @@ export default function LocationsTable({
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell className="py-2">
-                                        <div className="flex items-center gap-1.5">
+                                    <TableCell className="break-words overflow-hidden">
+                                        <div className="flex items-center gap-1.5 overflow-hidden">
                                             <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                             </svg>
@@ -281,8 +283,8 @@ export default function LocationsTable({
                                         </div>
                                     </TableCell>
                                     
-                                    <TableCell className="py-2">
-                                        <div className="flex items-center gap-3 text-xs">
+                                    <TableCell className="break-words overflow-hidden">
+                                        <div className="flex flex-col text-xs space-y-1">
                                             <div className="flex items-center gap-1">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
                                                 <span className="text-green-600 font-medium">

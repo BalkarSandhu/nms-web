@@ -7,7 +7,7 @@ export function LocationDetailsSidebar({ locationId, onClose }: { locationId: nu
     const { locations } = useAppSelector(state => state.locations);
 
     if (!locationId) {
-        return (    
+        return (
             <div className="md:flex md:flex-col hidden md:w-[280px] border-l-2 border-(--base)/20 p-4">
                 <p className="text-gray-500 text-sm text-center mt-8">Select a location to view details</p>
             </div>
