@@ -25,10 +25,16 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
         console.log('Clicked point:', point);
     };
 
-    const handleMetricItemClick = (item: { label: string; value: number }) => {
+    // const handleMetricItemClick = (item: { label: string; value: number }) => {
+    //     console.log('Clicked metric item:', item);
+        
+    //     navigate(`/devices?type=${encodeURIComponent(item.label)}`);
+    // };
+
+    const handleLocationMetricItemClick = (item: { label: string; value: number }) => {
         console.log('Clicked metric item:', item);
         
-        navigate(`/devices?type=${encodeURIComponent(item.label)}`);
+        navigate(`/locations?type=${encodeURIComponent(item.label)}`);
     };
 
     return (
@@ -44,7 +50,7 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
                         <MetricGeneral
                             title={metricsData.metric4Title || "Summary by Type"}
                             data={metricsData.metric4}
-                            onItemClick={handleMetricItemClick}
+                            onItemClick={handleLocationMetricItemClick}
                         />
                     )}
                     {metricsData?.metric2 && (

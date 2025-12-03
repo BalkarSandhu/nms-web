@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+// import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
 import { fetchLocations } from '@/store/locationsSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local_components/header';
 import DevicesTable from './local_components/table';
-import { DeviceDetailsSidebar } from './local_components/DeviceDetailsSidebar';
+// import { DeviceDetailsSidebar } from './local_components/DeviceDetailsSidebar';
 import { LoadingPage } from '@/components/loading-screen';
 import { exportToCsv, type CsvColumn } from '@/lib/utils';
 import type { readDeviceType } from '@/contexts/read-Types';
+import { useNavigate } from "react-router-dom";
 
 export default function DevicesPage() {
     const dispatch = useAppDispatch();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    // const [searchParams, setSearchParams] = useSearchParams();
     const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
     const [exportRows, setExportRows] = useState<readDeviceType[]>([]);
@@ -36,12 +38,12 @@ export default function DevicesPage() {
     };
 
     // Handle modal close - clear URL parameter
-    const handleModalClose = () => {
-        const params = new URLSearchParams(searchParams);
-        params.delete('id');
-        setSearchParams(params);
-        setSelectedDeviceId(null);
-    };
+    // const handleModalClose = () => {
+    //     const params = new URLSearchParams(searchParams);
+    //     params.delete('id');
+    //     setSearchParams(params);
+    //     setSelectedDeviceId(null);
+    // };
 
     useEffect(() => {
         // Only fetch if devices are not loaded OR data is stale (older than 5 minutes)
@@ -67,23 +69,28 @@ export default function DevicesPage() {
         );
     }
 
+    const handleDeviceNavigate = (deviceId: number) => {
+        setSelectedDeviceId(deviceId);
+        navigate(`/device-info?id=${deviceId}`);
+    };
+
     return (
         <div className="flex h-full p-2 w-full bg-(--contrast) gap-2 ">
             {/* Main Content */}
             <div className="flex-1 flex flex-col overflow-hidden p-2 w-8/10">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
                 <DevicesTable 
-                    onRowClick={setSelectedDeviceId}
+                    onRowClick={handleDeviceNavigate}
                     selectedDeviceId={selectedDeviceId}
                     onDataChange={setExportRows}
                 />
             </div>
 
             {/* Sidebar */}
-            <DeviceDetailsSidebar 
+            {/* <DeviceDetailsSidebar 
                 deviceId={selectedDeviceId}
                 onClose={handleModalClose}
-            />
+            /> */}
         </div>
     );
 }
