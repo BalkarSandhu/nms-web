@@ -108,7 +108,7 @@ export default function Filters({
       <div className="flex flex-wrap items-end gap-4">
         {/* From Date Filter */}
         <div className="flex flex-col gap-2 min-w-[200px]">
-          <Label className="text-[10px] font-medium text-(--contrast)">
+          <Label className="text-[10px] font-medium text-(--dark)">
             From Date
           </Label>
           <Popover open={fromDateOpen} onOpenChange={setFromDateOpen}>

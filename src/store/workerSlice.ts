@@ -8,7 +8,7 @@ export interface Worker {
   approved_by: string;
   capabilities: string[];
   created_at: string;
-  hostname: string;
+  name: string;
   id: string;
   ip_address: string;
   last_seen: string;

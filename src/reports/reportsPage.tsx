@@ -65,26 +65,26 @@ export default function ReportsPage() {
   const activeDevicesPerWorker = useMemo(() => {
     if (!devices.length) return [];
 
-    const workerMap: Record<string, { id: string; hostname: string; active: number; total: number }> = {};
+    const workerMap: Record<string, { id: string; name: string; active: number; total: number }> = {};
 
     devices.forEach((d) => {
       const workerId = d.worker.id || "unassigned";
-      const hostname = d.worker.hostname || workerId;
+      const hostname = d.worker.name || workerId;
       
       if (!workerMap[workerId]) {
-        workerMap[workerId] = { id: workerId, hostname: hostname, active: 0, total: 0 };
+        workerMap[workerId] = { id: workerId, name: hostname, active: 0, total: 0 };
       }
       
       workerMap[workerId].total += 1;
       
-      if (d.status && !d.disabled) {
+      if (d.is_reachable && !d.disabled) {
         workerMap[workerId].active += 1;
       }
     });
 
     const result = Object.values(workerMap)
-      .map(({ id, hostname, active, total }) => ({ 
-        worker: hostname,
+      .map(({ id, name, active, total }) => ({ 
+        worker: name,
         workerId: id,
         count: active,
         total: total,
@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
   const metrics = useMemo(() => {
     const totalDevices = devices.length;
-    const activeDevices = devices.filter((d) => d.status && !d.disabled).length;
+    const activeDevices = devices.filter((d) => d.is_reachable && !d.disabled).length;
     const uniqueWorkers = workers.length;
     const devicesWithIssues = devices.filter((d) => d.consecutive_failures > 0).length;
 
@@ -226,7 +226,7 @@ export default function ReportsPage() {
 
   // Bar chart configuration for worker utilizations
   const workerUtilizationData = {
-  labels: enrichedWorkers.map(w => w.hostname),
+  labels: enrichedWorkers.map(w => w.name),
   datasets: [
     {
       label: 'Utilization %',

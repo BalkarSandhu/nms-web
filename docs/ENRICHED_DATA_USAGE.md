@@ -82,8 +82,8 @@ function LocationSidebar({ selectedLocationId }: { selectedLocationId?: number }
                         <div key={device.id} className="border p-2 rounded mb-2">
                             <p className="font-medium">{device.display}</p>
                             <p className="text-sm text-gray-600">{device.ip}</p>
-                            <p className={`text-xs ${device.status ? 'text-green-600' : 'text-red-600'}`}>
-                                {device.status ? 'Online' : 'Offline'}
+                            <p className={`text-xs ${device.is_reachable ? 'text-green-600' : 'text-red-600'}`}>
+                                {device.is_reachable ? 'Online' : 'Offline'}
                             </p>
                         </div>
                     ))}
@@ -116,7 +116,7 @@ function DeviceDetailsCard({ deviceId }: { deviceId: number }) {
         <div className="card">
             <h3>{device.display}</h3>
             <p>IP: {device.ip}</p>
-            <p>Status: {device.status ? 'Online' : 'Offline'}</p>
+            <p>Status: {device.is_reachable ? 'Online' : 'Offline'}</p>
             
             {location && (
                 <div className="mt-2 border-t pt-2">
@@ -191,6 +191,6 @@ function LocationStatistics() {
 ```
 Location
   ├─ location_type_id → LocationType.name (type_name)
-  ├─ worker_id → Worker.hostname (worker_hostname)
+  ├─ worker_id → worker.name (worker_hostname)
   └─ id → Device.location_id (device_ids, devices_online, devices_offline)
 ```

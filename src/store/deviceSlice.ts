@@ -51,6 +51,8 @@ export interface CreateDevicePayload {
   device_type_id: number;
   display: string;
   hostname: string;
+  has_power:boolean;
+  last_check:string;
   imei: string;
   ip: string;
   location_id: number;

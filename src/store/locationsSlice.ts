@@ -5,8 +5,8 @@ import { getAuthHeaders, handle401Unauthorized, buildUrlWithWorkerId } from '@/l
 export interface Location {
   area: string;
   id: number;
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
   location_type_id: number;
   name: string;
   project: string;
@@ -27,8 +27,8 @@ export interface LocationType {
 // Types for API payloads
 export interface CreateLocationPayload {
   area: string;
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
   location_type_id: number;
   name: string;
   project: string;

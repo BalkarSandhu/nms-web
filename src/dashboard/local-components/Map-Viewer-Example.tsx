@@ -191,7 +191,7 @@ export const MapViewerExample = () => {
       category: 'green',
       additionalData: {
         population: '3.1M',
-        status: 'Good',
+        status: 'Fair',
       },
     },
     {
@@ -213,7 +213,7 @@ export const MapViewerExample = () => {
       category: 'green',
       additionalData: {
         population: '2.1M',
-        status: 'Good',
+        status: 'Fair',
       },
     },
     {

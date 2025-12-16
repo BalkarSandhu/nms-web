@@ -50,8 +50,8 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
     if (!worker) return null;
 
     const workerDevices = devices.filter(device => device.worker_id === workerId);
-    const onlineDevices = workerDevices.filter(d => d.status === true);
-    const offlineDevices = workerDevices.filter(d => d.status === false);
+    const onlineDevices = workerDevices.filter(d => d.is_reachable === true);
+    const offlineDevices = workerDevices.filter(d => d.is_reachable === false);
 
     const utilizationPercent = worker.max_devices > 0 
         ? Math.round((workerDevices.length / worker.max_devices) * 100)
@@ -158,7 +158,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
             <Dialog open={!!workerId} onOpenChange={onClose}>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="flex flex-row items-center justify-between">
-                        <DialogTitle>{worker.hostname}</DialogTitle>
+                        <DialogTitle>{worker.name}</DialogTitle>
                         <div className="flex gap-2">
                             {worker.approval_status === 'pending' && (
                                 <>
