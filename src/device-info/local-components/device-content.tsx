@@ -26,7 +26,7 @@ export default function DeviceContent(content: DeviceContentProps) {
             <div className="flex flex-col gap-2 max-w-[1000px] w-full border-l-2 border-(--dark)/50 p-2">
                 {
                     content.deviceStatusData.map((item, key) => {
-                        return <DeviceStatusBar key={key} is_reachable={item.is_reachable} message={item.message} timestamp={item.timestamp} />
+                        return <DeviceStatusBar key={key} status={item.status} is_reachable={item.is_reachable} message={item.message} timestamp={item.timestamp} />
                     })
                 }
             </div>

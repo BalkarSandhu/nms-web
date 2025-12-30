@@ -159,14 +159,19 @@ export default function DevicesReportsPage() {
       return;
     }
     const htmlContent = generateTableHTML(lastFilters);
-    const element = document.createElement('a');
     const file = new Blob([htmlContent], { type: 'text/html' });
-    element.href = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    
+    // Create anchor element without appending to DOM (SECURITY FIX)
+    const element = document.createElement('a');
+    element.href = url;
     element.download = `devices-report-${Date.now()}.html`;
-    document.body.appendChild(element);
+    
+    // Trigger download without adding to DOM
     element.click();
-    document.body.removeChild(element);
-    URL.revokeObjectURL(element.href);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
   };
 
   const handleDevicesGenerate = async (filters: any) => {

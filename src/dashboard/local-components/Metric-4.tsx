@@ -19,6 +19,13 @@ export interface MetricGeneralProps {
     onItemClick?: (item: MetricItem) => void;
     data?: MetricItem[];
     navigatePath?: string;
+    /**
+     * Preferred navigation target when an item is clicked.
+     * - 'auto' will choose between '/devices' and '/locations' based on the item label
+     * - 'devices' always navigates to '/devices'
+     * - 'locations' always navigates to '/locations'
+     */
+    navigateTarget?: 'auto' | 'devices' | 'locations';
     iconResolver?: (item: MetricItem) => React.ReactNode;
     emptyText?: string;
     maxItems?: number;
@@ -31,6 +38,7 @@ export default function MetricGeneral({
     onItemClick,
     data = [],
     navigatePath = "",
+    navigateTarget = 'auto',
     iconResolver,
     emptyText = "No data",
     maxItems = 6,
@@ -55,18 +63,39 @@ export default function MetricGeneral({
         },
     ];
 
+    const resolveTargetPath = (item: MetricItem) => {
+        // explicit navigatePath prop takes precedence
+        if (navigatePath) return navigatePath;
+
+        // honor explicit navigateTarget on the item (data producer can set '/devices' or '/locations')
+        if (item.navigateTarget) {
+            const t = item.navigateTarget.toString();
+            if (t === '/devices' || t === 'devices') return '/devices';
+            if (t === '/locations' || t === 'locations') return '/locations';
+        }
+
+        const target = (navigateTarget || 'auto');
+        if (target === 'devices') return '/devices';
+        if (target === 'locations') return '/locations';
+
+        // auto detect based on label keywords that are location-level
+        const label = (item.label || '').toString().toLowerCase();
+        const locationKeywords = [
+            'route', 'checkpost', 'check post', 'checkpoint', 'static location', 'area', 'site', 'location', 'depot', 'terminal', 'station', 'weigh'
+        ];
+        if (locationKeywords.some(k => label.includes(k))) return '/locations';
+
+        // default to devices
+        return '/devices';
+    };
+
     const handleItemClick = (item: MetricItem) => {
-    onItemClick?.(item);
-
-    if (navigatePath) {
+        onItemClick?.(item);
+        const path = resolveTargetPath(item);
         const params = new URLSearchParams(searchParams);
-
-        // Instead of 'label', use device_type_name
-        params.set('type', item.label);
-
-        navigate(`${navigatePath}?${params.toString()}`);
-    }
-};
+        params.set('type', String(item.label ?? '').trim());
+        navigate(`${path}?${params.toString()}`);
+    };
 
     // Built-in icon resolver based on label keywords
     const defaultIconResolver = (item: MetricItem) => {

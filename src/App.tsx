@@ -30,6 +30,7 @@ import LocationsPage from './locations/page'
 import WorkersPage from './workers/page'
 import DeviceInfoPage from './device-info/page'
 import LocationDetailPage from './locations/locationDetailPage'
+import ExpertSystem from '@/expert-system/ExpertSystem'
 
 function App() {
   const location = useLocation()
@@ -369,7 +370,9 @@ function App() {
           </Routes>
         </div>
       )}
+      <ExpertSystem />
     </div>
+    
   )
 }
 

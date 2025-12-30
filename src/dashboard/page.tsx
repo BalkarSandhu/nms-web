@@ -375,11 +375,12 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							const found = acc.find(item => item.label === typeName);
 							if (found) {
 								found.value += 1;
+								if (!found.navigateTarget) found.navigateTarget = '/devices';
 							} else {
-								acc.push({ label: typeName, value: 1 });
+								acc.push({ label: typeName, value: 1, navigateTarget: '/devices' });
 							}
 							return acc;
-						}, [] as { label: string; value: number }[])
+						}, [] as { label: string; value: number; navigateTarget?: string }[])
 						.sort((a, b) => b.value - a.value)
 						.slice(0, 5)
 				}}
@@ -412,11 +413,12 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 							const found = acc.find(item => item.label === typeName);
 							if (found) {
 								found.value += 1;
+								if (!found.navigateTarget) found.navigateTarget = '/locations';
 							} else {
-								acc.push({ label: typeName, value: 1 });
+								acc.push({ label: typeName, value: 1, navigateTarget: '/locations' });
 							}
 							return acc;
-						}, [] as { label: string; value: number }[])
+						}, [] as { label: string; value: number; navigateTarget?: string }[])
 						.sort((a, b) => b.value - a.value)
 						.slice(0, 5)
 				}}
@@ -438,7 +440,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Area", col2: "Downtime" },
 						data: workerDowntimeData,
 						maxRows: 5,
-						onRowClick: (row:WorkerRow) => navigate(`/workers/${row.id}`)
+						onRowClick: (row:WorkerRow) => navigate(`/workers?${row.id}`)
 					},
 					metric3: undefined,
 					metric4: undefined

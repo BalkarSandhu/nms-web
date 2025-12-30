@@ -37,7 +37,7 @@ export interface MapDataPoint {
   category: 'red' | 'azul' | 'green';
   popupData?: PopupData;
   additionalData?: Record<string, any>;
-  location?: string;
+  location?: string; // Location name for grouping devices
 }
 
 export interface MapConnection {
@@ -76,6 +76,7 @@ export interface MapViewerProps {
   topologyConnectionRadius?: number;
 }
 
+// Interface for topology node
 interface TopologyNode {
   id: string;
   coordinates: [number, number];
@@ -83,10 +84,12 @@ interface TopologyNode {
   status: 'red' | 'green' | 'mixed';
 }
 
+// Function to group devices by name AND coordinates
 const groupDevicesByLocation = (data: MapDataPoint[]): TopologyNode[] => {
   const locationMap = new Map<string, MapDataPoint[]>();
   
   data.forEach(point => {
+    // Create key using BOTH name and coordinates
     const key = `${point.name}-${point.coordinates[0].toFixed(6)},${point.coordinates[1].toFixed(6)}`;
     if (!locationMap.has(key)) {
       locationMap.set(key, []);
@@ -121,6 +124,7 @@ const groupDevicesByLocation = (data: MapDataPoint[]): TopologyNode[] => {
   return nodes;
 };
 
+// Function to calculate the geographic center (mean) of all points
 const calculateMeanCenter = (
   data: MapDataPoint[]
 ): { center: [number, number]; zoom: number } | null => {
@@ -217,7 +221,6 @@ export const MapViewer = ({
   const [currentZoom, setCurrentZoom] = useState(zoom);
   const [hoveredPoint, setHoveredPoint] = useState<MapDataPoint | null>(null);
   const [hoveredNode, setHoveredNode] = useState<TopologyNode | null>(null);
-  const [selectedDevice, setSelectedDevice] = useState<MapDataPoint | null>(null);
   const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
   const [colors, setColors] = useState<{ red: string; azul: string; green: string; blue?: string; mixed?: string }>({
@@ -230,6 +233,7 @@ export const MapViewer = ({
   const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Filter data based on status filter
   const filteredData = useMemo(() => {
     if (statusFilter === 'all') return data;
     if (statusFilter === 'online') return data.filter(point => point.category === 'green');
@@ -237,11 +241,13 @@ export const MapViewer = ({
     return data;
   }, [data, statusFilter]);
 
+  // Group devices by location for topology
   const topologyNodes = useMemo(() => {
     if (!enableTopology) return [];
     return groupDevicesByLocation(filteredData);
   }, [filteredData, enableTopology]);
 
+  // Get devices that are NOT in topology groups (single devices at unique locations)
   const singleDevices = useMemo(() => {
     if (!enableTopology) return filteredData;
     
@@ -253,71 +259,69 @@ export const MapViewer = ({
     return filteredData.filter(device => !groupedDeviceIds.has(device.id));
   }, [filteredData, topologyNodes, enableTopology]);
 
-  // Find the topology node that contains the selected device
-  const selectedTopologyNode = useMemo(() => {
-    if (!selectedDevice || !enableTopology) return null;
-    return topologyNodes.find(node => 
-      node.devices.some(d => d.id === selectedDevice.id)
-    );
-  }, [selectedDevice, topologyNodes, enableTopology]);
-
+  // Create topology connection lines
   const topologyConnectionsGeoJSON = useMemo(() => {
-    if (!enableTopology || !selectedTopologyNode) return { type: 'FeatureCollection' as const, features: [] };
+    if (!enableTopology) return { type: 'FeatureCollection' as const, features: [] };
     
-    const node = selectedTopologyNode;
-    const centerCoord = node.coordinates;
-    
-    const features = node.devices.map((device, idx) => {
-      const angle = (idx / node.devices.length) * 2 * Math.PI;
-      const offsetLon = Math.cos(angle) * topologyConnectionRadius;
-      const offsetLat = Math.sin(angle) * topologyConnectionRadius;
-      const deviceCoord: [number, number] = [
-        centerCoord[0] + offsetLon,
-        centerCoord[1] + offsetLat
-      ];
+    const features = topologyNodes.flatMap(node => {
+      const centerCoord = node.coordinates;
       
-      return {
-        type: 'Feature' as const,
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: [centerCoord, deviceCoord]
-        },
-        properties: {
-          id: `${node.id}-${device.id}`,
-          color: colors[device.category] || colors.azul,
-          width: 2,
-          deviceId: device.id,
-          nodeId: node.id,
-          lineType: 'dotted'
-        }
-      };
+      return node.devices.map((device, idx) => {
+        const angle = (idx / node.devices.length) * 2 * Math.PI;
+        const offsetLon = Math.cos(angle) * topologyConnectionRadius;
+        const offsetLat = Math.sin(angle) * topologyConnectionRadius;
+        const deviceCoord: [number, number] = [
+          centerCoord[0] + offsetLon,
+          centerCoord[1] + offsetLat
+        ];
+        
+        return {
+          type: 'Feature' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: [centerCoord, deviceCoord]
+          },
+          properties: {
+            id: `${node.id}-${device.id}`,
+            color: colors[device.category] || colors.azul,
+            width: 2,
+            deviceId: device.id,
+            nodeId: node.id,
+            lineType: 'dotted'
+          }
+        };
+      });
     });
 
     return {
       type: 'FeatureCollection' as const,
       features
     };
-  }, [selectedTopologyNode, enableTopology, topologyConnectionRadius, colors]);
+  }, [topologyNodes, enableTopology, topologyConnectionRadius, colors]);
 
+  // Create location-based connections (connecting devices with same location name)
+  // This creates polygons by connecting the OUTER DEVICE POINTS of topology groups
   const locationConnectionsGeoJSON = useMemo(() => {
-    if (!selectedDevice) return { type: 'FeatureCollection' as const, features: [] };
-    
     const features: any[] = [];
-    const deviceLocation = selectedDevice.location;
     
-    if (!deviceLocation) return { type: 'FeatureCollection' as const, features: [] };
+    // Group all devices (including those in topology) by location name
+    const locationGroups = new Map<string, Array<{ coordinates: [number, number]; id: string | number; isTopologyDevice: boolean }>>();
     
-    const relatedDevices: Array<{ coordinates: [number, number]; id: string | number; isTopologyDevice: boolean }> = [];
-    
-    // Add devices from topology nodes with same location
+    // Add all devices from topology nodes
     topologyNodes.forEach(node => {
       node.devices.forEach((device, idx) => {
-        if (device.location === deviceLocation) {
+        const location = device.location;
+        if (location) {
+          if (!locationGroups.has(location)) {
+            locationGroups.set(location, []);
+          }
+          
+          // Calculate the actual position of this device in the topology circle
           const angle = (idx / node.devices.length) * 2 * Math.PI;
           const offsetLon = Math.cos(angle) * topologyConnectionRadius;
           const offsetLat = Math.sin(angle) * topologyConnectionRadius;
           
-          relatedDevices.push({
+          locationGroups.get(location)!.push({
             coordinates: [node.coordinates[0] + offsetLon, node.coordinates[1] + offsetLat],
             id: device.id,
             isTopologyDevice: true
@@ -326,10 +330,13 @@ export const MapViewer = ({
       });
     });
     
-    // Add single devices with same location
+    // Add single devices (not part of topology)
     singleDevices.forEach(device => {
-      if (device.location === deviceLocation) {
-        relatedDevices.push({
+      if (device.location) {
+        if (!locationGroups.has(device.location)) {
+          locationGroups.set(device.location, []);
+        }
+        locationGroups.get(device.location)!.push({
           coordinates: device.coordinates,
           id: device.id,
           isTopologyDevice: false
@@ -337,39 +344,44 @@ export const MapViewer = ({
       }
     });
 
-    // Create mesh connections
-    if (relatedDevices.length > 1) {
-      for (let i = 0; i < relatedDevices.length; i++) {
-        for (let j = i + 1; j < relatedDevices.length; j++) {
-          features.push({
-            type: 'Feature' as const,
-            geometry: {
-              type: 'LineString' as const,
-              coordinates: [relatedDevices[i].coordinates, relatedDevices[j].coordinates]
-            },
-            properties: {
-              id: `location-${deviceLocation}-${relatedDevices[i].id}-${relatedDevices[j].id}`,
-              color: '#4CB944',
-              width: 2,
-              locationName: deviceLocation,
-              lineType: 'solid'
-            }
-          });
+    // Create connections between all device points in the same location group
+    locationGroups.forEach((points, locationName) => {
+      if (points.length > 1) {
+        // Create mesh connections (connect each device point to every other device point)
+        for (let i = 0; i < points.length; i++) {
+          for (let j = i + 1; j < points.length; j++) {
+            features.push({
+              type: 'Feature' as const,
+              geometry: {
+                type: 'LineString' as const,
+                coordinates: [points[i].coordinates, points[j].coordinates]
+              },
+              properties: {
+                id: `location-${locationName}-${points[i].id}-${points[j].id}`,
+                color: '#4CB944', // Green for location connections
+                width: 2,
+                locationName: locationName,
+                lineType: 'solid'
+              }
+            });
+          }
         }
       }
-    }
+    });
 
     return {
       type: 'FeatureCollection' as const,
       features
     };
-  }, [selectedDevice, topologyNodes, singleDevices, topologyConnectionRadius]);
+  }, [topologyNodes, singleDevices, topologyConnectionRadius]);
 
+  // Calculate mean center when data changes
   const meanCenter = useMemo(() => {
     if (!autoZoomToDensity || filteredData.length === 0) return null;
     return calculateMeanCenter(filteredData);
   }, [filteredData, autoZoomToDensity]);
 
+  // Auto-zoom to mean center when map loads
   useEffect(() => {
     if (
       mapRef.current &&
@@ -404,6 +416,7 @@ export const MapViewer = ({
     }
   }, [meanCenter, autoZoomToDensity, hasAutoZoomed, filteredData.length, isInitialLoad]);
 
+  // Handle filter updates from popup
   useEffect(() => {
     if (popupFilter && onFilterSet) {
       onFilterSet(popupFilter);
@@ -411,6 +424,7 @@ export const MapViewer = ({
     }
   }, [popupFilter, onFilterSet]);
 
+  // Extract CSS custom properties for colors
   useEffect(() => {
     const root = document.documentElement;
     const computedStyle = getComputedStyle(root);
@@ -424,6 +438,7 @@ export const MapViewer = ({
     });
   }, []);
 
+  // Map configuration with PMTiles
   const mapConfig = useMemo(() => {
     const pmtilesUrl = import.meta.env.VITE_MAP_SOURCE || 
                        'https://build.protomaps.com/20230901.pmtiles';
@@ -584,14 +599,18 @@ export const MapViewer = ({
     const features = connections.map(conn => {
       const fromPoint = filteredData.find(p => p.id === conn.from);
       const toPoint = filteredData.find(p => p.id === conn.to);
-      
-      if (!fromPoint || !toPoint) return null;
-      
+
+      // allow special synthetic endpoint 'location-main' which refers to the centerCoordinates
+      const fromCoords = conn.from === 'location-main' ? centerCoordinates : fromPoint?.coordinates;
+      const toCoords = conn.to === 'location-main' ? centerCoordinates : toPoint?.coordinates;
+
+      if (!fromCoords || !toCoords) return null;
+
       return {
         type: 'Feature' as const,
         geometry: {
           type: 'LineString' as const,
-          coordinates: [fromPoint.coordinates, toPoint.coordinates]
+          coordinates: [fromCoords, toCoords]
         },
         properties: {
           id: conn.id,
@@ -608,7 +627,7 @@ export const MapViewer = ({
       type: 'FeatureCollection' as const,
       features: features as any[]
     };
-  }, [connections, filteredData]);
+  }, [connections, filteredData, centerCoordinates]);
 
   const handleMove = useCallback((evt: any) => {
     setCurrentZoom(evt.viewState.zoom);
@@ -655,27 +674,11 @@ export const MapViewer = ({
     };
   }, [data]);
 
-  const handleDeviceClick = (device: MapDataPoint) => {
-    setSelectedDevice(device);
-    setHoveredPoint(device);
-    setHoveredNode(null);
-    if (onPointClick) {
-      onPointClick(device);
-    }
-  };
-
-  const handleNodeClick = (node: TopologyNode) => {
-    setHoveredNode(node);
-    setHoveredPoint(null);
-    setSelectedDevice(null);
-  };
-  // THIS IS THE RETURN/RENDER SECTION - PASTE THIS AFTER THE handleNodeClick FUNCTION
-
   return (
     <div className={`w-full h-full rounded overflow-hidden relative ${className}`}>
-      {/* Filter Controls */}
+      {/* Filter Controls - Top Left */}
       <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-white/10">
-        <div className="text-white text-sm font-semibold">Device Status</div>
+        <div className="text-white text-sm font-semibold ">Device Status</div>
         <div className="flex flex-col gap-1">
           <label className="flex items-center gap-1 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors">
             <input
@@ -721,27 +724,10 @@ export const MapViewer = ({
         </div>
       </div>
 
-      {/* Clear Selection Button */}
-      {selectedDevice && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <button
-            onClick={() => {
-              setSelectedDevice(null);
-              setHoveredPoint(null);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Clear Topology View
-          </button>
-        </div>
-      )}
-
-      {/* Device Details Panel */}
+      {/* Device Details Panel - Top Right */}
       {hoveredPoint && (
         <div className="absolute top-4 right-4 z-10 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-2xl border border-white/20 min-w-[280px] max-w-[350px]">
+          {/* Header with status indicator */}
           <div className="flex items-start justify-between mb-3 pb-3 border-b border-white/10">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -765,25 +751,21 @@ export const MapViewer = ({
             </button>
           </div>
 
+          {/* Device Information */}
           <div className="space-y-2">
-            {hoveredPoint.additionalData && Object.keys(hoveredPoint.additionalData).length > 0 && (
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">Additional Info</div>
-                {Object.entries(hoveredPoint.additionalData).map(([key, value]) => (
-                  <div key={key} className="flex justify-between items-center py-1">
-                    <span className="text-gray-400 text-xs capitalize">{key.replace(/_/g, ' ')}:</span>
-                    <span className="text-white text-xs">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
 
+            
+
+            {/* Popup Data if available */}
             {hoveredPoint.popupData && (
               <div className="mt-3 pt-3 border-t border-white/10">
                 {hoveredPoint.popupData.data.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center py-1">
                     <span className="text-gray-400 text-xs">{item.field}:</span>
-                    <span className="text-xs font-medium" style={{ color:'#ffffff' }}>
+                    <span 
+                      className="text-xs font-medium"
+                      style={{ color:'#ffffff' }}
+                    >
                       {item.value}
                     </span>
                   </div>
@@ -794,13 +776,10 @@ export const MapViewer = ({
         </div>
       )}
 
-      {/* Topology Node Details Panel */}
+      {/* Topology Node Details Panel - Top Right */}
       {hoveredNode && !hoveredPoint && (
-        <div 
-          className="absolute top-4 right-4 z-10 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-2xl border border-white/20 min-w-[280px] max-w-[350px]"
-          onMouseEnter={() => setHoveredNode(hoveredNode)}
-          onMouseLeave={() => setHoveredNode(null)}
-        >
+        <div className="absolute top-4 right-4 z-10 bg-black/90 backdrop-blur-sm rounded-lg p-4 shadow-2xl border border-white/20 min-w-[280px] max-w-[350px]">
+          {/* Header with status indicator */}
           <div className="flex items-start justify-between mb-3 pb-3 border-b border-white/10">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -808,7 +787,7 @@ export const MapViewer = ({
                   className="w-3 h-3 rounded-full animate-pulse"
                   style={{ backgroundColor: hoveredNode.status === 'mixed' ? colors.mixed : colors[hoveredNode.status] }}
                 ></div>
-                <h3 className="text-white font-bold text-lg">Site Overview</h3>
+                <h3 className="text-white font-bold text-lg">Topology Node</h3>
               </div>
               <p className="text-gray-400 text-xs">
                 {hoveredNode.devices.length} devices at this location
@@ -824,6 +803,7 @@ export const MapViewer = ({
             </button>
           </div>
 
+          {/* Device List */}
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             <div className="text-gray-400 text-xs mb-2 uppercase tracking-wide">Devices</div>
             {hoveredNode.devices.map((device) => (
@@ -832,7 +812,7 @@ export const MapViewer = ({
                 className="flex items-center gap-2 p-2 rounded bg-white/5 hover:bg-white/10 cursor-pointer transition-colors"
                 onClick={() => {
                   setHoveredNode(null);
-                  handleDeviceClick(device);
+                  setHoveredPoint(device);
                 }}
               >
                 <div 
@@ -947,11 +927,11 @@ export const MapViewer = ({
                   'interpolate',
                   ['linear'],
                   ['zoom'],
-                  6, ['*', ['get', 'width'], 1.5],
-                  10, ['*', ['get', 'width'], 2],
-                  15, ['*', ['get', 'width'], 3]
+                  6, ['*', ['get', 'width'], 2.0],
+                  10, ['*', ['get', 'width'], 2.6],
+                  15, ['*', ['get', 'width'], 4]
                 ],
-                'line-opacity': 0.2,
+                'line-opacity': 0.35,
                 'line-blur': 4
               }}
               layout={{ 'line-join': 'round', 'line-cap': 'round' }}
@@ -965,18 +945,18 @@ export const MapViewer = ({
                   'interpolate',
                   ['linear'],
                   ['zoom'],
-                  6, ['*', ['get', 'width'], 0.5],
+                  6, ['*', ['get', 'width'], 0.8],
                   10, ['get', 'width'],
-                  15, ['*', ['get', 'width'], 1.5]
+                  15, ['*', ['get', 'width'], 1.8]
                 ],
-                'line-opacity': 0.8
+                'line-opacity': 0.95
               }}
               layout={{ 'line-join': 'round', 'line-cap': 'round' }}
             />
           </Source>
         )}
 
-        {/* Topology Connections - DOTTED (only when device selected) */}
+        {/* Topology Connections - DOTTED */}
         {showPoints && enableTopology && topologyConnectionsGeoJSON.features.length > 0 && (
           <Source id="topology-connections" type="geojson" data={topologyConnectionsGeoJSON}>
             <Layer
@@ -1000,7 +980,7 @@ export const MapViewer = ({
           </Source>
         )}
 
-        {/* Location-based Connections - SOLID (only when device selected) */}
+        {/* Location-based Connections - SOLID */}
         {showPoints && locationConnectionsGeoJSON.features.length > 0 && (
           <Source id="location-connections" type="geojson" data={locationConnectionsGeoJSON}>
             <Layer
@@ -1041,7 +1021,7 @@ export const MapViewer = ({
           </Source>
         )}
 
-        {/* Topology Nodes */}
+        {/* Topology Nodes (Central nodes for grouped devices) */}
         {showPoints && enableTopology && topologyNodes.map(node => (
           <Marker
             key={`node-${node.id}`}
@@ -1057,72 +1037,71 @@ export const MapViewer = ({
                 borderRadius: '50%',
                 backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
                 border: '3px solid white',
-                boxShadow: selectedTopologyNode?.id === node.id ? '0 0 20px rgba(255,255,255,0.8)' : '0 4px 8px rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
               title={`${node.devices.length} devices`}
-              onMouseEnter={() => {
-                setHoveredPoint(null);
-                setHoveredNode(node);
-              }}
-              onMouseLeave={() => {}}
-              onClick={() => handleNodeClick(node)}
+              onMouseEnter={() => setHoveredNode(node)}
+              onMouseLeave={() => setHoveredNode(null)}
             >
               <span className="text-white text-xs font-bold">{node.devices.length}</span>
             </div>
           </Marker>
         ))}
 
-        {/* Topology Device Points */}
-        {showPoints && enableTopology && selectedTopologyNode && selectedTopologyNode.devices.map((device, idx) => {
-          const angle = (idx / selectedTopologyNode.devices.length) * 2 * Math.PI;
-          const offsetLon = Math.cos(angle) * topologyConnectionRadius;
-          const offsetLat = Math.sin(angle) * topologyConnectionRadius;
-          
-          return (
-            <Marker
-              key={`topology-device-${device.id}`}
-              longitude={selectedTopologyNode.coordinates[0] + offsetLon}
-              latitude={selectedTopologyNode.coordinates[1] + offsetLat}
-              anchor="center"
-            >
-              <div 
-                className="relative cursor-pointer hover:scale-110 transition-transform"
-                style={{
-                  width: pointSize * 0.8,
-                  height: pointSize * 0.8,
-                  borderRadius: '50%',
-                  backgroundColor: colors[device.category],
-                  border: selectedDevice?.id === device.id ? '3px solid white' : '2px solid white',
-                  boxShadow: selectedDevice?.id === device.id ? '0 0 15px rgba(255,255,255,0.8)' : '0 2px 4px rgba(0,0,0,0.3)'
-                }}
-                title={device.name}
-                onMouseEnter={() => setHoveredPoint(device)}
-                onMouseLeave={() => {}}
-                onClick={() => handleDeviceClick(device)}
+        {/* Topology Device Points (arranged around central node) */}
+        {showPoints && enableTopology && topologyNodes.map(node => 
+          node.devices.map((device, idx) => {
+            const angle = (idx / node.devices.length) * 2 * Math.PI;
+            const offsetLon = Math.cos(angle) * topologyConnectionRadius;
+            const offsetLat = Math.sin(angle) * topologyConnectionRadius;
+            
+            return (
+              <Marker
+                key={`topology-device-${device.id}`}
+                longitude={node.coordinates[0] + offsetLon}
+                latitude={node.coordinates[1] + offsetLat}
+                anchor="center"
+                onClick={() => onPointClick?.(device)}
               >
-                {showLabels && currentZoom > 15 && (
-                  <div 
-                    className="absolute left-full ml-2 whitespace-nowrap text-xs font-medium"
-                    style={{ color: colors[device.category] }}
-                  >
-                    {device.name}
-                  </div>
-                )}
-              </div>
-            </Marker>
-          );
-        })}
+                <div 
+                  className="relative cursor-pointer hover:scale-110 transition-transform"
+                  style={{
+                    width: pointSize * 0.8,
+                    height: pointSize * 0.8,
+                    borderRadius: '50%',
+                    backgroundColor: colors[device.category],
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}
+                  title={device.name}
+                  onMouseEnter={() => setHoveredPoint(device)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                >
+                  {showLabels && currentZoom > 15 && (
+                    <div 
+                      className="absolute left-full ml-2 whitespace-nowrap text-xs font-medium"
+                      style={{ color: colors[device.category] }}
+                    >
+                      {device.name}
+                    </div>
+                  )}
+                </div>
+              </Marker>
+            );
+          })
+        )}
 
-        {/* Single Devices */}
+        {/* Single Devices (not part of topology groups) */}
         {showPoints && singleDevices.map(point => (
           <Marker
             key={point.id}
             longitude={point.coordinates[0]}
             latitude={point.coordinates[1]}
             anchor="center"
+            onClick={() => onPointClick?.(point)}
           >
             <div 
               className="relative cursor-pointer hover:scale-110 transition-transform"
@@ -1131,13 +1110,12 @@ export const MapViewer = ({
                 height: pointSize,
                 borderRadius: '50%',
                 backgroundColor: colors[point.category],
-                border: selectedDevice?.id === point.id ? '3px solid white' : '2px solid white',
-                boxShadow: selectedDevice?.id === point.id ? '0 0 15px rgba(255,255,255,0.8)' : '0 2px 4px rgba(0,0,0,0.3)'
+                border: '2px solid white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
               }}
               title={point.name}
               onMouseEnter={() => setHoveredPoint(point)}
-              onMouseLeave={() => {}}
-              onClick={() => handleDeviceClick(point)}
+              onMouseLeave={() => setHoveredPoint(null)}
             >
               {showLabels && currentZoom > 15 && (
                 <div 

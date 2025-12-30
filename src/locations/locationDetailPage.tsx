@@ -60,7 +60,8 @@ export default function LocationDetailPage() {
   // Calculate power statistics
   const devicesWithPower = locationDevices.filter(d => d.has_power === true).length;
   const devicesWithoutPower = locationDevices.filter(d => d.has_power === false).length;
-
+  // Connected (online and not disabled)
+  
   useEffect(() => {
     if (!locations.length) {
       dispatch(fetchLocations());
@@ -98,7 +99,32 @@ export default function LocationDetailPage() {
       };
     });
 
-    setMapDataPoints(dataPoints);
+    // Add a synthetic central point representing the location itself so
+    // topology lines from 'location-main' are anchored and visible on the map.
+    if (location && location.latitude && location.longitude) {
+      const locationPoint: MapDataPoint = {
+        id: 'location-main',
+        name: location.name || 'Location',
+        coordinates: [location.longitude || 0, location.latitude || 0],
+        value: 1,
+        category: normalizeStatus(location.status) === true ? 'green' : 'azul',
+        popupData: {
+          indicatorColour: normalizeStatus(location.status) === true ? 'green' : 'white',
+          headerLeft: { field: 'Location', value: location.name || 'Location' },
+          headerRight: { field: 'Status', value: getStatusDisplay(location.status) },
+          sideLabel: { field: 'Devices', value: String(locationDevices.length) },
+          data: []
+        },
+        additionalData: {
+          location_id: location.id
+        }
+      };
+
+      // place the location point at the beginning so it's easy to find in filteredData
+      setMapDataPoints([locationPoint, ...dataPoints]);
+    } else {
+      setMapDataPoints(dataPoints);
+    }
   }, [locationDevices, location?.name]);
 
   useEffect(() => {
@@ -224,6 +250,31 @@ export default function LocationDetailPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">{location.name}</h1>
+          </div>
+          {/* Location-scoped metric buttons */}
+          <div className="ml-4 w-full sm:w-auto">
+            <div className="flex flex-wrap gap-2 mt-2">
+             
+
+              <Button className={`px-3 py-1 text-sm font-semibold rounded ${devicesOnline > 0 ? 'bg-green-600 text-white border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Online: {devicesOnline}
+              </Button>
+
+              <Button className={`px-3 py-1 text-sm font-semibold rounded ${devicesOffline > 0 ? 'bg-red-500 text-white border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Offline: {devicesOffline}
+              </Button>
+
+              <Button className={`px-3 py-1 text-sm font-semibold rounded ${devicesWithPower > 0 ? 'bg-green-600 text-white border border-emerald-200' : 'bg-red-500 text-white border border-red-200'}`}>
+                <Power className="h-4 w-4 mr-2" />
+                Powered: {devicesWithPower}
+              </Button>
+
+            
+
+              
+            </div>
           </div>
           
           <div className={`ml-auto px-3 py-1 rounded-lg font-semibold text-xs flex items-center gap-1 whitespace-nowrap ${
@@ -431,7 +482,7 @@ export default function LocationDetailPage() {
         <div className="lg:col-span-2 space-y-2">
           
           {/* Map Card */}
-          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden h-96">
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden h-116">
             <CardHeader>
               <CardTitle className="flex items-center gap-1 text-m font-semibold text-gray-900">
                 <MapPin className="h-5 w-5 text-cyan-600" />

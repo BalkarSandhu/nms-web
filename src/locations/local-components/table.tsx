@@ -79,11 +79,15 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
 export default function LocationsTable({ 
     onRowClick,
     selectedLocationId,
-    onDataChange
+    onDataChange,
+    initialFilters,
+    onFiltersChange
 }: { 
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
     onDataChange?: (rows: EnrichedLocation[]) => void;
+    initialFilters?: Record<string,string>;
+    onFiltersChange?: (filters: Record<string,string>) => void;
 }) {
     const enrichedLocations = useEnrichedLocations();
     const [searchParams] = useSearchParams();
@@ -91,13 +95,18 @@ export default function LocationsTable({
     const [hasProcessedUrlId, setHasProcessedUrlId] = useState(false);
     
     const [filters, setFilters] = useState<Record<string, string>>(() => {
+        if (initialFilters) return initialFilters;
         try {
             const params = new URLSearchParams(window.location.search);
             const statusParam = params.get('status');
+            const typeParam = params.get('type');
+            const projectParam = params.get('project');
+            const areaParam = params.get('area');
             const init: Record<string, string> = {};
-            if (statusParam) {
-                init.status = String(statusParam).toLowerCase();
-            }
+            if (statusParam) init.status = String(statusParam).toLowerCase();
+            if (typeParam) init.type = String(typeParam).trim();
+            if (projectParam) init.project = String(projectParam).trim();
+            if (areaParam) init.area = String(areaParam).trim();
             return init;
         } catch {
             return {};
@@ -107,15 +116,26 @@ export default function LocationsTable({
     // React to changes in search params - update filters when URL changes
     useEffect(() => {
         const statusParam = searchParams.get('status');
-        if (statusParam) {
-            setFilters(prev => ({ ...prev, status: String(statusParam).toLowerCase() }));
-        } else {
-            setFilters(prev => {
-                const { status, ...rest } = prev;
-                return rest;
-            });
-        }
+        const typeParam = searchParams.get('type');
+        const projectParam = searchParams.get('project');
+        const areaParam = searchParams.get('area');
+
+        setFilters(prev => {
+            const next = { ...prev };
+
+            if (statusParam) next.status = String(statusParam).toLowerCase(); else delete next.status;
+            if (typeParam) next.type = String(typeParam).trim(); else delete next.type;
+            if (projectParam) next.project = String(projectParam).trim(); else delete next.project;
+            if (areaParam) next.area = String(areaParam).trim(); else delete next.area;
+
+            return next;
+        });
     }, [searchParams]);
+
+    // propagate filter changes to parent if callback provided
+    useEffect(() => {
+        onFiltersChange?.(filters);
+    }, [filters, onFiltersChange]);
 
     // Handle location ID from URL
     useEffect(() => {
@@ -174,10 +194,10 @@ export default function LocationsTable({
 
     const filteredLocations = useMemo(() => {
         return enrichedLocations.filter(location => {
-            if (filters.type && location.type_name !== filters.type) return false;
+            if (filters.type && String(location.type_name ?? '').trim().toLowerCase() !== String(filters.type ?? '').trim().toLowerCase()) return false;
             if (filters.status && location.status !== filters.status) return false;
-            if (filters.project && location.project !== filters.project) return false;
-            if (filters.area && location.area !== filters.area) return false;
+            if (filters.project && String(location.project ?? '').trim() !== String(filters.project ?? '').trim()) return false;
+            if (filters.area && String(location.area ?? '').trim() !== String(filters.area ?? '').trim()) return false;
             return true;
         });
     }, [enrichedLocations, filters]);

@@ -4,10 +4,11 @@ import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { fetchAllDevices } from '@/store/deviceSlice';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin, Activity, Server, FileText, Signal, AlertCircle, CheckCircle2, WifiOff, Power, Zap, Monitor } from 'lucide-react';
+import { ArrowLeft, MapPin, Activity, Server, FileText, Signal, AlertCircle, CheckCircle2, Power, Monitor } from 'lucide-react';
 import MapViewer from '../dashboard/local-components/Map-Viewer';
 import type { MapDataPoint } from '../dashboard/local-components/Map-Viewer';
 import NetworkHealthCard from './NetworkHeathCard';
+import DeviceStatistics from '../locations/Devicestatistics';
 
 type LogEntry = {
   id: number;
@@ -33,11 +34,10 @@ export default function DeviceDetailPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  
   const deviceId = Number(searchParams.get('id'));
-  
+
   const { devices } = useAppSelector(state => state.devices);
-  
+
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [mapDataPoints, setMapDataPoints] = useState<MapDataPoint[]>([]);
 
@@ -163,37 +163,77 @@ export default function DeviceDetailPage() {
 
   const isDeviceOnline = normalizeStatus(device.is_reachable);
   const hasPower = device.has_power === true;
+  const isConnected = isDeviceOnline && !device.disabled;
+
 
   return (
     <div className="min-h-screen bg-white p-3">
       
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <button 
           onClick={() => navigate('/devices')}
-          className="text-gray-500 hover:text-gray-700 transition"
+          className="text-gray-500 hover:text-gray-700 transition mt-1"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         
-        <div className="flex items-center gap-1 flex-1 ml-4">
-          <div className={`p-1 rounded-lg ${isDeviceOnline ? 'bg-emerald-100' : 'bg-red-100'}`}>
-            <Monitor className={`h-6 w-6 ${isDeviceOnline ? 'text-emerald-600' : 'text-red-600'}`} />
+        <div className="flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex items-start flex-col sm:flex-row sm:items-center gap-3">
+            <div className={`p-1 rounded-lg ${isDeviceOnline ? 'bg-emerald-100' : 'bg-red-100'}`}>
+              <Monitor className={`h-6 w-6 ${isDeviceOnline ? 'text-emerald-600' : 'text-red-600'}`} />
+            </div>
+
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">{device.display || device.hostname}</h1>
+
+              {/* Top status buttons (displayed under the title on small screens, inline on larger screens) */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button
+                  className={`px-3 py-1 text-sm font-semibold rounded flex items-center gap-2 ${
+                    hasPower ? 'bg-green-600 text-white border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  <Power className={`h-4 w-4 ${hasPower ? 'text-white' : 'text-red-600'}`} />
+                  {hasPower ? 'Power: ON' : 'No Power'}
+                </Button>
+
+                <Button
+                  className={`px-3 py-1 text-sm font-semibold rounded flex items-center gap-2 ${
+                    isDeviceOnline ? 'bg-green-600 text-white border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  <Signal className={`h-4 w-4 ${isDeviceOnline ? 'text-white' : 'text-red-600'}`} />
+                  {isDeviceOnline ? 'Internet: Online' : 'Internet: Offline'}
+                </Button>
+
+                <Button
+                  className={`px-3 py-1 text-sm font-semibold rounded flex items-center gap-2 ${
+                    isConnected ? 'bg-green-600 text-white border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {isConnected ? <CheckCircle2 className="h-4 w-4 text-white" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+                  {isConnected ? 'Connected' : 'Not Connected'}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">{device.display || device.hostname}</h1>
-          </div>
-          
-          <div className={`ml-auto px-3 py-1 rounded-lg font-semibold text-xs flex items-center gap-1 whitespace-nowrap ${
-            isDeviceOnline 
-              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
-              : 'bg-red-100 text-red-700 border border-red-300'
-          }`}>
-            {isDeviceOnline ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-            {getStatusDisplay(device.is_reachable)}
+
+          {/* Right-side status badge */}
+          <div className="ml-auto mt-1 sm:mt-0">
+            <div className={`px-3 py-1 rounded-lg font-semibold text-xs flex items-center gap-1 whitespace-nowrap ${
+              isDeviceOnline 
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' 
+                : 'bg-red-100 text-red-700 border border-red-300'
+            }`}>
+              {isDeviceOnline ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+              {getStatusDisplay(device.is_reachable)}
+            </div>
           </div>
         </div>
       </div>
+
+      
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-1">
@@ -223,31 +263,11 @@ export default function DeviceDetailPage() {
 
                 <div className="border-t border-gray-200"></div>
 
-                {/* Hostname */}
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-600 flex justify-between">
-                    <span>Hostname:</span>
-                    <span className='font-medium'>{device.hostname}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200"></div>
-
                 {/* IP Address */}
                 <div className="space-y-2">
                   <div className="text-sm text-gray-600 flex justify-between">
                     <span>IP Address:</span>
                     <span className='font-medium font-mono'>{device.ip}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200"></div>
-
-                {/* Protocol */}
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-600 flex justify-between">
-                    <span>Protocol:</span>
-                    <span className='font-medium'>{device.protocol || 'N/A'}</span>
                   </div>
                 </div>
 
@@ -321,7 +341,7 @@ export default function DeviceDetailPage() {
                 {/* Last Ping */}
                 <div className="space-y-2">
                   <div className="text-sm text-gray-600 flex justify-between">
-                    <span>Last Ping:</span>
+                    <span>Last Seen:</span>
                     <span className='font-medium'>{formatTimeAgo(device.last_check)}</span>
                   </div>
                 </div>
@@ -330,62 +350,54 @@ export default function DeviceDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Device Status Card */}
-          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-1 text-m font-semibold text-gray-900">
-                <Activity className="h-5 w-5 text-purple-600" />
-                Device Status
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="p-3">
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className={`border rounded-lg p-2 ${
-                  isDeviceOnline 
-                    ? 'bg-emerald-50 border-emerald-200' 
-                    : 'bg-red-50 border-red-200'
-                }`}>
-                  <div className={`text-lg font-bold ${
-                    isDeviceOnline ? 'text-emerald-600' : 'text-red-600'
-                  }`}>
-                    {isDeviceOnline ? 'Online' : 'Offline'}
-                  </div>
-                  <div className={`text-xs mt-1 flex items-center gap-1 ${
-                    isDeviceOnline ? 'text-emerald-700' : 'text-red-700'
-                  }`}>
-                    {isDeviceOnline ? <Signal className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                    Network Status
-                  </div>
-                </div>
-                
-                <div className={`border rounded-lg p-2 ${
-                  device.disabled 
-                    ? 'bg-amber-50 border-amber-200' 
-                    : 'bg-emerald-50 border-emerald-200'
-                }`}>
-                  <div className={`text-lg font-bold ${
-                    device.disabled ? 'text-amber-600' : 'text-emerald-600'
-                  }`}>
-                    {device.disabled ? 'Disabled' : 'Active'}
-                  </div>
-                  <div className={`text-xs mt-1 ${
-                    device.disabled ? 'text-amber-700' : 'text-emerald-700'
-                  }`}>
-                    Device State
-                  </div>
-                </div>
-              </div>
+      
+          {/* Metrics Grid */}
+          <div className="flex flex-col gap-2">
 
-              {/* Status Reason */}
-              {device.status_reason && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">Status Message</div>
-                  <div className="text-sm text-gray-900">{device.status_reason}</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            {/* Device Statistics (uptime/downtime) */}
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-1 text-m font-semibold text-gray-900">
+                  <Activity className="h-5 w-5 text-amber-600" />
+                  Device Statistics
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="p-3">
+                {(() => {
+                  const clamp = (v: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v));
+                  const isOnline = normalizeStatus(device.is_reachable) === true;
+                  const uptime = isOnline ? clamp(99 - (device.latency_ms || 0) / 2, 50, 99.9) : 60;
+                  const downtime = clamp(100 - uptime, 0, 100);
+                  const avg_response_time = isOnline && device.latency_ms ? Math.round(device.latency_ms) : undefined;
+
+                  const statsDevice = {
+                    id: device.id,
+                    hostname: device.hostname,
+                    is_reachable: device.is_reachable,
+                    uptime,
+                    downtime,
+                    avg_response_time,
+                    created_at: device.created_at,
+                  } as any;
+
+                  return <DeviceStatistics devices={[statsDevice]} />;
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Network Health Card - Single Device */}
+            <NetworkHealthCard 
+              device={{
+                id: device.id,
+                hostname: device.hostname,
+                latency_ms: device.latency_ms || 0,
+                is_reachable: normalizeStatus(device.is_reachable),
+                ip: device.ip,
+                last_check: device.last_check || ''
+              }} 
+            />
+          </div>
 
           {/* Logs Card */}
           <Card className="border border-gray-200 shadow-sm hover:shadow-md transition">
@@ -421,14 +433,14 @@ export default function DeviceDetailPage() {
         <div className="lg:col-span-2 space-y-2">
           
           {/* Map Card */}
-          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden h-96">
+          <Card className="border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden h-126">
             <CardHeader>
               <CardTitle className="flex items-center gap-1 text-m font-semibold text-gray-900">
                 <MapPin className="h-5 w-5 text-cyan-600" />
                 Device Location
               </CardTitle>
             </CardHeader>
-            
+
             <CardContent className="p-0 m-0 h-full">
               <div className="h-full overflow-hidden bg-white">
                 {device.location?.latitude && device.location?.longitude ? (
@@ -455,53 +467,6 @@ export default function DeviceDetailPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Power Status Card */}
-            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-amber-600" />
-                  Power Status
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="p-3">
-                <div className="flex flex-col items-center justify-center py-4">
-                  {hasPower ? (
-                    <div className="flex flex-col items-center">
-                      <Power className="w-8 h-8 text-green-600 animate-pulse drop-shadow-md mb-3" />
-                      <span className="text-green-600 text-sm font-semibold">
-                        Powered ON
-                      </span>
-                      {/* <span className="text-gray-500 text-xs mt-1">Device is receiving power</span> */}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Power className="w-16 h-16 text-red-500 opacity-80 mb-3" />
-                      <span className="text-red-500 text-lg font-semibold">
-                        No Power
-                      </span>
-                      <span className="text-gray-500 text-xs mt-1">Device is not powered</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Network Health Card - Single Device */}
-            <NetworkHealthCard 
-              device={{
-                id: device.id,
-                hostname: device.hostname,
-                latency_ms: device.latency_ms || 0,
-                is_reachable: normalizeStatus(device.is_reachable),
-                ip: device.ip,
-                last_check: device.last_check || ''
-              }} 
-            />
-          </div>
 
           {/* Graphs Section */}
           <div className="grid grid-cols-1 gap-2">

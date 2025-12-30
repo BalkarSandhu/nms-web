@@ -5,7 +5,7 @@ import MetricGeneral from "./Metric-4";
 import MetricMapSwitcher from "./Metric-Map-Switcher";
 import { MapViewer } from "./Map-Viewer";
 import type { MapDataPoint } from "./Map-Viewer";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 
 import "@/index.css";
@@ -20,7 +20,7 @@ export type MetricsProps = {
 
 export default function Metrics({ metricState, setMetricState, metricsData, mapData = [] }: MetricsProps) {
 
-    const navigate = useNavigate();
+    // navigation is handled inside MetricGeneral; parent no longer navigates here
     const handlePointClick = (point: MapDataPoint) => {
         console.log('Clicked point:', point);
     };
@@ -31,10 +31,11 @@ export default function Metrics({ metricState, setMetricState, metricsData, mapD
     //     navigate(`/devices?type=${encodeURIComponent(item.label)}`);
     // };
 
+    const location = useLocation();
+
     const handleLocationMetricItemClick = (item: { label: string; value: number }) => {
-        console.log('Clicked metric item:', item);
-        
-        navigate(`/locations?type=${encodeURIComponent(item.label)}`);
+        // parent only receives the click for analytics or side-effects
+        console.log('Metric item clicked (parent handler):', item, 'currentPath:', location.pathname);
     };
 
     return (

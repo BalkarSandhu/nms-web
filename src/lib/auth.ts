@@ -39,17 +39,24 @@ const readCookie = (name: string): string | null => {
   return parts.pop()?.split(';').shift() ?? null;
 };
 
+// Replace the writeCookie and deleteCookie functions with these secure versions:
+
 const writeCookie = (name: string, value: string, expires: Date) => {
   if (!hasDocument) return;
-  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${getSecureFlag()}`;
+  const secureFlag = getSecureFlag();
+  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}; HttpOnly`;
   document.cookie = cookieString;
 };
 
 const deleteCookie = (name: string) => {
   if (!hasDocument) return;
   const pastDate = new Date(0);
-  document.cookie = `${name}=; expires=${pastDate.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${getSecureFlag()}`;
+  const secureFlag = getSecureFlag();
+  document.cookie = `${name}=; expires=${pastDate.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}`;
 };
+
+// Also update persistWorkerId function for consistency:
+
 
 const decodeJwtPayload = (token: string): JwtPayload | null => {
   try {
@@ -293,11 +300,11 @@ export const extractTokenFromUrl = (): string | null => {
 /**
  * Store worker_id in cookie
  */
-export const persistWorkerId = (workerId: string | number) => {
+ export const persistWorkerId = (workerId: string | number) => {
   if (!hasDocument) return;
-  // Store worker_id in cookie for 1 year
   const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-  const cookieString = `${WORKER_ID_COOKIE}=${workerId}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${getSecureFlag()}`;
+  const secureFlag = getSecureFlag();
+  const cookieString = `${WORKER_ID_COOKIE}=${workerId}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}`;
   document.cookie = cookieString;
 };
 
