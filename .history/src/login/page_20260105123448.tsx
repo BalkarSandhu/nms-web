@@ -6,7 +6,7 @@ import { Toast } from '../components/ui/toast';
 
 export default function LoginPage() {
 
-    /// return (
+    // return (
     //     <a href="https://bccliccc.in" ref={a => { if (a) a.click(); }} style={{ display: 'none' }} />
     // )
 

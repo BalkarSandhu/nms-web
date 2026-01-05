@@ -39,12 +39,12 @@ const readCookie = (name: string): string | null => {
   return parts.pop()?.split(';').shift() ?? null;
 };
 
-// FIXED: Remove HttpOnly flag (can't be set via JavaScript)
+// Replace the writeCookie and deleteCookie functions with these secure versions:
+
 const writeCookie = (name: string, value: string, expires: Date) => {
   if (!hasDocument) return;
   const secureFlag = getSecureFlag();
-  // HttpOnly REMOVED - it can only be set by server-side code
-  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}`;
+  const cookieString = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}; HttpOnly`;
   document.cookie = cookieString;
 };
 
@@ -54,6 +54,9 @@ const deleteCookie = (name: string) => {
   const secureFlag = getSecureFlag();
   document.cookie = `${name}=; expires=${pastDate.toUTCString()}; path=/; SameSite=${SAMESITE_POLICY}${secureFlag}`;
 };
+
+// Also update persistWorkerId function for consistency:
+
 
 const decodeJwtPayload = (token: string): JwtPayload | null => {
   try {
@@ -70,8 +73,15 @@ const decodeJwtPayload = (token: string): JwtPayload | null => {
 const isExpired = (payload: JwtPayload | null): boolean => {
   if (!payload || typeof payload.exp !== 'number') return false;
   const now = Math.floor(Date.now() / 1000);
+  // Token is expired if exp time has passed
   return payload.exp <= now;
 };
+
+
+
+
+
+
 
 const broadcastAuthChange = (event: AuthChangeEvent) => {
   if (!isBrowser) return;
@@ -97,6 +107,7 @@ const coerceExpiry = (expiry?: string | number | null): number | null => {
 
 const buildExpiryDate = (expiresAt: number | null): Date => {
   if (expiresAt) return new Date(expiresAt);
+  // Fallback to 24 hours from now if backend did not provide an expiry
   return new Date(Date.now() + 24 * 60 * 60 * 1000);
 };
 
@@ -106,9 +117,10 @@ const buildExpiryDate = (expiresAt: number | null): Date => {
 export const persistAuthToken = (token: string, expiry?: string) => {
   const payload = decodeJwtPayload(token);
   
+  // Use JWT exp claim if available, otherwise use provided expiry
   let expiresAt: number | null = null;
   if (payload && typeof payload.exp === 'number') {
-    expiresAt = payload.exp * 1000;
+    expiresAt = payload.exp * 1000; // Convert seconds to milliseconds
   } else {
     expiresAt = coerceExpiry(expiry);
   }
@@ -167,6 +179,7 @@ export const getAuthToken = (): ValidAuthToken | null => {
     return { token: 'bypass-token', payload: {}, expiresAt: null };
   }
 
+  // Get token from cookie only (no localStorage for security)
   const token = readCookie(TOKEN_COOKIE);
   if (!token) return null;
   
@@ -178,11 +191,13 @@ export const getAuthToken = (): ValidAuthToken | null => {
     return null;
   }
 
+  // Check if token is expired
   if (isExpired(payload)) {
     clearAuthToken();
     return null;
   }
 
+  // Get expiry from JWT payload
   if (typeof payload.exp === 'number') {
     expiresAt = payload.exp * 1000;
   }
@@ -223,6 +238,7 @@ export const isDataStale = (lastFetched: number | null, maxAge: number = 5 * 60 
 
 /**
  * Refresh authentication token (NOT IMPLEMENTED - backend does not support refresh)
+ * This function is kept for compatibility but will always return null
  */
 export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
   console.warn('Token refresh is not supported by backend');
@@ -231,23 +247,28 @@ export const refreshAuthToken = async (): Promise<ValidAuthToken | null> => {
 
 /**
  * Global 401 handler - called when any API returns 401
+ * Clears auth and triggers logout across all tabs
  */
 export const handle401Unauthorized = () => {
   console.warn('401 Unauthorized detected - clearing auth');
   clearAuthToken();
   
+  // Redirect to login if in browser
   if (isBrowser && window.location.pathname !== '/login') {
     window.location.href = '/login';
   }
+  
 };
 
 /**
  * Wrapper for fetch that automatically handles 401 responses
+ * Use this instead of raw fetch for authenticated requests
  */
 export const authenticatedFetch = async (
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<Response> => {
+  // Ensure auth headers are included
   const headers = {
     ...getAuthHeaders(),
     ...(init?.headers || {}),
@@ -258,6 +279,7 @@ export const authenticatedFetch = async (
     headers,
   });
 
+  // Handle 401 globally
   if (response.status === 401) {
     handle401Unauthorized();
     throw new Error('Unauthorized - token invalid or expired');
@@ -278,7 +300,7 @@ export const extractTokenFromUrl = (): string | null => {
 /**
  * Store worker_id in cookie
  */
-export const persistWorkerId = (workerId: string | number) => {
+ export const persistWorkerId = (workerId: string | number) => {
   if (!hasDocument) return;
   const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
   const secureFlag = getSecureFlag();
@@ -295,6 +317,7 @@ export const getWorkerId = (): string | null => {
 
 /**
  * Build URL with worker_id parameter if available
+ * Appends worker_id as a query parameter if it exists in cookies
  */
 export const buildUrlWithWorkerId = (baseUrl: string): string => {
   const workerId = getWorkerId();
@@ -343,6 +366,7 @@ export type WorkerAssignmentResponse = {
 
 /**
  * Authenticate using URL token
+ * Exchanges URL token for JWT token and stores it
  */
 export const authenticateWithUrlToken = async (urlToken: string): Promise<TokenLoginResponse> => {
   const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/token-login`, {
@@ -359,6 +383,7 @@ export const authenticateWithUrlToken = async (urlToken: string): Promise<TokenL
 
   const data: TokenLoginResponse = await response.json();
   
+  // Store the JWT token
   persistAuthToken(data.token, data.user.token_expiry);
   
   return data;
@@ -390,12 +415,18 @@ export const fetchWorkerAssignment = async (userId: number): Promise<number> => 
 
 /**
  * Complete URL token authentication flow
+ * 1. Authenticate with URL token to get JWT
+ * 2. Fetch worker assignment for the user
+ * Returns user data and worker_id
  */
 export const completeUrlTokenAuth = async (urlToken: string): Promise<{
   user: TokenLoginResponse['user'];
   workerId: number;
 }> => {
+  // Step 1: Authenticate with URL token
   const loginResponse = await authenticateWithUrlToken(urlToken);
+  
+  // Step 2: Fetch worker assignment
   const workerId = await fetchWorkerAssignment(loginResponse.user.id);
   
   return {

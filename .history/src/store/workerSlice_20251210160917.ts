@@ -122,7 +122,7 @@ export const fetchWorkers = createAsyncThunk(
       if (params.status) queryParams.append('status', params.status);
       if (params.approval_status) queryParams.append('approval_status', params.approval_status);
 
-      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers?${queryParams}`;
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);
       const response = await fetch(
         url,
