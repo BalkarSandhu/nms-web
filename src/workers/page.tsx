@@ -32,13 +32,16 @@ export default function WorkersPage() {
         exportToCsv('workers.csv', exportRows, exportColumns);
     };
 
+    // ✅ FIXED: Only check on mount, not on every workers/lastFetched change
     useEffect(() => {
-        // Only fetch if workers are not loaded OR data is stale (older than 5 minutes)
-        if (!workers || workers.length === 0 || isDataStale(lastFetched)) {
+        // Capture current values at mount time
+        const shouldFetch = !workers || workers.length === 0 || isDataStale(lastFetched);
+        
+        if (shouldFetch) {
             dispatch(fetchWorkers({}));
             dispatch(fetchWorkerStats());
         }
-    }, [dispatch, workers, lastFetched]);
+    }, [dispatch]); // Only dispatch in dependencies
 
     if (loading && workers.length === 0) {
         return <LoadingPage />;

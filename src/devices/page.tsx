@@ -23,7 +23,7 @@ export default function DevicesPage() {
     const exportColumns = useMemo<CsvColumn<readDeviceType>[]>(() => [
         { header: 'S.No', accessor: (_row, index) => index + 1 },
         { header: 'Display Name', accessor: (row) => row.display },
-        { header: 'Hostname', accessor: (row) => row.hostname },
+        { header: 'Hostname', accessor: (row) => row.name },
         { header: 'IP', accessor: (row) => `${row.ip}:${row.port}` },
         { header: 'Type', accessor: (row) => row.device_type.name },
         { header: 'Status', accessor: (row) => (row.is_reachable ? 'Online' : 'Offline') },

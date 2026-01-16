@@ -48,6 +48,7 @@ export default function WorkerDetailPage() {
   const devicesOnline = locationDevices.filter(d => d.is_reachable === true).length;
   const devicesOffline = locationDevices.filter(d => d.is_reachable === false).length;
 
+  // ✅ FIXED: Removed locations.length and devices.length from dependencies
   useEffect(() => {
     if (!locations.length) {
       dispatch(fetchLocations());
@@ -55,7 +56,7 @@ export default function WorkerDetailPage() {
     if (!devices.length) {
       dispatch(fetchDevices());
     }
-  }, [dispatch, locations.length, devices.length]);
+  }, [dispatch]); // Only dispatch in dependencies
 
   // Build map data from devices
   useEffect(() => {
@@ -413,7 +414,6 @@ export default function WorkerDetailPage() {
             {/* Map Container */}
             <div className="flex-1 overflow-hidden">
               <MapViewer
-                // ref={mapViewerRef}
                 data={mapDataPoints}
                 connections={mapConnections}
                 centerCoordinates={

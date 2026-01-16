@@ -76,7 +76,7 @@ export async function getLocationTypes(): Promise<{ id: number; name: string }[]
   }));
 }
 
-export async function getWorkerTypes(): Promise<{ id: string; name: string }[]> {
+export async function getWorkerTypes(): Promise<{ id: string; hostname: string }[]> {
   const url = `${import.meta.env.VITE_NMS_HOST}/workers`;
 
   const token = getCookie("token");
@@ -95,7 +95,7 @@ export async function getWorkerTypes(): Promise<{ id: string; name: string }[]> 
 
   return data.workers.map((item: any) => ({
     id: item.id,
-    name: item.name,
+    hostname: item.name,
   }));
 }
 

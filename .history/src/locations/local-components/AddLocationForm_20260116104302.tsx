@@ -151,7 +151,7 @@ export const AddLocationForm = () => {
       />
 
       <InputField
-        label="Worker"
+        label="Area"
         placeholder="Select Worker"
         type="combobox"
         comboboxOptions={workerTypeOptions.map((t) => t.name)}

@@ -53,7 +53,7 @@ export default function AddDeviceForm() {
         const types = await getWorkerTypes();
         setWorkerTypeOptions(types);
         if (types.length > 0 && !workerType) {
-          setWorkerType(types[0].name);
+          setWorkerType(types[0].hostname);
         }
       } catch (error) {
         console.error("Error fetching workers:", error);
