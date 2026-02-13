@@ -1,0 +1,29 @@
+.layout {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+.toolbar {
+  width: 100px;
+  padding: 6px;
+  background: #f1f5f9;
+}
+
+.tool-item {
+  background: white;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: grab;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.canvas {
+  flex: 1;
+}
+
+.props {
+  width: 260px;
+  padding: 10px;
+  background: #f8fafc;
+}

@@ -116,6 +116,12 @@ const baseNavItems = [
     { title: "Location Reports", url: "/reports/locations" },
     { title: "Area Reports", url: "/reports/workers" },
   ],
+},
+{
+  title:"Topology",
+  url:"/topology",
+  icon: Network,
+  isActive:false,
 }
 
 

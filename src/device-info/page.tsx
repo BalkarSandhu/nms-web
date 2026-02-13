@@ -386,17 +386,7 @@ export default function DeviceDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Network Health Card - Single Device */}
-            <NetworkHealthCard 
-              device={{
-                id: device.id,
-                hostname: device.hostname,
-                latency_ms: device.latency_ms || 0,
-                is_reachable: normalizeStatus(device.is_reachable),
-                ip: device.ip,
-                last_check: device.last_check || ''
-              }} 
-            />
+            
           </div>
 
           {/* Logs Card */}
