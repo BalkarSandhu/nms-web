@@ -1020,7 +1020,6 @@ export const MapViewer = ({
 
         {/* Topology Nodes (Central nodes for grouped devices) */}
         {/* Topology Nodes */}
-        // Topology Nodes
 {showPoints && enableTopology && topologyNodes.map(node => (
   <Marker
     key={`node-${node.id}`}
@@ -1035,6 +1034,7 @@ export const MapViewer = ({
         height: topologyNodeSize,
         borderRadius: '50%',
         backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
+        // Highlight ring when selected
         border: selectedNode?.id === node.id ? '3px solid #FFD700' : '3px solid white',
         boxShadow: selectedNode?.id === node.id 
           ? '0 0 12px rgba(255,215,0,0.8)' 
@@ -1046,10 +1046,7 @@ export const MapViewer = ({
       title={`${node.devices.length} devices`}
       onMouseEnter={() => setHoveredNode(node)}
       onMouseLeave={() => setHoveredNode(null)}
-      onClick={(e) => {
-        e.stopPropagation(); // ← THIS is the fix
-        setSelectedNode(prev => prev?.id === node.id ? null : node);
-      }}
+      onClick={() => setSelectedNode(prev => prev?.id === node.id ? null : node)}
     >
       <span className="text-white text-xs font-bold">{node.devices.length}</span>
     </div>
@@ -1069,6 +1066,7 @@ export const MapViewer = ({
       longitude={selectedNode.coordinates[0] + offsetLon}
       latitude={selectedNode.coordinates[1] + offsetLat}
       anchor="center"
+      onClick={() => onPointClick?.(device)}
     >
       <div 
         className="relative cursor-pointer hover:scale-110 transition-transform"
@@ -1083,10 +1081,6 @@ export const MapViewer = ({
         title={device.name}
         onMouseEnter={() => setHoveredPoint(device)}
         onMouseLeave={() => setHoveredPoint(null)}
-        onClick={(e) => {
-          e.stopPropagation(); // ← prevents map click from firing
-          onPointClick?.(device);
-        }}
       />
     </Marker>
   );

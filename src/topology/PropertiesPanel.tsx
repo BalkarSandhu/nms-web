@@ -1,4 +1,3 @@
-import React from "react";
 
 export default function PropertiesPanel({ node, onChange }: any) {
   if (!node) return <div className="props">Select any device</div>;

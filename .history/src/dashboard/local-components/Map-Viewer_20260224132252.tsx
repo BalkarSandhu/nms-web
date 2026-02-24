@@ -1069,6 +1069,7 @@ export const MapViewer = ({
       longitude={selectedNode.coordinates[0] + offsetLon}
       latitude={selectedNode.coordinates[1] + offsetLat}
       anchor="center"
+      onClick={() => onPointClick?.(device)}
     >
       <div 
         className="relative cursor-pointer hover:scale-110 transition-transform"
@@ -1083,10 +1084,6 @@ export const MapViewer = ({
         title={device.name}
         onMouseEnter={() => setHoveredPoint(device)}
         onMouseLeave={() => setHoveredPoint(null)}
-        onClick={(e) => {
-          e.stopPropagation(); // ← prevents map click from firing
-          onPointClick?.(device);
-        }}
       />
     </Marker>
   );

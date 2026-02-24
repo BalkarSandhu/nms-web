@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Activity, Server, FileText, Signal, AlertCircle, CheckCircle2, Power, Monitor } from 'lucide-react';
 import MapViewer from '../dashboard/local-components/Map-Viewer';
 import type { MapDataPoint } from '../dashboard/local-components/Map-Viewer';
-import NetworkHealthCard from './NetworkHeathCard';
 import DeviceStatistics from '../locations/Devicestatistics';
 
 type LogEntry = {

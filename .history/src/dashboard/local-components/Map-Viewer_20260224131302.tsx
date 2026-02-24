@@ -824,10 +824,6 @@ export const MapViewer = ({
         style={{ width: '100%', height: '100%' }}
         initialViewState={initialViewState}
         onMove={handleMove}
-        onClick={()=>{
-          setSelectedNode(null);
-          setHoveredNode(null);
-        }}
         maxBounds={maxBounds}
         dragRotate={false}
         scrollZoom={enableZoom}
@@ -1019,42 +1015,34 @@ export const MapViewer = ({
         )}
 
         {/* Topology Nodes (Central nodes for grouped devices) */}
-        {/* Topology Nodes */}
-        // Topology Nodes
-{showPoints && enableTopology && topologyNodes.map(node => (
-  <Marker
-    key={`node-${node.id}`}
-    longitude={node.coordinates[0]}
-    latitude={node.coordinates[1]}
-    anchor="center"
-  >
-    <div 
-      className="relative cursor-pointer hover:scale-110 transition-transform"
-      style={{
-        width: topologyNodeSize,
-        height: topologyNodeSize,
-        borderRadius: '50%',
-        backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
-        border: selectedNode?.id === node.id ? '3px solid #FFD700' : '3px solid white',
-        boxShadow: selectedNode?.id === node.id 
-          ? '0 0 12px rgba(255,215,0,0.8)' 
-          : '0 4px 8px rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-      title={`${node.devices.length} devices`}
-      onMouseEnter={() => setHoveredNode(node)}
-      onMouseLeave={() => setHoveredNode(null)}
-      onClick={(e) => {
-        e.stopPropagation(); // ← THIS is the fix
-        setSelectedNode(prev => prev?.id === node.id ? null : node);
-      }}
-    >
-      <span className="text-white text-xs font-bold">{node.devices.length}</span>
-    </div>
-  </Marker>
-))}
+        {showPoints && enableTopology && topologyNodes.map(node => (
+          <Marker
+            key={`node-${node.id}`}
+            longitude={node.coordinates[0]}
+            latitude={node.coordinates[1]}
+            anchor="center"
+          >
+            <div 
+              className="relative cursor-pointer hover:scale-110 transition-transform"
+              style={{
+                width: topologyNodeSize,
+                height: topologyNodeSize,
+                borderRadius: '50%',
+                backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
+                border: '3px solid white',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title={`${node.devices.length} devices`}
+              onMouseEnter={() => setHoveredNode(node)}
+              onMouseLeave={() => setHoveredNode(null)}
+            >
+              <span className="text-white text-xs font-bold">{node.devices.length}</span>
+            </div>
+          </Marker>
+        ))}
 
         {/* Topology Device Points (arranged around central node) */}
         {/* Topology Device Points - only for selected node */}
@@ -1069,6 +1057,7 @@ export const MapViewer = ({
       longitude={selectedNode.coordinates[0] + offsetLon}
       latitude={selectedNode.coordinates[1] + offsetLat}
       anchor="center"
+      onClick={() => onPointClick?.(device)}
     >
       <div 
         className="relative cursor-pointer hover:scale-110 transition-transform"
@@ -1083,10 +1072,6 @@ export const MapViewer = ({
         title={device.name}
         onMouseEnter={() => setHoveredPoint(device)}
         onMouseLeave={() => setHoveredPoint(null)}
-        onClick={(e) => {
-          e.stopPropagation(); // ← prevents map click from firing
-          onPointClick?.(device);
-        }}
       />
     </Marker>
   );

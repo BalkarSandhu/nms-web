@@ -74,7 +74,7 @@ export default function WorkerDetailPage() {
         data: [
           { field: 'IP Address', value: device.ip, colour: 'white' },
           { field: 'Type', value: device.device_type.name || 'N/A', colour: 'white' },
-          { field: 'Last Updated', value: device.updated_at || 'N/A', colour: 'white' },
+          { field: 'Last Updated', value: formatTimeAgo(device.updated_at) || 'N/A', colour: 'white' },
         ]
       },
       additionalData: {

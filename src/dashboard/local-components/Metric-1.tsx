@@ -2,7 +2,6 @@ import { useState } from "react";
 import BaseCard from "./Base-Card";
 import "@/index.css";
 import { MenuGroupType } from "./Base-Card";
-import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 
 export interface MetricData {
     low: number;
@@ -57,16 +56,8 @@ export default function Metric1({
     const chartData = historicalData.length > 0 ? historicalData : defaultHistoricalData;
 
     // Calculate trend
-    const calculateTrend = () => {
-        if (chartData.length < 2) return 0;
-        const recent = chartData.slice(-6);
-        const older = chartData.slice(-12, -6);
-        const recentAvg = recent.reduce((sum, d) => sum + d.online, 0) / recent.length;
-        const olderAvg = older.reduce((sum, d) => sum + d.online, 0) / older.length;
-        return ((recentAvg - olderAvg) / olderAvg) * 100;
-    };
+    
 
-    const trend = calculateTrend();
 
     const resolvedMenuGroups = menuGroups ?? [
         {

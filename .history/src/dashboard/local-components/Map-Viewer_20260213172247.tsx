@@ -223,7 +223,6 @@ export const MapViewer = ({
   const [hoveredNode, setHoveredNode] = useState<TopologyNode | null>(null);
   const [popupFilter, setPopupFilter] = useState<FilterLink | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
-  const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null);
   const [colors, setColors] = useState<{ red: string; azul: string; green: string; blue?: string; mixed?: string }>({
     red: '#D52941',
     azul: '#246EB9',
@@ -262,35 +261,44 @@ export const MapViewer = ({
 
   // Create topology connection lines
   const topologyConnectionsGeoJSON = useMemo(() => {
-  if (!enableTopology || !selectedNode) return { type: 'FeatureCollection' as const, features: [] };
-  
-  // Only render connections for the selected node
-  const node = selectedNode;
-  const centerCoord = node.coordinates;
-  
-  const features = node.devices.map((device, idx) => {
-    const angle = (idx / node.devices.length) * 2 * Math.PI;
-    const offsetLon = Math.cos(angle) * topologyConnectionRadius;
-    const offsetLat = Math.sin(angle) * topologyConnectionRadius;
-    const deviceCoord: [number, number] = [
-      centerCoord[0] + offsetLon,
-      centerCoord[1] + offsetLat
-    ];
-    return {
-      type: 'Feature' as const,
-      geometry: { type: 'LineString' as const, coordinates: [centerCoord, deviceCoord] },
-      properties: {
-        id: `${node.id}-${device.id}`,
-        color: colors[device.category] || colors.azul,
-        width: 2,
-        deviceId: device.id,
-        nodeId: node.id,
-      }
-    };
-  });
+    if (!enableTopology) return { type: 'FeatureCollection' as const, features: [] };
+    
+    const features = topologyNodes.flatMap(node => {
+      const centerCoord = node.coordinates;
+      
+      return node.devices.map((device, idx) => {
+        const angle = (idx / node.devices.length) * 2 * Math.PI;
+        const offsetLon = Math.cos(angle) * topologyConnectionRadius;
+        const offsetLat = Math.sin(angle) * topologyConnectionRadius;
+        const deviceCoord: [number, number] = [
+          centerCoord[0] + offsetLon,
+          centerCoord[1] + offsetLat
+        ];
+        
+        return {
+          type: 'Feature' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: [centerCoord, deviceCoord]
+          },
+          properties: {
+            id: `${node.id}-${device.id}`,
+            color: colors[device.category] || colors.azul,
+            width: 2,
+            deviceId: device.id,
+            nodeId: node.id,
+            lineType: 'dotted'
+          }
+        };
+      });
+    });
 
-  return { type: 'FeatureCollection' as const, features };
-}, [topologyNodes, enableTopology, topologyConnectionRadius, colors, selectedNode]);
+    return {
+      type: 'FeatureCollection' as const,
+      features
+    };
+  }, [topologyNodes, enableTopology, topologyConnectionRadius, colors]);
+
   // Create location-based connections (connecting devices with same location name)
   // This creates polygons by connecting the OUTER DEVICE POINTS of topology groups
   const locationConnectionsGeoJSON = useMemo(() => {
@@ -824,10 +832,6 @@ export const MapViewer = ({
         style={{ width: '100%', height: '100%' }}
         initialViewState={initialViewState}
         onMove={handleMove}
-        onClick={()=>{
-          setSelectedNode(null);
-          setHoveredNode(null);
-        }}
         maxBounds={maxBounds}
         dragRotate={false}
         scrollZoom={enableZoom}
@@ -1019,78 +1023,77 @@ export const MapViewer = ({
         )}
 
         {/* Topology Nodes (Central nodes for grouped devices) */}
-        {/* Topology Nodes */}
-        // Topology Nodes
-{showPoints && enableTopology && topologyNodes.map(node => (
-  <Marker
-    key={`node-${node.id}`}
-    longitude={node.coordinates[0]}
-    latitude={node.coordinates[1]}
-    anchor="center"
-  >
-    <div 
-      className="relative cursor-pointer hover:scale-110 transition-transform"
-      style={{
-        width: topologyNodeSize,
-        height: topologyNodeSize,
-        borderRadius: '50%',
-        backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
-        border: selectedNode?.id === node.id ? '3px solid #FFD700' : '3px solid white',
-        boxShadow: selectedNode?.id === node.id 
-          ? '0 0 12px rgba(255,215,0,0.8)' 
-          : '0 4px 8px rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}
-      title={`${node.devices.length} devices`}
-      onMouseEnter={() => setHoveredNode(node)}
-      onMouseLeave={() => setHoveredNode(null)}
-      onClick={(e) => {
-        e.stopPropagation(); // ← THIS is the fix
-        setSelectedNode(prev => prev?.id === node.id ? null : node);
-      }}
-    >
-      <span className="text-white text-xs font-bold">{node.devices.length}</span>
-    </div>
-  </Marker>
-))}
+        {showPoints && enableTopology && topologyNodes.map(node => (
+          <Marker
+            key={`node-${node.id}`}
+            longitude={node.coordinates[0]}
+            latitude={node.coordinates[1]}
+            anchor="center"
+          >
+            <div 
+              className="relative cursor-pointer hover:scale-110 transition-transform"
+              style={{
+                width: topologyNodeSize,
+                height: topologyNodeSize,
+                borderRadius: '50%',
+                backgroundColor: node.status === 'mixed' ? colors.mixed : colors[node.status],
+                border: '3px solid white',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title={`${node.devices.length} devices`}
+              onMouseEnter={() => setHoveredNode(node)}
+              onMouseLeave={() => setHoveredNode(null)}
+            >
+              <span className="text-white text-xs font-bold">{node.devices.length}</span>
+            </div>
+          </Marker>
+        ))}
 
         {/* Topology Device Points (arranged around central node) */}
-        {/* Topology Device Points - only for selected node */}
-{showPoints && enableTopology && selectedNode && selectedNode.devices.map((device, idx) => {
-  const angle = (idx / selectedNode.devices.length) * 2 * Math.PI;
-  const offsetLon = Math.cos(angle) * topologyConnectionRadius;
-  const offsetLat = Math.sin(angle) * topologyConnectionRadius;
-  
-  return (
-    <Marker
-      key={`topology-device-${device.id}`}
-      longitude={selectedNode.coordinates[0] + offsetLon}
-      latitude={selectedNode.coordinates[1] + offsetLat}
-      anchor="center"
-    >
-      <div 
-        className="relative cursor-pointer hover:scale-110 transition-transform"
-        style={{
-          width: pointSize * 0.8,
-          height: pointSize * 0.8,
-          borderRadius: '50%',
-          backgroundColor: colors[device.category],
-          border: '2px solid white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-        }}
-        title={device.name}
-        onMouseEnter={() => setHoveredPoint(device)}
-        onMouseLeave={() => setHoveredPoint(null)}
-        onClick={(e) => {
-          e.stopPropagation(); // ← prevents map click from firing
-          onPointClick?.(device);
-        }}
-      />
-    </Marker>
-  );
-})}
+        {showPoints && enableTopology && topologyNodes.map(node => 
+          node.devices.map((device, idx) => {
+            const angle = (idx / node.devices.length) * 2 * Math.PI;
+            const offsetLon = Math.cos(angle) * topologyConnectionRadius;
+            const offsetLat = Math.sin(angle) * topologyConnectionRadius;
+            
+            return (
+              <Marker
+                key={`topology-device-${device.id}`}
+                longitude={node.coordinates[0] + offsetLon}
+                latitude={node.coordinates[1] + offsetLat}
+                anchor="center"
+                onClick={() => onPointClick?.(device)}
+              >
+                <div 
+                  className="relative cursor-pointer hover:scale-110 transition-transform"
+                  style={{
+                    width: pointSize * 0.8,
+                    height: pointSize * 0.8,
+                    borderRadius: '50%',
+                    backgroundColor: colors[device.category],
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}
+                  title={device.name}
+                  onMouseEnter={() => setHoveredPoint(device)}
+                  onMouseLeave={() => setHoveredPoint(null)}
+                >
+                  {showLabels && currentZoom > 15 && (
+                    <div 
+                      className="absolute left-full ml-2 whitespace-nowrap text-xs font-medium"
+                      style={{ color: colors[device.category] }}
+                    >
+                      {device.name}
+                    </div>
+                  )}
+                </div>
+              </Marker>
+            );
+          })
+        )}
 
         {/* Single Devices (not part of topology groups) */}
         {showPoints && singleDevices.map(point => (

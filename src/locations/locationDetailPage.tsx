@@ -88,7 +88,7 @@ export default function LocationDetailPage() {
           data: [
             { field: 'IP Address', value: device.ip, colour: 'white' },
             { field: 'Type', value: device.device_type.name || 'N/A', colour: 'white' },
-            { field: 'Last Updated', value: device.updated_at || 'N/A', colour: 'white' },
+            { field: 'Last Updated', value: formatTimeAgo(device.updated_at) || 'N/A', colour: 'white' },
           ]
         },
         additionalData: {
@@ -155,7 +155,7 @@ export default function LocationDetailPage() {
       const locationStatusNormalized = normalizeStatus(location.status);
       generatedLogs.push({
         id: logId++,
-        timestamp: new Date(location.updated_at || Date.now()).toLocaleString(),
+        timestamp: new Date(formatTimeAgo(location.updated_at) || Date.now()).toLocaleString(),
         level: locationStatusNormalized === true ? 'success' : 'error',
         message: `Location status: ${getStatusDisplay(location.status)}`,
       });
@@ -164,7 +164,7 @@ export default function LocationDetailPage() {
         const deviceStatusNormalized = normalizeStatus(device.is_reachable);
         generatedLogs.push({
           id: logId++,
-          timestamp: new Date(device.last_check || device.updated_at).toLocaleString(),
+          timestamp: new Date(formatTimeAgo(device.updated_at) || Date.now()).toLocaleString(),
           level: deviceStatusNormalized === true ? 'success' : 'error',
           message: device.status_reason || (deviceStatusNormalized === true ? 'Device online' : 'Device offline'),
           device: device.hostname,
