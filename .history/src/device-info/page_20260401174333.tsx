@@ -44,6 +44,7 @@ const getLatencyColor = (latency: number) => {
 
 const renderLatencyDot = (props: any) => {
   const { cx, cy, payload } = props;
+  if (cx === null || cy === null) return null;
   const { latency } = payload;
   const color = getLatencyColor(latency).color;
   return <circle cx={cx} cy={cy} r={3} fill={color} stroke="#ffffff" strokeWidth={1} />;
@@ -71,6 +72,7 @@ export default function DeviceDetailPage() {
   type TimeRangeKey = '24h' | '7d' | '30d' | 'custom';
   type Granularity = 'raw' | 'hourly' | 'daily';
 
+  const [ setLogs] = useState<LogEntry[]>([]);
   const [mapDataPoints, setMapDataPoints] = useState<MapDataPoint[]>([]);
 
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
@@ -81,6 +83,7 @@ export default function DeviceDetailPage() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [uptimeData, setUptimeData] = useState<any>(null);
+  const [ setUptimeLoading] = useState(false);
   const [_, setUptimeError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);

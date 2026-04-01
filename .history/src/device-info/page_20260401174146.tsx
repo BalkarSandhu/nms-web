@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { authenticatedFetch } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,7 @@ const getLatencyColor = (latency: number) => {
 
 const renderLatencyDot = (props: any) => {
   const { cx, cy, payload } = props;
+  if (cx === null || cy === null) return null;
   const { latency } = payload;
   const color = getLatencyColor(latency).color;
   return <circle cx={cx} cy={cy} r={3} fill={color} stroke="#ffffff" strokeWidth={1} />;
@@ -52,6 +53,7 @@ const renderLatencyDot = (props: any) => {
 export default function DeviceDetailPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const deviceId = Number(searchParams.get('id'));
 
@@ -71,6 +73,7 @@ export default function DeviceDetailPage() {
   type TimeRangeKey = '24h' | '7d' | '30d' | 'custom';
   type Granularity = 'raw' | 'hourly' | 'daily';
 
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [mapDataPoints, setMapDataPoints] = useState<MapDataPoint[]>([]);
 
   const [historyData, setHistoryData] = useState<HistoryEntry[]>([]);
@@ -81,7 +84,8 @@ export default function DeviceDetailPage() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [uptimeData, setUptimeData] = useState<any>(null);
-  const [_, setUptimeError] = useState<string | null>(null);
+  const [uptimeLoading, setUptimeLoading] = useState(false);
+  const [uptimeError, setUptimeError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);
 
@@ -167,6 +171,7 @@ export default function DeviceDetailPage() {
   useEffect(() => {
     if (!deviceId) return;
 
+    setUptimeLoading(true);
     setUptimeError(null);
 
     const baseUrl = `${import.meta.env.VITE_NMS_HOST}/devices/${deviceId}/uptime`;
@@ -190,6 +195,7 @@ export default function DeviceDetailPage() {
       .catch((err) => {
         setUptimeError(err.message || 'Failed to fetch uptime');
       })
+      .finally(() => setUptimeLoading(false));
   }, [deviceId]);
 
   useEffect(() => {
@@ -249,6 +255,7 @@ export default function DeviceDetailPage() {
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
+      setLogs(generatedLogs);
     }
   }, [device]);
 

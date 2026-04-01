@@ -44,6 +44,7 @@ const getLatencyColor = (latency: number) => {
 
 const renderLatencyDot = (props: any) => {
   const { cx, cy, payload } = props;
+  if (cx === null || cy === null) return null;
   const { latency } = payload;
   const color = getLatencyColor(latency).color;
   return <circle cx={cx} cy={cy} r={3} fill={color} stroke="#ffffff" strokeWidth={1} />;
