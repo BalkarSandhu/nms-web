@@ -1020,7 +1020,6 @@ export const MapViewer = ({
 
         {/* Topology Nodes (Central nodes for grouped devices) */}
         {/* Topology Nodes */}
-        // Topology Nodes
 {showPoints && enableTopology && topologyNodes.map(node => (
   <Marker
     key={`node-${node.id}`}
