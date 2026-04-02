@@ -151,7 +151,6 @@ const TopologyEditor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   // Convert tree data to React Flow nodes and edges
   const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {
@@ -501,8 +500,8 @@ const TopologyEditor = () => {
             </div>
           ) : (
             <ReactFlow
-              nodes={filteredNodes}
-              edges={filteredEdges}
+              nodes={nodes}
+              edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onNodeClick={(_, node) => setSelectedNode(node.data.id)}
@@ -535,7 +534,7 @@ const TopologyEditor = () => {
 
       {/* Status Bar */}
       <div className="border-t border-slate-700/50 bg-slate-800/30 px-4 py-2 text-xs text-slate-500 flex justify-between">
-        <span>Total Locations: {filteredNodes.length} / {nodes.length}</span>
+        <span>Total Locations: {nodes.length}</span>
         <span>
           {autoRefresh && 'Auto-refresh enabled • '}Last updated:{' '}
           {new Date().toLocaleTimeString()}

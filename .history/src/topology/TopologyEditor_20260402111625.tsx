@@ -151,7 +151,6 @@ const TopologyEditor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   // Convert tree data to React Flow nodes and edges
   const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {

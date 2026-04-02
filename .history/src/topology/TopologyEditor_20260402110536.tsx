@@ -151,7 +151,6 @@ const TopologyEditor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   // Convert tree data to React Flow nodes and edges
   const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {
@@ -202,20 +201,6 @@ const TopologyEditor = () => {
 
     return { nodes, edges };
   };
-
-  // Filter nodes and edges
-  const filteredNodes = useMemo(() => {
-    return nodes.filter(node => {
-      const matchesSearch = searchTerm === '' || node.data.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || node.data.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    });
-  }, [nodes, searchTerm, filterStatus]);
-
-  const filteredEdges = useMemo(() => {
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    return edges.filter(edge => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target));
-  }, [edges, filteredNodes]);
 
   // Fetch topology tree from API
   const fetchTopology = useCallback(async () => {
@@ -387,6 +372,189 @@ const TopologyEditor = () => {
     return processTreeData(mockLocations);
   };
 
+  // Toggle node expansion
+  const toggleExpanded = useCallback((nodeId: number) => {
+    setExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Filter and search nodes
+  const filteredTree = useMemo(() => {
+    const filterNode = (node: TreeNode): TreeNode | null => {
+      const matchesSearch =
+        searchTerm === '' ||
+        node.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === 'all' || node.status === filterStatus;
+
+      const children = node.children
+        .map((child) => filterNode(child))
+        .filter((child): child is TreeNode => child !== null);
+
+      if (matchesSearch && matchesStatus) {
+        return {
+          ...node,
+          children,
+          isExpanded: true,
+        };
+      }
+
+      return children.length > 0
+        ? {
+            ...node,
+            children,
+            isExpanded: true,
+          }
+        : null;
+    };
+
+    return treeData
+      .map((node) => filterNode(node))
+      .filter((node): node is TreeNode => node !== null);
+  }, [treeData, searchTerm, filterStatus]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'text-emerald-500';
+      case 'offline':
+        return 'text-red-500';
+      default:
+        return 'text-slate-400';
+    }
+  };
+
+  const getStatusBgColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'offline':
+        return 'bg-red-500/10 border-red-500/20';
+      default:
+        return 'bg-slate-500/10 border-slate-500/20';
+    }
+  };
+
+  const renderTreeNode = (node: TreeNode, isRoot = false) => {
+    const isExpanded = expandedNodes.has(node.id);
+    const hasChildren = node.children && node.children.length > 0;
+    const isSelected = selectedNode === node.id;
+
+    return (
+      <div key={node.id} className="select-none">
+        <div
+          className={`
+            group flex items-center gap-2 px-3 py-2.5 rounded-lg 
+            transition-all duration-200 cursor-pointer
+            ${
+              isSelected
+                ? 'bg-blue-500/15 border border-blue-500/30'
+                : 'hover:bg-slate-700/40 border border-transparent'
+            }
+            ${!isRoot ? 'ml-4' : ''}
+          `}
+          onClick={() => setSelectedNode(node.id)}
+          onDoubleClick={() => hasChildren && toggleExpanded(node.id)}
+        >
+          {/* Expand/Collapse Button */}
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpanded(node.id);
+              }}
+              className="flex items-center justify-center w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+            </button>
+          ) : (
+            <div className="w-5" />
+          )}
+
+          {/* Status Indicator */}
+          <div className="flex-shrink-0">
+            <Circle
+              size={10}
+              className={`fill-current ${getStatusColor(node.status)}`}
+            />
+          </div>
+
+          {/* Node Icon */}
+          <div className="flex-shrink-0 text-slate-400 group-hover:text-slate-300">
+            {node.level === 0 && <Server size={16} />}
+            {node.level === 1 && <Network size={16} />}
+            {node.level > 1 && <Activity size={16} />}
+          </div>
+
+          {/* Node Name */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-200 truncate">
+              {node.name}
+            </p>
+            {node.description && (
+              <p className="text-xs text-slate-400 truncate mt-0.5">
+                {node.description}
+              </p>
+            )}
+          </div>
+
+          {/* Health Badge */}
+          {node.device_count !== undefined && (
+            <div
+              className={`
+                flex-shrink-0 text-xs font-medium px-2 py-1 rounded-md
+                border ${getStatusBgColor(node.status)}
+              `}
+            >
+              {node.online_device_count}/{node.device_count}
+            </div>
+          )}
+
+          {/* Health Percentage */}
+          {node.health_percentage !== undefined && (
+            <div className="flex-shrink-0 flex items-center gap-1.5">
+              <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    node.health_percentage >= 80
+                      ? 'bg-emerald-500'
+                      : node.health_percentage >= 50
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
+                  }`}
+                  style={{ width: `${node.health_percentage}%` }}
+                />
+              </div>
+              <span className="text-xs text-slate-400 w-8 text-right">
+                {node.health_percentage}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Children */}
+        {hasChildren && isExpanded && (
+          <div className="relative">
+            <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-700/50" />
+            {node.children.map((child) => renderTreeNode(child))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex flex-col overflow-hidden">
       {/* Header */}
@@ -475,10 +643,10 @@ const TopologyEditor = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex">
-        {/* Graph View */}
-        <div className="flex-1 overflow-hidden">
+        {/* Tree View */}
+        <div className="flex-1 overflow-auto">
           {error && (
-            <div className="absolute top-20 left-4 right-4 z-10 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-3">
+            <div className="m-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-3">
               <AlertCircle className="text-yellow-400 flex-shrink-0 mt-0.5" size={18} />
               <div>
                 <p className="text-sm font-medium text-yellow-300">
@@ -489,36 +657,23 @@ const TopologyEditor = () => {
             </div>
           )}
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <RefreshCw className="animate-spin text-blue-400 mb-3" size={32} />
-              <p className="text-slate-400">Loading topology...</p>
-            </div>
-          ) : nodes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <AlertCircle className="text-slate-500 mb-3" size={32} />
-              <p className="text-slate-400">No locations found</p>
-            </div>
-          ) : (
-            <ReactFlow
-              nodes={filteredNodes}
-              edges={filteredEdges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={(_, node) => setSelectedNode(node.data.id)}
-              nodeTypes={nodeTypes}
-              fitView
-              className="bg-slate-900"
-            >
-              <Background color="#334155" gap={20} />
-              <Controls />
-              <MiniMap
-                nodeColor="#64748b"
-                maskColor="#0f172a"
-                style={{ background: '#1e293b' }}
-              />
-            </ReactFlow>
-          )}
+          <div className="p-4 max-w-7xl">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <RefreshCw className="animate-spin text-blue-400 mb-3" size={32} />
+                <p className="text-slate-400">Loading topology...</p>
+              </div>
+            ) : filteredTree.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <AlertCircle className="text-slate-500 mb-3" size={32} />
+                <p className="text-slate-400">No locations found</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredTree.map((node) => renderTreeNode(node, true))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar - Node Details */}
@@ -526,7 +681,7 @@ const TopologyEditor = () => {
           <div className="w-80 border-l border-slate-700/50 bg-slate-800/20 backdrop-blur-sm overflow-auto">
             <NodeDetails
               nodeId={selectedNode}
-              nodes={nodes}
+              treeData={treeData}
               onClose={() => setSelectedNode(null)}
             />
           </div>
@@ -535,7 +690,7 @@ const TopologyEditor = () => {
 
       {/* Status Bar */}
       <div className="border-t border-slate-700/50 bg-slate-800/30 px-4 py-2 text-xs text-slate-500 flex justify-between">
-        <span>Total Locations: {filteredNodes.length} / {nodes.length}</span>
+        <span>Total Locations: {treeData.length}</span>
         <span>
           {autoRefresh && 'Auto-refresh enabled • '}Last updated:{' '}
           {new Date().toLocaleTimeString()}
@@ -548,12 +703,21 @@ const TopologyEditor = () => {
 // Node Details Sidebar Component
 interface NodeDetailsProps {
   nodeId: number;
-  nodes: Node[];
+  treeData: TreeNode[];
   onClose: () => void;
 }
 
-const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, nodes, onClose }) => {
-  const node = nodes.find(n => n.data.id === nodeId);
+const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, treeData, onClose }) => {
+  const findNode = (nodes: TreeNode[]): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === nodeId) return node;
+      const found = findNode(node.children);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const node = findNode(treeData);
 
   if (!node) return null;
 

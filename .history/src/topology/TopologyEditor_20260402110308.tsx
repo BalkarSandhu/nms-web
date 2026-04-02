@@ -16,18 +16,6 @@ import {
   Server,
   Network,
 } from 'lucide-react';
-import ReactFlow, {
-  Node,
-  Edge,
-  Background,
-  Controls,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  Panel,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import { getAuthHeaders } from '@/lib/auth';
 
 interface Location {
   id: number;
@@ -41,16 +29,15 @@ interface Location {
   online_device_count?: number;
   offline_device_count?: number;
   health_percentage?: number;
+  location_type_id?: number;
+  latitude?: number;
+  longitude?: number;
+  created_at?: string;
+  updated_at?: string;
+  devices?: any[];
   children?: Location[];
   depth?: number;
   has_children?: boolean;
-  latitude?: number;
-  longitude?: number;
-  location_type_id?: number;
-  worker_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  status_reason?: string;
 }
 
 interface TreeNode extends Location {
@@ -59,195 +46,72 @@ interface TreeNode extends Location {
   level: number;
 }
 
-// Custom Node Component
-const LocationNode = ({ data }: { data: TreeNode }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'text-emerald-500';
-      case 'offline':
-        return 'text-red-500';
-      default:
-        return 'text-slate-400';
-    }
-  };
-
-  const getStatusBgColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'bg-emerald-500/10 border-emerald-500/20';
-      case 'offline':
-        return 'bg-red-500/10 border-red-500/20';
-      default:
-        return 'bg-slate-500/10 border-slate-500/20';
-    }
-  };
-
-  return (
-    <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 min-w-[200px] shadow-lg">
-      <div className="flex items-center gap-2 mb-2">
-        <Circle
-          size={10}
-          className={`fill-current ${getStatusColor(data.status)}`}
-        />
-        <div className="text-slate-400">
-          {data.level === 0 && <Server size={16} />}
-          {data.level === 1 && <Network size={16} />}
-          {data.level > 1 && <Activity size={16} />}
-        </div>
-        <h3 className="text-sm font-medium text-slate-200 truncate flex-1">
-          {data.name}
-        </h3>
-      </div>
-
-      {data.description && (
-        <p className="text-xs text-slate-400 mb-2 truncate">
-          {data.description}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between">
-        {data.device_count !== undefined && (
-          <div
-            className={`text-xs font-medium px-2 py-1 rounded-md border ${getStatusBgColor(data.status)}`}
-          >
-            {data.online_device_count}/{data.device_count}
-          </div>
-        )}
-
-        {data.health_percentage !== undefined && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  data.health_percentage >= 80
-                    ? 'bg-emerald-500'
-                    : data.health_percentage >= 50
-                      ? 'bg-yellow-500'
-                      : 'bg-red-500'
-                }`}
-                style={{ width: `${data.health_percentage}%` }}
-              />
-            </div>
-            <span className="text-xs text-slate-400">
-              {data.health_percentage}%
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const nodeTypes = {
-  locationNode: LocationNode,
-};
-
 const TopologyEditor = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
+  const [selectedNode, setSelectedNode] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
-
-  // Convert tree data to React Flow nodes and edges
-  const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-    let nodeId = 0;
-
-    const processNode = (node: TreeNode, x: number, y: number, parentId?: string): string => {
-      const id = `node-${node.id}`;
-      nodes.push({
-        id,
-        type: 'locationNode',
-        position: { x, y },
-        data: node,
-        draggable: true,
-      });
-
-      if (parentId) {
-        edges.push({
-          id: `edge-${parentId}-${id}`,
-          source: parentId,
-          target: id,
-          type: 'smoothstep',
-          style: { stroke: '#64748b', strokeWidth: 2 },
-        });
-      }
-
-      // Position children
-      if (node.children && node.children.length > 0) {
-        const childSpacing = 250; // Horizontal spacing between siblings
-        const startX = x - ((node.children.length - 1) * childSpacing) / 2;
-        node.children.forEach((child, index) => {
-          const childX = startX + index * childSpacing;
-          const childY = y + 150; // Vertical spacing
-          processNode(child, childX, childY, id);
-        });
-      }
-
-      return id;
-    };
-
-    // Process root nodes
-    treeNodes.forEach((rootNode, index) => {
-      const rootX = index * 400; // Spacing between root nodes
-      const rootY = 50;
-      processNode(rootNode, rootX, rootY);
-    });
-
-    return { nodes, edges };
-  };
-
-  // Filter nodes and edges
-  const filteredNodes = useMemo(() => {
-    return nodes.filter(node => {
-      const matchesSearch = searchTerm === '' || node.data.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || node.data.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    });
-  }, [nodes, searchTerm, filterStatus]);
-
-  const filteredEdges = useMemo(() => {
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    return edges.filter(edge => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target));
-  }, [edges, filteredNodes]);
 
   // Fetch topology tree from API
   const fetchTopology = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/locations/tree`, {
-        headers: getAuthHeaders()
-      });
+      const API_BASE_URL = 'http://103.208.173.228:8000/api';
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
+      // Fetch root locations first
+      const rootsResponse = await fetch(`${API_BASE_URL}/locations/roots`);
+      if (!rootsResponse.ok) {
+        throw new Error(`Failed to fetch roots: ${rootsResponse.statusText}`);
       }
 
-      const data = await response.json();
-      const processedTree = processTreeData(data.tree || []);
-      const { nodes: graphNodes, edges: graphEdges } = buildGraphData(processedTree);
-      setNodes(graphNodes);
-      setEdges(graphEdges);
+      const rootsData = await rootsResponse.json();
+      let rootLocations = rootsData.locations || [];
+
+      // Process each root with its full subtree
+      const fullTrees = await Promise.all(
+        rootLocations.map((root: Location) => fetchFullSubtree(root, 0))
+      );
+
+      setTreeData(fullTrees);
       setError(null);
+
+      // Auto-expand first node
+      if (fullTrees.length > 0) {
+        const initialExpanded = new Set<number>();
+        initialExpanded.add(fullTrees[0].id);
+        setExpandedNodes(initialExpanded);
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load topology';
       setError(errorMsg);
       console.error('Error fetching topology:', err);
-      // Show mock data on error for demo
+
+      // Fallback: try direct tree endpoint
+      try {
+        const API_BASE_URL = 'http://103.208.173.228:8000/api';
+        const treeResponse = await fetch(`${API_BASE_URL}/locations/tree`);
+        if (treeResponse.ok) {
+          const data = await treeResponse.json();
+          const processedTree = processTreeData(data.tree || []);
+          setTreeData(processedTree);
+          setError(null);
+          return;
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback tree endpoint also failed');
+      }
+
+      // Last resort: mock data
       const mockData = generateMockTopology();
-      const { nodes: graphNodes, edges: graphEdges } = buildGraphData(mockData);
-      setNodes(graphNodes);
-      setEdges(graphEdges);
+      setTreeData(mockData);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchFullSubtree]);
 
   // Initial fetch
   useEffect(() => {
@@ -274,6 +138,88 @@ const TopologyEditor = () => {
       level,
     }));
   };
+
+  // Fetch children for a specific node (for lazy loading)
+  const fetchChildren = useCallback(async (parentId: number): Promise<Location[]> => {
+    try {
+      const API_BASE_URL = 'http://103.208.173.228:8000/api';
+      const response = await fetch(
+        `${API_BASE_URL}/locations/${parentId}/children`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch children for ${parentId}`);
+      }
+
+      const data = await response.json();
+      return data.children || [];
+    } catch (err) {
+      console.error('Error fetching children:', err);
+      return [];
+    }
+  }, []);
+
+  // Calculate status based on devices if not explicitly provided
+  const getLocationStatus = (location: Location): 'online' | 'offline' | 'unknown' => {
+    // Use explicit status if provided
+    if (location.status && location.status !== 'unknown') {
+      return location.status;
+    }
+
+    // Calculate from devices if available
+    if (location.devices && location.devices.length > 0) {
+      const onlineDevices = location.devices.filter(
+        (d: any) => d.is_reachable === true
+      ).length;
+
+      if (onlineDevices === 0) return 'offline';
+      if (onlineDevices === location.devices.length) return 'online';
+      return 'online'; // Partial online still counts as online
+    }
+
+    // Calculate from device counts if available
+    if (location.device_count !== undefined && location.online_device_count !== undefined) {
+      if (location.online_device_count === 0) return 'offline';
+      if (location.online_device_count > 0) return 'online';
+    }
+
+    return 'unknown';
+  };
+    async (node: Location, level: number = 0): Promise<TreeNode> => {
+      try {
+        let children: Location[] = [];
+
+        // First check if node has children in the response
+        if (node.children && node.children.length > 0) {
+          children = node.children;
+        } else if (node.has_children) {
+          // If marked as having children but not included, fetch them
+          children = await fetchChildren(node.id);
+        }
+
+        // Recursively process children
+        const processedChildren = await Promise.all(
+          children.map((child) => fetchFullSubtree(child, level + 1))
+        );
+
+        return {
+          ...node,
+          children: processedChildren,
+          isExpanded: false,
+          level,
+        };
+      } catch (err) {
+        console.error(`Error fetching full subtree for ${node.id}:`, err);
+        return {
+          ...node,
+          children: [],
+          isExpanded: false,
+          level,
+        };
+      }
+    },
+    [fetchChildren]
+  );
 
   // Generate mock data for demo/fallback
   const generateMockTopology = (): TreeNode[] => {
@@ -387,6 +333,190 @@ const TopologyEditor = () => {
     return processTreeData(mockLocations);
   };
 
+  // Toggle node expansion
+  const toggleExpanded = useCallback((nodeId: number) => {
+    setExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Filter and search nodes
+  const filteredTree = useMemo(() => {
+    const filterNode = (node: TreeNode): TreeNode | null => {
+      const matchesSearch =
+        searchTerm === '' ||
+        node.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === 'all' || node.status === filterStatus;
+
+      const children = node.children
+        .map((child) => filterNode(child))
+        .filter((child): child is TreeNode => child !== null);
+
+      if (matchesSearch && matchesStatus) {
+        return {
+          ...node,
+          children,
+          isExpanded: true,
+        };
+      }
+
+      return children.length > 0
+        ? {
+            ...node,
+            children,
+            isExpanded: true,
+          }
+        : null;
+    };
+
+    return treeData
+      .map((node) => filterNode(node))
+      .filter((node): node is TreeNode => node !== null);
+  }, [treeData, searchTerm, filterStatus]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'text-emerald-500';
+      case 'offline':
+        return 'text-red-500';
+      default:
+        return 'text-slate-400';
+    }
+  };
+
+  const getStatusBgColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'offline':
+        return 'bg-red-500/10 border-red-500/20';
+      default:
+        return 'bg-slate-500/10 border-slate-500/20';
+    }
+  };
+
+  const renderTreeNode = (node: TreeNode, isRoot = false) => {
+    const isExpanded = expandedNodes.has(node.id);
+    const hasChildren = node.children && node.children.length > 0;
+    const isSelected = selectedNode === node.id;
+    const nodeStatus = getLocationStatus(node as Location);
+
+    return (
+      <div key={node.id} className="select-none">
+        <div
+          className={`
+            group flex items-center gap-2 px-3 py-2.5 rounded-lg 
+            transition-all duration-200 cursor-pointer
+            ${
+              isSelected
+                ? 'bg-blue-500/15 border border-blue-500/30'
+                : 'hover:bg-slate-700/40 border border-transparent'
+            }
+            ${!isRoot ? 'ml-4' : ''}
+          `}
+          onClick={() => setSelectedNode(node.id)}
+          onDoubleClick={() => hasChildren && toggleExpanded(node.id)}
+        >
+          {/* Expand/Collapse Button */}
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpanded(node.id);
+              }}
+              className="flex items-center justify-center w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDown size={16} />
+              ) : (
+                <ChevronRight size={16} />
+              )}
+            </button>
+          ) : (
+            <div className="w-5" />
+          )}
+
+          {/* Status Indicator */}
+          <div className="flex-shrink-0">
+            <Circle
+              size={10}
+              className={`fill-current ${getStatusColor(nodeStatus)}`}
+            />
+          </div>
+
+          {/* Node Icon */}
+          <div className="flex-shrink-0 text-slate-400 group-hover:text-slate-300">
+            {node.level === 0 && <Server size={16} />}
+            {node.level === 1 && <Network size={16} />}
+            {node.level > 1 && <Activity size={16} />}
+          </div>
+
+          {/* Node Name */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-200 truncate">
+              {node.name}
+            </p>
+            {node.description && (
+              <p className="text-xs text-slate-400 truncate mt-0.5">
+                {node.description}
+              </p>
+            )}
+          </div>
+
+          {/* Health Badge */}
+          {node.device_count !== undefined && (
+            <div
+              className={`
+                flex-shrink-0 text-xs font-medium px-2 py-1 rounded-md
+                border ${getStatusBgColor(nodeStatus)}
+              `}
+            >
+              {node.online_device_count || 0}/{node.device_count}
+            </div>
+          )}
+
+          {/* Health Percentage */}
+          {node.health_percentage !== undefined && (
+            <div className="flex-shrink-0 flex items-center gap-1.5">
+              <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    node.health_percentage >= 80
+                      ? 'bg-emerald-500'
+                      : node.health_percentage >= 50
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
+                  }`}
+                  style={{ width: `${node.health_percentage}%` }}
+                />
+              </div>
+              <span className="text-xs text-slate-400 w-8 text-right">
+                {node.health_percentage}%
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Children */}
+        {hasChildren && isExpanded && (
+          <div className="relative">
+            <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-700/50" />
+            {node.children.map((child) => renderTreeNode(child))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex flex-col overflow-hidden">
       {/* Header */}
@@ -475,10 +605,10 @@ const TopologyEditor = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex">
-        {/* Graph View */}
-        <div className="flex-1 overflow-hidden">
+        {/* Tree View */}
+        <div className="flex-1 overflow-auto">
           {error && (
-            <div className="absolute top-20 left-4 right-4 z-10 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-3">
+            <div className="m-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-3">
               <AlertCircle className="text-yellow-400 flex-shrink-0 mt-0.5" size={18} />
               <div>
                 <p className="text-sm font-medium text-yellow-300">
@@ -489,36 +619,23 @@ const TopologyEditor = () => {
             </div>
           )}
 
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <RefreshCw className="animate-spin text-blue-400 mb-3" size={32} />
-              <p className="text-slate-400">Loading topology...</p>
-            </div>
-          ) : nodes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <AlertCircle className="text-slate-500 mb-3" size={32} />
-              <p className="text-slate-400">No locations found</p>
-            </div>
-          ) : (
-            <ReactFlow
-              nodes={filteredNodes}
-              edges={filteredEdges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={(_, node) => setSelectedNode(node.data.id)}
-              nodeTypes={nodeTypes}
-              fitView
-              className="bg-slate-900"
-            >
-              <Background color="#334155" gap={20} />
-              <Controls />
-              <MiniMap
-                nodeColor="#64748b"
-                maskColor="#0f172a"
-                style={{ background: '#1e293b' }}
-              />
-            </ReactFlow>
-          )}
+          <div className="p-4 max-w-7xl">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <RefreshCw className="animate-spin text-blue-400 mb-3" size={32} />
+                <p className="text-slate-400">Loading topology...</p>
+              </div>
+            ) : filteredTree.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <AlertCircle className="text-slate-500 mb-3" size={32} />
+                <p className="text-slate-400">No locations found</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredTree.map((node) => renderTreeNode(node, true))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar - Node Details */}
@@ -526,7 +643,7 @@ const TopologyEditor = () => {
           <div className="w-80 border-l border-slate-700/50 bg-slate-800/20 backdrop-blur-sm overflow-auto">
             <NodeDetails
               nodeId={selectedNode}
-              nodes={nodes}
+              treeData={treeData}
               onClose={() => setSelectedNode(null)}
             />
           </div>
@@ -535,7 +652,7 @@ const TopologyEditor = () => {
 
       {/* Status Bar */}
       <div className="border-t border-slate-700/50 bg-slate-800/30 px-4 py-2 text-xs text-slate-500 flex justify-between">
-        <span>Total Locations: {filteredNodes.length} / {nodes.length}</span>
+        <span>Total Locations: {treeData.length}</span>
         <span>
           {autoRefresh && 'Auto-refresh enabled • '}Last updated:{' '}
           {new Date().toLocaleTimeString()}
@@ -548,12 +665,21 @@ const TopologyEditor = () => {
 // Node Details Sidebar Component
 interface NodeDetailsProps {
   nodeId: number;
-  nodes: Node[];
+  treeData: TreeNode[];
   onClose: () => void;
 }
 
-const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, nodes, onClose }) => {
-  const node = nodes.find(n => n.data.id === nodeId);
+const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, treeData, onClose }) => {
+  const findNode = (nodes: TreeNode[]): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === nodeId) return node;
+      const found = findNode(node.children);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const node = findNode(treeData);
 
   if (!node) return null;
 

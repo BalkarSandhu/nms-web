@@ -151,7 +151,6 @@ const TopologyEditor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   // Convert tree data to React Flow nodes and edges
   const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {
@@ -202,20 +201,6 @@ const TopologyEditor = () => {
 
     return { nodes, edges };
   };
-
-  // Filter nodes and edges
-  const filteredNodes = useMemo(() => {
-    return nodes.filter(node => {
-      const matchesSearch = searchTerm === '' || node.data.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || node.data.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    });
-  }, [nodes, searchTerm, filterStatus]);
-
-  const filteredEdges = useMemo(() => {
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    return edges.filter(edge => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target));
-  }, [edges, filteredNodes]);
 
   // Fetch topology tree from API
   const fetchTopology = useCallback(async () => {
@@ -501,11 +486,10 @@ const TopologyEditor = () => {
             </div>
           ) : (
             <ReactFlow
-              nodes={filteredNodes}
-              edges={filteredEdges}
+              nodes={nodes}
+              edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
-              onNodeClick={(_, node) => setSelectedNode(node.data.id)}
               nodeTypes={nodeTypes}
               fitView
               className="bg-slate-900"
@@ -526,7 +510,7 @@ const TopologyEditor = () => {
           <div className="w-80 border-l border-slate-700/50 bg-slate-800/20 backdrop-blur-sm overflow-auto">
             <NodeDetails
               nodeId={selectedNode}
-              nodes={nodes}
+              treeData={[]} // TODO: Update this to work with nodes
               onClose={() => setSelectedNode(null)}
             />
           </div>
@@ -535,7 +519,7 @@ const TopologyEditor = () => {
 
       {/* Status Bar */}
       <div className="border-t border-slate-700/50 bg-slate-800/30 px-4 py-2 text-xs text-slate-500 flex justify-between">
-        <span>Total Locations: {filteredNodes.length} / {nodes.length}</span>
+        <span>Total Locations: {nodes.length}</span>
         <span>
           {autoRefresh && 'Auto-refresh enabled • '}Last updated:{' '}
           {new Date().toLocaleTimeString()}
@@ -548,12 +532,21 @@ const TopologyEditor = () => {
 // Node Details Sidebar Component
 interface NodeDetailsProps {
   nodeId: number;
-  nodes: Node[];
+  treeData: TreeNode[];
   onClose: () => void;
 }
 
-const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, nodes, onClose }) => {
-  const node = nodes.find(n => n.data.id === nodeId);
+const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, treeData, onClose }) => {
+  const findNode = (nodes: TreeNode[]): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === nodeId) return node;
+      const found = findNode(node.children);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const node = findNode(treeData);
 
   if (!node) return null;
 

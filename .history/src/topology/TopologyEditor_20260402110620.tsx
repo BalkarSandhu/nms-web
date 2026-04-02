@@ -151,7 +151,6 @@ const TopologyEditor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   // Convert tree data to React Flow nodes and edges
   const buildGraphData = (treeNodes: TreeNode[]): { nodes: Node[], edges: Edge[] } => {
@@ -202,20 +201,6 @@ const TopologyEditor = () => {
 
     return { nodes, edges };
   };
-
-  // Filter nodes and edges
-  const filteredNodes = useMemo(() => {
-    return nodes.filter(node => {
-      const matchesSearch = searchTerm === '' || node.data.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || node.data.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    });
-  }, [nodes, searchTerm, filterStatus]);
-
-  const filteredEdges = useMemo(() => {
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    return edges.filter(edge => filteredNodeIds.has(edge.source) && filteredNodeIds.has(edge.target));
-  }, [edges, filteredNodes]);
 
   // Fetch topology tree from API
   const fetchTopology = useCallback(async () => {
@@ -273,118 +258,6 @@ const TopologyEditor = () => {
       isExpanded: false,
       level,
     }));
-  };
-
-  // Generate mock data for demo/fallback
-  const generateMockTopology = (): TreeNode[] => {
-    const mockLocations: Location[] = [
-      {
-        id: 1,
-        name: 'Data Center - Delhi',
-        parent_id: null,
-        status: 'online',
-        project: 'Infrastructure',
-        area: 'North India',
-        device_count: 45,
-        online_device_count: 44,
-        offline_device_count: 1,
-        health_percentage: 97,
-        children: [
-          {
-            id: 2,
-            name: 'Server Room A',
-            parent_id: 1,
-            status: 'online',
-            project: 'Infrastructure',
-            area: 'North India',
-            device_count: 20,
-            online_device_count: 20,
-            offline_device_count: 0,
-            health_percentage: 100,
-            children: [
-              {
-                id: 5,
-                name: 'Rack 01',
-                parent_id: 2,
-                status: 'online',
-                project: 'Infrastructure',
-                area: 'North India',
-                device_count: 8,
-                online_device_count: 8,
-                offline_device_count: 0,
-                health_percentage: 100,
-              },
-              {
-                id: 6,
-                name: 'Rack 02',
-                parent_id: 2,
-                status: 'online',
-                project: 'Infrastructure',
-                area: 'North India',
-                device_count: 12,
-                online_device_count: 11,
-                offline_device_count: 1,
-                health_percentage: 92,
-              },
-            ],
-          },
-          {
-            id: 3,
-            name: 'Server Room B',
-            parent_id: 1,
-            status: 'offline',
-            project: 'Infrastructure',
-            area: 'North India',
-            device_count: 25,
-            online_device_count: 15,
-            offline_device_count: 10,
-            health_percentage: 60,
-            children: [
-              {
-                id: 7,
-                name: 'Rack 03',
-                parent_id: 3,
-                status: 'offline',
-                project: 'Infrastructure',
-                area: 'North India',
-                device_count: 10,
-                online_device_count: 5,
-                offline_device_count: 5,
-                health_percentage: 50,
-              },
-            ],
-          },
-        ],
-      },
-      {
-        id: 4,
-        name: 'Data Center - Mumbai',
-        parent_id: null,
-        status: 'online',
-        project: 'Infrastructure',
-        area: 'West India',
-        device_count: 32,
-        online_device_count: 32,
-        offline_device_count: 0,
-        health_percentage: 100,
-        children: [
-          {
-            id: 8,
-            name: 'Server Room C',
-            parent_id: 4,
-            status: 'online',
-            project: 'Infrastructure',
-            area: 'West India',
-            device_count: 32,
-            online_device_count: 32,
-            offline_device_count: 0,
-            health_percentage: 100,
-          },
-        ],
-      },
-    ];
-
-    return processTreeData(mockLocations);
   };
 
   return (
@@ -501,11 +374,10 @@ const TopologyEditor = () => {
             </div>
           ) : (
             <ReactFlow
-              nodes={filteredNodes}
-              edges={filteredEdges}
+              nodes={nodes}
+              edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
-              onNodeClick={(_, node) => setSelectedNode(node.data.id)}
               nodeTypes={nodeTypes}
               fitView
               className="bg-slate-900"
@@ -526,7 +398,7 @@ const TopologyEditor = () => {
           <div className="w-80 border-l border-slate-700/50 bg-slate-800/20 backdrop-blur-sm overflow-auto">
             <NodeDetails
               nodeId={selectedNode}
-              nodes={nodes}
+              treeData={[]} // TODO: Update this to work with nodes
               onClose={() => setSelectedNode(null)}
             />
           </div>
@@ -535,7 +407,7 @@ const TopologyEditor = () => {
 
       {/* Status Bar */}
       <div className="border-t border-slate-700/50 bg-slate-800/30 px-4 py-2 text-xs text-slate-500 flex justify-between">
-        <span>Total Locations: {filteredNodes.length} / {nodes.length}</span>
+        <span>Total Locations: {nodes.length}</span>
         <span>
           {autoRefresh && 'Auto-refresh enabled • '}Last updated:{' '}
           {new Date().toLocaleTimeString()}
@@ -548,12 +420,21 @@ const TopologyEditor = () => {
 // Node Details Sidebar Component
 interface NodeDetailsProps {
   nodeId: number;
-  nodes: Node[];
+  treeData: TreeNode[];
   onClose: () => void;
 }
 
-const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, nodes, onClose }) => {
-  const node = nodes.find(n => n.data.id === nodeId);
+const NodeDetails: React.FC<NodeDetailsProps> = ({ nodeId, treeData, onClose }) => {
+  const findNode = (nodes: TreeNode[]): TreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === nodeId) return node;
+      const found = findNode(node.children);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const node = findNode(treeData);
 
   if (!node) return null;
 
