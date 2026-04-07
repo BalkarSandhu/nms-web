@@ -1,7 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchLocationsPaginated } from '@/store/locationsSlice';
 import LocationsFilters, { type FilterConfig } from './filters';
+import { EditLocationForm } from './EditLocationForm';
+import { DeleteLocationForm } from './DeleteLocationForm';
 import {
     Table,
     TableBody,
@@ -10,6 +13,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type EnrichedLocation = {
     id: number;
@@ -17,7 +22,6 @@ export type EnrichedLocation = {
     latitude: number;
     longitude: number;
     status: string;
-    
     status_reason: string;
     location_type_id: number;
     project: string;
@@ -33,17 +37,17 @@ export type EnrichedLocation = {
     device_ids: number[];
 };
 
-
 export const useEnrichedLocations = (): EnrichedLocation[] => {
     const { locations, locationTypes } = useAppSelector(state => state.locations);
     const { workers } = useAppSelector(state => state.workers);
     const { devices } = useAppSelector(state => state.devices);
+
     const normalizeStatus = (status: any): boolean | 'false' => {
-  if (status === 'unknown' || status === 'Unknown' || status === null || status === undefined) {
-    return false;
-  }
-  return status;
-};
+        if (status === 'unknown' || status === 'Unknown' || status === null || status === undefined) {
+            return false;
+        }
+        return status;
+    };
 
     return useMemo(() => {
         return locations.map((location) => {
@@ -55,9 +59,7 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
             const worker_hostname = worker?.name;
 
             const locationDevices = devices.filter(device => device.location_id === location.id);
-            // const devices_online = locationDevices.filter(d => d.is_reachable === true).length;
             const devices_online = locationDevices.filter(d => normalizeStatus(d.is_reachable) === true).length;
-
             const devices_offline = locationDevices.filter(d => normalizeStatus(d.is_reachable) === false).length;
             const devices_total = locationDevices.length;
             const device_ids = locationDevices.map(d => d.id);
@@ -76,86 +78,127 @@ export const useEnrichedLocations = (): EnrichedLocation[] => {
     }, [locations, locationTypes, workers, devices]);
 };
 
-export default function LocationsTable({ 
+export default function LocationsTable({
     onRowClick,
     selectedLocationId,
     onDataChange,
     initialFilters,
     onFiltersChange
-}: { 
+}: {
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
     onDataChange?: (rows: EnrichedLocation[]) => void;
-    initialFilters?: Record<string,string>;
-    onFiltersChange?: (filters: Record<string,string>) => void;
+    initialFilters?: Record<string, string>;
+    onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
     const enrichedLocations = useEnrichedLocations();
     const [searchParams] = useSearchParams();
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedLocationId || null);
     const [hasProcessedUrlId, setHasProcessedUrlId] = useState(false);
-    
+
     const [filters, setFilters] = useState<Record<string, string>>(() => {
         if (initialFilters) return initialFilters;
         try {
             const params = new URLSearchParams(window.location.search);
-            const statusParam = params.get('status');
-            const typeParam = params.get('type');
-            const projectParam = params.get('project');
-            const areaParam = params.get('area');
             const init: Record<string, string> = {};
-            if (statusParam) init.status = String(statusParam).toLowerCase();
-            if (typeParam) init.type = String(typeParam).trim();
-            if (projectParam) init.project = String(projectParam).trim();
-            if (areaParam) init.area = String(areaParam).trim();
+            const s = params.get('status'); if (s) init.status = s.toLowerCase();
+            const t = params.get('type');   if (t) init.type = t.trim();
+            const p = params.get('project');if (p) init.project = p.trim();
+            const a = params.get('area');   if (a) init.area = a.trim();
             return init;
         } catch {
             return {};
         }
     });
 
-    // React to changes in search params - update filters when URL changes
-    useEffect(() => {
-        const statusParam = searchParams.get('status');
-        const typeParam = searchParams.get('type');
-        const projectParam = searchParams.get('project');
-        const areaParam = searchParams.get('area');
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedLocationForAction, setSelectedLocationForAction] = useState<number | null>(null);
 
+    const dispatch = useAppDispatch();
+    const { pagination, paginationLoading: loading } = useAppSelector(state => state.locations);
+
+    // ─── Pagination state ────────────────────────────────────────────────────
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(50);
+    // Local draft for the page-number input so the user can type freely
+    const [pageInputValue, setPageInputValue] = useState('1');
+
+    // Keep input in sync when currentPage changes from buttons
+    useEffect(() => {
+        setPageInputValue(String(currentPage));
+    }, [currentPage]);
+
+    // Keep local currentPage in sync with pagination metadata from backend
+    useEffect(() => {
+        if (pagination.currentPage && pagination.currentPage !== currentPage) {
+            setCurrentPage(pagination.currentPage);
+        }
+    }, [pagination.currentPage]);
+
+    // ─── Fetch on page / perPage change ─────────────────────────────────────
+    const lastFetchParamsRef = useRef<{ page: number; perPage: number } | null>(null);
+    const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+
+        const alreadyFetched =
+            lastFetchParamsRef.current?.page === currentPage &&
+            lastFetchParamsRef.current?.perPage === perPage;
+
+        if (alreadyFetched) return;
+
+        lastFetchParamsRef.current = { page: currentPage, perPage };
+
+        fetchTimeoutRef.current = setTimeout(() => {
+            dispatch(fetchLocationsPaginated({ page: currentPage, perPage }) as any);
+        }, 100);
+
+        return () => {
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        };
+    }, [currentPage, perPage, dispatch]);
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    const totalPages = Math.max(1, pagination.totalPages);
+
+    const goToPage = (page: number) => {
+        const clamped = Math.max(1, Math.min(page, totalPages));
+        if (clamped === currentPage) return;
+        // Clear cache so the fetch always runs for the new page
+        lastFetchParamsRef.current = null;
+        setCurrentPage(clamped);
+    };
+
+    // ─── Sync filters from URL search params ─────────────────────────────────
+    useEffect(() => {
         setFilters(prev => {
             const next = { ...prev };
-
-            if (statusParam) next.status = String(statusParam).toLowerCase(); else delete next.status;
-            if (typeParam) next.type = String(typeParam).trim(); else delete next.type;
-            if (projectParam) next.project = String(projectParam).trim(); else delete next.project;
-            if (areaParam) next.area = String(areaParam).trim(); else delete next.area;
-
+            const s = searchParams.get('status'); s ? (next.status = s.toLowerCase()) : delete next.status;
+            const t = searchParams.get('type');   t ? (next.type = t.trim())          : delete next.type;
+            const p = searchParams.get('project');p ? (next.project = p.trim())       : delete next.project;
+            const a = searchParams.get('area');   a ? (next.area = a.trim())          : delete next.area;
             return next;
         });
     }, [searchParams]);
 
-    // propagate filter changes to parent if callback provided
-    useEffect(() => {
-        onFiltersChange?.(filters);
-    }, [filters, onFiltersChange]);
+    useEffect(() => { onFiltersChange?.(filters); }, [filters, onFiltersChange]);
 
-    // Handle location ID from URL
+    // ─── Handle location ID from URL ─────────────────────────────────────────
     useEffect(() => {
         try {
-            const locationIdFromUrl = searchParams.get('id');
-            const locationId = locationIdFromUrl ? parseInt(locationIdFromUrl, 10) : null;
-            
-            if (locationId !== null && !isNaN(locationId) && !hasProcessedUrlId) {
+            const raw = searchParams.get('id');
+            const locationId = raw ? parseInt(raw, 10) : null;
+            if (locationId && !isNaN(locationId) && !hasProcessedUrlId) {
                 setLocalSelectedId(locationId);
                 onRowClick?.(locationId);
                 setHasProcessedUrlId(true);
-                
-                // Scroll to the selected location row after a short delay
                 setTimeout(() => {
-                    const element = document.querySelector(`[data-location-id="${locationId}"]`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    document.querySelector(`[data-location-id="${locationId}"]`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 300);
-            } else if (locationId === null && hasProcessedUrlId) {
+            } else if (!locationId && hasProcessedUrlId) {
                 setHasProcessedUrlId(false);
             }
         } catch (e) {
@@ -163,79 +206,77 @@ export default function LocationsTable({
         }
     }, [searchParams, onRowClick, hasProcessedUrlId]);
 
-    // Update local selected ID when prop changes
-    useEffect(() => {
-        setLocalSelectedId(selectedLocationId || null);
-    }, [selectedLocationId]);
+    useEffect(() => { setLocalSelectedId(selectedLocationId || null); }, [selectedLocationId]);
 
+    // ─── Filter options ───────────────────────────────────────────────────────
     const filterOptions = useMemo(() => {
-        const uniqueTypes = [...new Set(enrichedLocations.map(loc => loc.type_name))].sort();
-        const uniqueStatuses = [...new Set(enrichedLocations.map(loc => loc.status))].sort();
-        const uniqueProjects = [...new Set(enrichedLocations.map(loc => loc.project))].sort();
-        const uniqueAreas = [...new Set(enrichedLocations.map(loc => loc.area))].sort();
-
+        const uniq = <T,>(arr: T[]) => [...new Set(arr)].sort() as T[];
         return {
-            types: uniqueTypes.map(type => ({ label: type, value: type })),
-            statuses: uniqueStatuses.map(status => ({ 
-                label: status.charAt(0).toUpperCase() + status.slice(1), 
-                value: status 
-            })),
-            projects: uniqueProjects.map(project => ({ label: project, value: project })),
-            areas: uniqueAreas.map(area => ({ label: area, value: area })),
+            types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
+            statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
+            projects: uniq(enrichedLocations.map(l => l.project)).map(v => ({ label: v, value: v })),
+            areas:    uniq(enrichedLocations.map(l => l.area)).map(v => ({ label: v, value: v })),
         };
     }, [enrichedLocations]);
 
     const filterConfigs: FilterConfig[] = [
-        { label: "Type", key: "type", options: filterOptions.types },
-        { label: "Status", key: "status", options: filterOptions.statuses },
+        { label: "Type",    key: "type",    options: filterOptions.types    },
+        { label: "Status",  key: "status",  options: filterOptions.statuses },
         { label: "Project", key: "project", options: filterOptions.projects },
-        { label: "Area", key: "area", options: filterOptions.areas }
+        { label: "Area",    key: "area",    options: filterOptions.areas    },
     ];
 
     const filteredLocations = useMemo(() => {
-        return enrichedLocations.filter(location => {
-            if (filters.type && String(location.type_name ?? '').trim().toLowerCase() !== String(filters.type ?? '').trim().toLowerCase()) return false;
-            if (filters.status && location.status !== filters.status) return false;
-            if (filters.project && String(location.project ?? '').trim() !== String(filters.project ?? '').trim()) return false;
-            if (filters.area && String(location.area ?? '').trim() !== String(filters.area ?? '').trim()) return false;
+        return enrichedLocations.filter(loc => {
+            if (filters.type    && loc.type_name.trim().toLowerCase() !== filters.type.trim().toLowerCase()) return false;
+            if (filters.status  && loc.status !== filters.status) return false;
+            if (filters.project && loc.project.trim() !== filters.project.trim()) return false;
+            if (filters.area    && loc.area.trim() !== filters.area.trim()) return false;
             return true;
         });
     }, [enrichedLocations, filters]);
 
-    useEffect(() => {
-        onDataChange?.(filteredLocations);
-    }, [filteredLocations, onDataChange]);
+    useEffect(() => { onDataChange?.(filteredLocations); }, [filteredLocations, onDataChange]);
 
-    const handleRowClick = (locationId: number) => {
-        setLocalSelectedId(locationId);
-        onRowClick?.(locationId);
-    };
+    const handleRowClick = (id: number) => { setLocalSelectedId(id); onRowClick?.(id); };
 
+    // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <div className="gap-4 w-full h-full bg-(--contrast) py-2">
-            <LocationsFilters 
+            <LocationsFilters
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
                 initialFilters={filters}
             />
 
+            {/* ── Inline loading indicator (table stays mounted) ── */}
+            {loading && (
+                <div className="px-4 py-2 text-sm text-blue-600 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+                    <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Loading page {currentPage}...
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <Table className="table-fixed w-full">
                     <TableHeader className="bg-gray-50 sticky top-0 z-10">
                         <TableRow className="border-b-2 border-gray-200">
-                            <TableHead className="w-[5%] font-semibold text-gray-700 text-center py-3">No.</TableHead>
-                            <TableHead className="w-[30%] font-semibold text-gray-700 py-3">Location Name</TableHead>
-                            <TableHead className="w-[14%] font-semibold text-gray-700 py-3">Type</TableHead>
-                            <TableHead className="w-[16%] font-semibold text-gray-700 py-3">Area</TableHead>
-                            <TableHead className="w-[15%] font-semibold text-gray-700 text-center py-3">Location Status</TableHead>
-
+                            <TableHead className="w-[4%]  font-semibold text-gray-700 text-center py-3">No.</TableHead>
+                            <TableHead className="w-[25%] font-semibold text-gray-700 py-3">Location Name</TableHead>
+                            <TableHead className="w-[12%] font-semibold text-gray-700 py-3">Type</TableHead>
+                            <TableHead className="w-[15%] font-semibold text-gray-700 py-3">Area</TableHead>
+                            <TableHead className="w-[14%] font-semibold text-gray-700 text-center py-3">Location Status</TableHead>
                             <TableHead className="w-[20%] font-semibold text-gray-700 py-3">Devices</TableHead>
+                            <TableHead className="w-[10%] font-semibold text-gray-700 text-center py-3">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredLocations.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                                <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                                     <div className="flex flex-col items-center justify-center gap-2">
                                         <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -248,85 +289,91 @@ export default function LocationsTable({
                             </TableRow>
                         ) : (
                             filteredLocations.map((location, index) => (
-                                <TableRow 
+                                <TableRow
                                     key={location.id}
                                     data-location-id={location.id}
                                     className={`cursor-pointer transition-all duration-150 border-b border-gray-100 ${
-                                        localSelectedId === location.id 
-                                            ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500' 
+                                        localSelectedId === location.id
+                                            ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500'
                                             : 'hover:bg-gray-50'
                                     }`}
                                     onClick={() => handleRowClick(location.id)}
                                 >
-                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">
-                                        {index + 1}
-                                    </TableCell>
-                                    
+                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">{(currentPage - 1) * perPage + index + 1}</TableCell>
+
                                     <TableCell className="font-medium py-2">
-                                        <span className={`text-sm font-semibold ${
-                                            localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'
-                                        }`} title={location.name}>
+                                        <span className={`text-sm font-semibold ${localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'}`} title={location.name}>
                                             {location.name}
                                         </span>
                                     </TableCell>
-                                    
+
                                     <TableCell className="py-2">
                                         <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
-                                            localSelectedId === location.id 
-                                                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                            localSelectedId === location.id
+                                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                                 : 'bg-gray-100 text-gray-700 border border-gray-200'
                                         }`}>
                                             {location.type_name}
                                         </span>
                                     </TableCell>
-                                    
-                                    
-                                    
+
                                     <TableCell className="py-2">
                                         <div className="flex items-center gap-1.5">
                                             <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                             </svg>
-                                            <span className={`text-sm ${
-                                                localSelectedId === location.id ? 'text-blue-800' : 'text-gray-700'
-                                            }`} title={location.area}>
+                                            <span className={`text-sm ${localSelectedId === location.id ? 'text-blue-800' : 'text-gray-700'}`} title={location.area}>
                                                 {location.area}
                                             </span>
                                         </div>
                                     </TableCell>
+
                                     <TableCell className="text-center py-2">
                                         <div className="flex items-center justify-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                                location.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                                            }`}></span>
-                                            <span className={`text-xs font-semibold ${
-                                                location.status === 'online' ? 'text-green-700' : 'text-red-700'
-                                            }`}>
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${location.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                                            <span className={`text-xs font-semibold ${location.status === 'online' ? 'text-green-700' : 'text-red-700'}`}>
                                                 {location.status === 'online' ? 'Online' : 'Offline'}
                                             </span>
                                         </div>
                                     </TableCell>
-                                    
+
                                     <TableCell className="py-2">
                                         <div className="flex items-center gap-3 text-xs">
                                             <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
-                                                <span className="text-green-600 font-medium">
-                                                    {location.devices_online} online
-                                                </span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                                                <span className="text-green-600 font-medium">{location.devices_online} online</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
-                                                <span className="text-red-600 font-medium">
-                                                    {location.devices_offline} offline
-                                                </span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                                                <span className="text-red-600 font-medium">{location.devices_offline} offline</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0"></span>
-                                                <span className="text-gray-600">
-                                                    {location.devices_total} total
-                                                </span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                                                <span className="text-gray-600">{location.devices_total} total</span>
                                             </div>
+                                        </div>
+                                    </TableCell>
+
+                                    <TableCell className="text-center py-2">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setEditDialogOpen(true); }}
+                                                className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition duration-150"
+                                                title="Edit location"
+                                            >
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setDeleteDialogOpen(true); }}
+                                                className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition duration-150"
+                                                title="Delete location"
+                                            >
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -334,6 +381,101 @@ export default function LocationsTable({
                         )}
                     </TableBody>
                 </Table>
+            </div>
+
+            {selectedLocationForAction !== null && (
+                <EditLocationForm locationId={selectedLocationForAction} open={editDialogOpen} setOpen={setEditDialogOpen} />
+            )}
+            {selectedLocationForAction !== null && (
+                <DeleteLocationForm locationId={selectedLocationForAction} open={deleteDialogOpen} setOpen={setDeleteDialogOpen} />
+            )}
+
+            {/* ── Pagination ── */}
+            <div className="flex items-center justify-between mt-6 px-4 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <div className="flex items-center gap-4">
+                    {/* Items per page */}
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="perPage" className="text-sm font-medium text-gray-700">Items per page:</label>
+                        <select
+                            id="perPage"
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(Number(e.target.value));
+                                goToPage(1);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+
+                    {/* Page info */}
+                    <div className="text-sm text-gray-600">
+                        Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                        {pagination.total > 0 && (
+                            <span> • Total: <span className="font-semibold">{pagination.total}</span> items</span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {/* Previous */}
+                    <Button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                    </Button>
+
+                    {/* Page number input */}
+                    <div className="flex items-center gap-1 border border-gray-300 rounded-md px-3 py-2">
+                        <input
+                            type="number"
+                            min={1}
+                            max={totalPages}
+                            value={pageInputValue}
+                            onChange={(e) => {
+                                setPageInputValue(e.target.value);
+                            }}
+                            onBlur={() => {
+                                const parsed = parseInt(pageInputValue, 10);
+                                if (!isNaN(parsed)) {
+                                    goToPage(parsed);
+                                } else {
+                                    setPageInputValue(String(currentPage));
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const parsed = parseInt(pageInputValue, 10);
+                                    if (!isNaN(parsed)) goToPage(parsed);
+                                    else setPageInputValue(String(currentPage));
+                                    (e.target as HTMLInputElement).blur();
+                                }
+                            }}
+                            className="w-14 text-center text-sm outline-none"
+                        />
+                    </div>
+
+                    {/* Next */}
+                    <Button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage >= totalPages}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                    >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                    </Button>
+                </div>
             </div>
         </div>
     );

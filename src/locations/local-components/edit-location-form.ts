@@ -41,3 +41,45 @@ export async function editLocation({
 
   return response.json();
 }
+
+// New function to update multiple fields at once
+export async function editLocationBulk(
+  id: number,
+  updates: {
+    name?: string;
+    area?: string;
+    project?: string;
+    status?: string;
+    location_type_id?: number;
+    parent_id?: number | null;
+  }
+) {
+  const url = `${import.meta.env.VITE_NMS_HOST}/locations/${id}`;
+
+  const getCookie = (cookieName: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${cookieName}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  };
+
+  const token = getCookie("token");
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to update location");
+  }
+
+  return response.json();
+}

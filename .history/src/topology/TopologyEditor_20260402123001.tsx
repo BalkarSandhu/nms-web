@@ -284,7 +284,7 @@ const TopologyEditor = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'partial'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
-  const [locationId, setLocationId] = useState<number>();
+  const [locationId, setLocationId] = useState<number>(36);
   const [viewMode, setViewMode] = useState<'tree' | 'subtree'>('subtree');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [availableAreas, setAvailableAreas] = useState<string[]>([]);

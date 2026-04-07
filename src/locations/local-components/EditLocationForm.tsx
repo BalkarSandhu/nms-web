@@ -1,12 +1,9 @@
 // src/components/locations/EditLocationForm.tsx
 
-import React, { useState } from "react";
-// import { Button } from "@/components/ui/button";
+import React, { useState, useMemo } from "react";
 import { Form, InputField } from "@/components/form-components";
-import { editLocation } from "./edit-location-form";
+import { editLocationBulk } from "./edit-location-form";
 import { useAppSelector } from "@/store/hooks";
-
-const editableFields = ["name", "area", "project", "status", "worker_id"];
 
 export const EditLocationForm = ({
   locationId,
@@ -17,49 +14,126 @@ export const EditLocationForm = ({
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { locations } = useAppSelector((state) => state.locations);
+  const { locations, locationTypes } = useAppSelector((state) => state.locations);
   const location = locations.find((l) => l.id === locationId);
 
   const [status, setStatus] = useState<
     { message: string; type: "error" | "success" | "info" } | undefined
   >(undefined);
 
-  const [selectedField, setSelectedField] = useState("");
-  const [newValue, setNewValue] = useState("");
+  // Form fields state
+  const [formData, setFormData] = useState({
+    name: "",
+    area: "",
+    project: "",
+    status: "",
+    location_type_id: "",
+    parent_id: "" as string | null,
+  });
 
-  // Automatically fill old value when field selected
+  // Initialize form when location changes or dialog opens
   React.useEffect(() => {
-    if (selectedField && location) {
-      setNewValue(String(location[selectedField as keyof typeof location] || ""));
+    if (location && open) {
+      setFormData({
+        name: location.name || "",
+        area: location.area || "",
+        project: location.project || "",
+        status: location.status || "",
+        location_type_id: String(location.location_type_id || ""),
+        parent_id: location && (location as any).parent_id ? String((location as any).parent_id) : null,
+      });
     }
-  }, [selectedField, location]);
+  }, [location, open, locationId]);
+
+  // Get location types for dropdown
+  const locationTypeOptions = useMemo(() => {
+    return locationTypes.map((lt) => ({
+      label: lt.name || lt.location_type || "Unknown",
+      value: String(lt.id),
+    }));
+  }, [locationTypes]);
+
+  // Get parent locations (exclude current location)
+  const parentLocationOptions = useMemo(() => {
+    return locations
+      .filter((l) => l.id !== locationId) // Exclude the current location
+      .map((l) => ({
+        label: l.name,
+        value: String(l.id),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [locations, locationId]);
+
+  // Get status options from existing locations
+  const statusOptions = useMemo(() => {
+    const statuses = [...new Set(locations.map((l) => l.status))].filter(Boolean);
+    return statuses.map((s) => ({ label: s, value: s }));
+  }, [locations]);
+
+  const handleInputChange = (field: string, value: string | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!selectedField || !newValue) {
+    // Validate required fields
+    if (!formData.name.trim()) {
       setStatus({
-        message: "Please select a field and provide a new value.",
+        message: "Location name is required.",
         type: "error",
       });
       return;
     }
 
-    setStatus({ message: "Updating...", type: "info" });
+    if (!formData.area.trim()) {
+      setStatus({
+        message: "Area is required.",
+        type: "error",
+      });
+      return;
+    }
+
+    if (!formData.project.trim()) {
+      setStatus({
+        message: "Project is required.",
+        type: "error",
+      });
+      return;
+    }
+
+    setStatus({ message: "Updating location...", type: "info" });
 
     try {
-      await editLocation({
-        id: locationId,
-        field: selectedField,
-        data: newValue,
+      const updates: any = {
+        name: formData.name.trim(),
+        area: formData.area.trim(),
+        project: formData.project.trim(),
+        status: formData.status || undefined,
+        location_type_id: formData.location_type_id
+          ? parseInt(formData.location_type_id)
+          : undefined,
+      };
+
+      // Add parent_id if selected
+      if (formData.parent_id) {
+        updates.parent_id = parseInt(formData.parent_id);
+      } else if (formData.parent_id === null) {
+        updates.parent_id = null;
+      }
+
+      await editLocationBulk(locationId, updates);
+      setStatus({
+        message: "Location updated successfully!",
+        type: "success",
       });
-      setStatus({ message: "Location updated successfully!", type: "success" });
 
       setTimeout(() => {
         setOpen(false);
         setStatus(undefined);
-        setSelectedField("");
-        setNewValue("");
       }, 1500);
     } catch (error: any) {
       setStatus({
@@ -78,26 +152,62 @@ export const EditLocationForm = ({
       statusMessage={status}
       trigger={<></>}
     >
+      {/* Location Name */}
       <InputField
-        label="Select Field"
-        placeholder="Choose field to edit"
-        type="combobox"
-        comboboxOptions={editableFields}
-        stateValue={selectedField}
-        stateAction={setSelectedField}
+        label="Location Name"
+        placeholder="Enter location name"
+        type="input"
+        stateValue={formData.name}
+        stateAction={(value) => handleInputChange("name", value)}
       />
 
-      {selectedField && (
-        <InputField
-          label="New Value"
-          placeholder="Enter new value"
-          type="input"
-          stateValue={newValue}
-          stateAction={setNewValue}
-        />
-      )}
+      {/* Area */}
+      <InputField
+        label="Area"
+        placeholder="Enter area"
+        type="input"
+        stateValue={formData.area}
+        stateAction={(value) => handleInputChange("area", value)}
+      />
 
-      
+      {/* Project */}
+      <InputField
+        label="Project"
+        placeholder="Enter project"
+        type="input"
+        stateValue={formData.project}
+        stateAction={(value) => handleInputChange("project", value)}
+      />
+
+      {/* Status */}
+      <InputField
+        label="Status"
+        placeholder="Select status"
+        type="selectbox"
+        selectBoxOptions={statusOptions}
+        stateValue={formData.status}
+        stateAction={(value) => handleInputChange("status", value)}
+      />
+
+      {/* Location Type */}
+      <InputField
+        label="Location Type"
+        placeholder="Select location type"
+        type="selectbox"
+        selectBoxOptions={locationTypeOptions}
+        stateValue={formData.location_type_id}
+        stateAction={(value) => handleInputChange("location_type_id", value)}
+      />
+
+      {/* Parent Location with Search */}
+      <InputField
+        label="Parent Location (Optional)"
+        placeholder="Search and select parent location"
+        type="selectbox"
+        selectBoxOptions={parentLocationOptions}
+        stateValue={formData.parent_id || ""}
+        stateAction={(value) => handleInputChange("parent_id", value)}
+      />
     </Form>
   );
 };

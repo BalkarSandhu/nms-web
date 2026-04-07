@@ -25,16 +25,18 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
   // Health status
   const getHealthStatus = (latency: number) => {
     if (latency === 0) return { status: '---', color: 'text-gray-600', bgColor: 'bg-gray-50', gradient: 'from-gray-400 to-gray-600' };
-    if (latency < 20) return { status: 'Excellent', color: 'text-green-600', bgColor: 'bg-green-50', gradient: 'from-green-400 to-green-700' };
+    if (latency === -1) return { status: '---', color: 'text-gray-600', bgColor: 'bg-gray-50', gradient: 'from-gray-400 to-gray-600' };
+    if (latency < 20 && latency > -1 ) return { status: 'Excellent', color: 'text-green-600', bgColor: 'bg-green-50', gradient: 'from-green-400 to-green-700' };
     if (latency < 50) return { status: 'Fair', color: 'text-blue-600', bgColor: 'bg-blue-50', gradient: 'from-blue-400 to-blue-700' };
     if (latency < 100) return { status: 'Fair', color: 'text-orange-600', bgColor: 'bg-orange-50', gradient: 'from-orange-400 to-orange-700' };
     return { status: 'Poor', color: 'text-red-600', bgColor: 'bg-red-50', gradient: 'from-red-400 to-red-700' };
   };
-
+  
   const getLatencyStatus = (latency: number) => {
-    if (latency < 20) return { color: 'text-green-600', icon: TrendingDown };
+    if (latency < 20 && latency > -1) return { color: 'text-green-600', icon: TrendingDown };
     if (latency < 50) return { color: 'text-blue-600', icon: Minus };
     if (latency < 100) return { color: 'text-orange-600', icon: TrendingUp };
+    if(latency === -1) return { color: 'text-gray-600', icon: Minus };
     return { color: 'text-red-600', icon: TrendingUp };
   };
 

@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { isDataStale } from '@/lib/auth';
+import { useAppSelector } from '@/store/hooks';
 import Header from './local-components/header';
 import LocationsTable, { type EnrichedLocation } from './local-components/table';
-import { fetchLocations } from '@/store/locationsSlice';
 import { exportToCsv, type CsvColumn } from '@/lib/utils';
 
 export default function LocationsPage() {
-    const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { locations, loading, error, lastFetched } = useAppSelector(state => state.locations);
+    const { error } = useAppSelector(state => state.locations);
     const [exportRows, setExportRows] = useState<EnrichedLocation[]>([]);
 
     const exportColumns = useMemo<CsvColumn<EnrichedLocation>[]>(() => [
@@ -35,22 +32,14 @@ export default function LocationsPage() {
         navigate(`/locations/${locationId}`);
     };
 
-    useEffect(() => {
-        if (!locations.length || isDataStale(lastFetched)) {
-            dispatch(fetchLocations());
-        }
-    }, [dispatch, locations.length, lastFetched]);
-
     return (
         <div className="p-4 flex gap-4 bg-gray-50 min-h-[90vh] max-h-full w-full">
             <div className="h-full w-full">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
-                {loading ? (
-                    <div className="p-4 text-center text-gray-500">Loading locations...</div>
-                ) : error ? (
+                {error ? (
                     <div className="p-4 text-center text-red-500">{error}</div>
                 ) : (
-                    <LocationsTable 
+                    <LocationsTable
                         onRowClick={handleRowClick}
                         onDataChange={setExportRows}
                     />

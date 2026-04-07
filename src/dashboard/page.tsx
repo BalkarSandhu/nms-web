@@ -12,6 +12,7 @@ import Filters from "./local-components/Filters";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAllDevices, fetchDeviceTypes, fetchDeviceStatistics } from "@/store/deviceSlice";
 import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
+import { fetchLocationsforMap} from '@/store/locationsSlice';
 import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 import { AlertTriangle } from 'lucide-react';
 
@@ -50,7 +51,8 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		dispatch(fetchDeviceStatistics());
 
 		// Fetch locations and location types
-		dispatch(fetchLocations());
+		// dispatch(fetchLocations());
+		dispatch(fetchLocationsforMap());
 		dispatch(fetchLocationTypes());
 
 		// Fetch workers and worker stats (with default params)

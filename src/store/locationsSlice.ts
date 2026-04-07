@@ -70,12 +70,21 @@ interface MessageResponse {
 }
 
 // State interface
+interface PaginationMeta {
+  currentPage: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
+
 interface LocationState {
   locations: Location[];
   locationTypes: LocationType[];
   loading: boolean;
+  paginationLoading: boolean; // dedicated flag for pagination fetches only
   error: string | null;
-  lastFetched: number | null; // Timestamp of last successful fetch
+  lastFetched: number | null;
+  pagination: PaginationMeta;
 }
 
 // Initial state
@@ -83,8 +92,15 @@ const initialState: LocationState = {
   locations: [],
   locationTypes: [],
   loading: false,
+  paginationLoading: false,
   error: null,
   lastFetched: null,
+  pagination: {
+    currentPage: 1,
+    perPage: 50,
+    total: 0,
+    totalPages: 0,
+  },
 };
 
 // Async thunks
@@ -96,16 +112,103 @@ export const fetchLocations = createAsyncThunk(
       const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
-      
-      // Handle 401 globally
       if (response.status === 401) {
         handle401Unauthorized();
         throw new Error('Unauthorized - please log in again');
       }
-      
       if (!response.ok) throw new Error('Failed to fetch locations');
       const data: { count: number; locations: Location[] } = await response.json();
       return data.locations;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+// NEW THUNK: Fetch all locations in a single request using per_page=2000
+export const fetchAllLocationsPaginated = createAsyncThunk(
+  'locations/fetchAllPaginated',
+  async (_, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams({
+        page: '1',
+        per_page: '2000', // Fetch up to 2000 locations in single request
+      });
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations?${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+
+      if (!response.ok) throw new Error('Failed to fetch locations');
+      const data = await response.json();
+
+      const locations = data.locations || data.data || data.results || [];
+      return locations;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+export const fetchLocationsforMap = createAsyncThunk(
+  'locations/fetchAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations?page=1&per_page=200`);
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+      if (!response.ok) throw new Error('Failed to fetch locations');
+      const data: { count: number; locations: Location[] } = await response.json();
+      return data.locations;
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+
+
+export const fetchLocationsPaginated = createAsyncThunk(
+  'locations/fetchPaginated',
+  async (params: { page: number; perPage: number }, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams({
+        page: params.page.toString(),
+        per_page: params.perPage.toString(),
+      });
+      const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations?${queryParams}`;
+      const url = buildUrlWithWorkerId(baseUrl);
+      const response = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+
+      if (response.status === 401) {
+        handle401Unauthorized();
+        throw new Error('Unauthorized - please log in again');
+      }
+
+      if (!response.ok) throw new Error('Failed to fetch locations');
+      const data = await response.json();
+
+      const locations = data.locations || data.data || data.results || [];
+
+      const pagination = {
+        currentPage: Number(data.page) || params.page,
+        perPage: Number(data.per_page) || params.perPage,
+        total: Number(data.total) || 0,
+        totalPages: Math.max(1, Number(data.total_pages) || Math.ceil((Number(data.total) || 0) / params.perPage)),
+      };
+
+      return { locations, pagination };
     } catch (error) {
       return rejectWithValue((error as Error).message);
     }
@@ -142,10 +245,7 @@ export const fetchLocationsByBounds = createAsyncThunk(
       });
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations/bounds?${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch locations by bounds');
       const data: Location[] = await response.json();
       return data;
@@ -163,13 +263,9 @@ export const fetchLocationsCount = createAsyncThunk(
       if (params.project) queryParams.append('project', params.project);
       if (params.area) queryParams.append('area', params.area);
       if (params.location_type_id) queryParams.append('location_type_id', params.location_type_id.toString());
-      
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations/count?${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch locations count');
       const data: CountResponse = await response.json();
       return data.count;
@@ -184,16 +280,11 @@ export const fetchLocationTypes = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations/types`);
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
-      
-      // Handle 401 globally
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (response.status === 401) {
         handle401Unauthorized();
         throw new Error('Unauthorized - please log in again');
       }
-      
       if (!response.ok) throw new Error('Failed to fetch location types');
       const data: LocationType[] = await response.json();
       return data;
@@ -230,10 +321,7 @@ export const fetchLocationById = createAsyncThunk(
   async (id: number, { rejectWithValue }) => {
     try {
       const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/locations?id=${id}`);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch location');
       const data: Location = await response.json();
       return data;
@@ -249,10 +337,7 @@ export const deleteLocationType = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/locations/types?id=${id}`,
-        {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        }
+        { method: 'DELETE', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to delete location type');
       const data: MessageResponse = await response.json();
@@ -269,10 +354,7 @@ export const deleteLocation = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/locations?id=${id}`,
-        {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        }
+        { method: 'DELETE', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to delete location');
       const data: MessageResponse = await response.json();
@@ -302,12 +384,44 @@ const locationSlice = createSlice({
       .addCase(fetchLocations.fulfilled, (state, action) => {
         state.loading = false;
         state.locations = action.payload;
-        state.lastFetched = Date.now(); // Track when data was fetched
+        state.lastFetched = Date.now();
       })
       .addCase(fetchLocations.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
+      // Fetch all locations paginated (NEW)
+      .addCase(fetchAllLocationsPaginated.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAllLocationsPaginated.fulfilled, (state, action) => {
+        state.loading = false;
+        state.locations = action.payload;
+        state.lastFetched = Date.now();
+      })
+      .addCase(fetchAllLocationsPaginated.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Fetch locations with pagination — uses paginationLoading, NOT loading
+      .addCase(fetchLocationsPaginated.pending, (state) => {
+        state.paginationLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchLocationsPaginated.fulfilled, (state, action) => {
+        state.paginationLoading = false;
+        state.locations = action.payload.locations;
+        state.pagination = action.payload.pagination;
+        state.lastFetched = Date.now();
+      })
+      .addCase(fetchLocationsPaginated.rejected, (state, action) => {
+        state.paginationLoading = false;
+        state.error = action.payload as string;
+      })
+
       // Create location
       .addCase(createLocation.pending, (state) => {
         state.loading = true;
@@ -315,13 +429,13 @@ const locationSlice = createSlice({
       })
       .addCase(createLocation.fulfilled, (state, action) => {
         state.loading = false;
-        // Add new location to state
         state.locations.push(action.payload.location);
       })
       .addCase(createLocation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch locations by bounds
       .addCase(fetchLocationsByBounds.pending, (state) => {
         state.loading = true;
@@ -335,7 +449,8 @@ const locationSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Fetch locations count (no state update needed, returns count)
+
+      // Fetch locations count
       .addCase(fetchLocationsCount.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -347,6 +462,7 @@ const locationSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch location types
       .addCase(fetchLocationTypes.pending, (state) => {
         state.loading = true;
@@ -360,6 +476,7 @@ const locationSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Create location type
       .addCase(createLocationType.pending, (state) => {
         state.loading = true;
@@ -367,13 +484,13 @@ const locationSlice = createSlice({
       })
       .addCase(createLocationType.fulfilled, (state, action) => {
         state.loading = false;
-        // Add new location type to state
         state.locationTypes.push(action.payload);
       })
       .addCase(createLocationType.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch location by ID
       .addCase(fetchLocationById.pending, (state) => {
         state.loading = true;
@@ -381,7 +498,6 @@ const locationSlice = createSlice({
       })
       .addCase(fetchLocationById.fulfilled, (state, action) => {
         state.loading = false;
-        // Update or add location if not already in state
         const index = state.locations.findIndex(loc => loc.id === action.payload.id);
         if (index !== -1) {
           state.locations[index] = action.payload;
@@ -393,6 +509,7 @@ const locationSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Delete location type
       .addCase(deleteLocationType.pending, (state) => {
         state.loading = true;
@@ -400,13 +517,13 @@ const locationSlice = createSlice({
       })
       .addCase(deleteLocationType.fulfilled, (state, action) => {
         state.loading = false;
-        // Remove deleted location type from state
         state.locationTypes = state.locationTypes.filter(type => type.id !== action.payload.id);
       })
       .addCase(deleteLocationType.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Delete location
       .addCase(deleteLocation.pending, (state) => {
         state.loading = true;
@@ -414,7 +531,6 @@ const locationSlice = createSlice({
       })
       .addCase(deleteLocation.fulfilled, (state, action) => {
         state.loading = false;
-        // Remove deleted location from state
         state.locations = state.locations.filter(loc => loc.id !== action.payload.id);
       })
       .addCase(deleteLocation.rejected, (state, action) => {
