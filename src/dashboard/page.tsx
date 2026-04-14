@@ -5,14 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import Section from "./local-components/Section";
 import Filters from "./local-components/Filters";
 
-// import { useAPIs } from "@/contexts/API-Context"
-// import type { ApiContextType } from "@/contexts/API-Context"
-
 // Redux imports
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAllDevices, fetchDeviceTypes, fetchDeviceStatistics } from "@/store/deviceSlice";
-import { fetchLocations, fetchLocationTypes } from "@/store/locationsSlice";
-import { fetchLocationsforMap} from '@/store/locationsSlice';
+import { fetchLocationsforMap, fetchLocationTypes } from "@/store/locationsSlice";
 import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 import { AlertTriangle } from 'lucide-react';
 
@@ -25,7 +21,7 @@ type DashboardProps = {
 interface WorkerRow {
   id: number;
   name: string;
-  [key: string]: any; // optional, if there are extra properties
+  [key: string]: any;
 }
 
 
@@ -34,11 +30,9 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	const navigate = useNavigate();
 
 	// Get data from Redux store
-	const { devices: reduxDevices } = useAppSelector(state => state.devices);
-	const { locations: reduxLocations } = useAppSelector(state => state.locations);
-	const { workers: reduxWorkers } = useAppSelector(state => state.workers);
-	const { deviceTypes } = useAppSelector(state => state.devices);
-	const { locationTypes } = useAppSelector(state => state.locations);
+	const { devices: reduxDevices = [], deviceTypes = [] } = useAppSelector(state => state.devices);
+	const { locations: reduxLocations = [], locationTypes = [] } = useAppSelector(state => state.locations);
+	const { workers: reduxWorkers = [] } = useAppSelector(state => state.workers);
 	const { loading, deviceStatistics: reduxDevicesStatistics } = useAppSelector(state => state.devices);
 
 	// Fetch all data when component mounts
@@ -51,7 +45,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		dispatch(fetchDeviceStatistics());
 
 		// Fetch locations and location types
-		// dispatch(fetchLocations());
 		dispatch(fetchLocationsforMap());
 		dispatch(fetchLocationTypes());
 
@@ -60,14 +53,20 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		dispatch(fetchWorkerStats());
 	}, [dispatch]);
 
-	// Use only Redux data for dashboard metrics
-	const activeDevices = reduxDevices;
-	const activeLocations = reduxLocations || [];
-	const activeWorkers = reduxWorkers;
-	const deviceStats = reduxDevicesStatistics;
+	// Use only Redux data for dashboard metrics - with fallback to empty arrays
+	const activeDevices = Array.isArray(reduxDevices) ? reduxDevices : [];
+	const activeLocations = Array.isArray(reduxLocations) ? reduxLocations : [];
+	const activeWorkers = Array.isArray(reduxWorkers) ? reduxWorkers : [];
+	const deviceStats = reduxDevicesStatistics || {
+		online_devices: 0,
+		offline_devices: 0,
+		active_devices: 0,
+		protocol_stats: {},
+		total_devices: 0,
+		device_type_stats: {},
+	};
 
 	// Loading check for device statistics
-	
 	if (loading) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full w-full">
@@ -76,9 +75,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			</div>
 		);
 	}
-
-	// Note: Removed blocking loading check to allow UI to render immediately
-	// Data will populate as API calls complete in parallel
 
 	// Helper function to calculate downtime in hours
 	const calculateDowntime = (updatedAt: string): number => {
@@ -98,11 +94,10 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 	};
 
 	// DEVICES METRICS
-	// const onlineDevices = activeDevices.filter(d => d.status);
 	const offlineDevices = activeDevices.filter(d => !d.is_reachable);
 
-	const onlineDevicesCount = deviceStats.online_devices;
-	const offlineDevicesCount = deviceStats.offline_devices;
+	const onlineDevicesCount = deviceStats.online_devices || 0;
+	const offlineDevicesCount = deviceStats.offline_devices || 0;
 
 	const deviceMetrics = {
 		low: onlineDevicesCount,// Online (green)
@@ -178,11 +173,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			navigate(`/devices`);
 		}
 	};
-// 	const handleMetricItemClick = (item: MetricItem) => {
-//     // Navigate to /devices with device_type_name equal to clicked item's label
-//     navigate(`/devices?device_type_name=${encodeURIComponent(item.label)}`);
-// };
-
 
 	const handleLocationStatusClick = (status: 'online' | 'offline' | 'unknown') => {
 		navigate(`/locations?status=${encodeURIComponent(status)}`);
@@ -255,7 +245,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 			popupData: {
 				indicatorColour: indicatorColour,
 				headerLeft: { field: 'Location', value: l.name },
-				headerRight: { field: 'Project', value: l.project },
+				headerRight: { field: 'Project', value: l.project || 'N/A' },
 				sideLabel: { field: 'Area', value: l.area },
 				data: [
 					{
@@ -404,7 +394,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Location", col2: "Downtime" },
 						data: locationDowntimeData,
 						maxRows: 5,
-						onRowClick: (row:WorkerRow) => navigate(`/locations?id=${row.id}`)
+						onRowClick: (row: WorkerRow) => navigate(`/locations?id=${row.id}`)
 					},
 					metric3: undefined,
 					metric4: activeLocations
@@ -443,7 +433,7 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						headers: { col1: "Area", col2: "Downtime" },
 						data: workerDowntimeData,
 						maxRows: 5,
-						onRowClick: (row:WorkerRow) => navigate(`/workers?${row.id}`)
+						onRowClick: (row: WorkerRow) => navigate(`/workers?${row.id}`)
 					},
 					metric3: undefined,
 					metric4: undefined

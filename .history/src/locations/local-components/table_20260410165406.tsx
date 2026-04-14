@@ -24,7 +24,7 @@ export type EnrichedLocation = {
     status: string;
     status_reason: string;
     location_type_id: number;
-    project?: string;
+    project: string;
     area: string;
     worker_id?: string;
     created_at?: string;
@@ -137,7 +137,7 @@ export default function LocationsTable({
 
             const worker_id = location.worker_id;
             const worker = worker_id
-                ? safeWorkers.find(w => w.id === worker_id || w.id === String(worker_id))
+                ? safeWorkers.find(w => w.id === worker_id || w.id === parseInt(String(worker_id), 10))
                 : undefined;
             const worker_hostname = worker?.name;
 
@@ -177,8 +177,8 @@ export default function LocationsTable({
         return {
             types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
             statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
-            projects: uniq(enrichedLocations.map(l => l.project).filter((p): p is string => p != null)).map(v => ({ label: v, value: v })),
-            areas:    uniq(enrichedLocations.map(l => l.area).filter((a): a is string => a != null)).map(v => ({ label: v, value: v })),
+            projects: uniq(enrichedLocations.map(l => l.project)).filter(Boolean).map(v => ({ label: v, value: v })),
+            areas:    uniq(enrichedLocations.map(l => l.area)).filter(Boolean).map(v => ({ label: v, value: v })),
         };
     }, [enrichedLocations]);
 

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 // import { useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
+import { fetchLocations } from '@/store/locationsSlice';
 import {fetchAllLocationsPaginated} from '@/store/locationsSlice';
+import { fetchLocationsforMap } from '@/store/locationsSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local_components/header';
 import DevicesTable from './local_components/table';
@@ -48,7 +50,7 @@ export default function DevicesPage() {
         if (isDataStale(lastFetched)) {
             dispatch(fetchAllDevices());
             // dispatch(fetchLocations());
-            // dispatch(fetchLocationsforMap());
+            dispatch(fetchLocationsforMap());
             dispatch(fetchAllLocationsPaginated());
             dispatch(fetchDeviceTypes());
         }

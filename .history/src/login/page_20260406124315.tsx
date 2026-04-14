@@ -40,7 +40,7 @@ export default function LoginPage() {
 
                 <div className="w-full h-full p-6 hidden  md:flex md:flex-col md:items-center md:gap-5 md:m-auto ">
 
-                    <span className = "text-[24px] text-(--contrast) font-bold ">DWINMS</span>
+                    <span className = "text-[24px] text-(--contrast) font-bold ">Dadhwal NMS</span>
 
                     <span className = "text-[16px] text-(--contrast)">Get started by registering <br/>locations and devices</span>
 

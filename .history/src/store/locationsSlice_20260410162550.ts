@@ -75,18 +75,18 @@ interface MessageResponse {
   message: string;
 }
 
-// interface ApiResponse<T> {
-//   data?: T[];
-//   locations?: T[];
-//   pagination?: {
-//     current_page: number;
-//     page_size: number;
-//     total_pages: number;
-//     total_records: number;
-//     has_next: boolean;
-//     has_prev: boolean;
-//   };
-// }
+interface ApiResponse<T> {
+  data?: T[];
+  locations?: T[];
+  pagination?: {
+    current_page: number;
+    page_size: number;
+    total_pages: number;
+    total_records: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
 
 // State interface
 interface PaginationMeta {
@@ -173,7 +173,7 @@ export const fetchAllLocationsPaginated = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const queryParams = new URLSearchParams({
-        page_size: '50', // Fetch up to 2000 locations in single request
+        fetch_all: 'true', // Fetch up to 2000 locations in single request
       });
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations?${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);

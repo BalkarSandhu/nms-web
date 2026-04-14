@@ -178,7 +178,7 @@ export default function LocationsTable({
             types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
             statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
             projects: uniq(enrichedLocations.map(l => l.project).filter((p): p is string => p != null)).map(v => ({ label: v, value: v })),
-            areas:    uniq(enrichedLocations.map(l => l.area).filter((a): a is string => a != null)).map(v => ({ label: v, value: v })),
+            areas:    uniq(enrichedLocations.map(l => l.area)).filter(Boolean).map(v => ({ label: v, value: v })),
         };
     }, [enrichedLocations]);
 

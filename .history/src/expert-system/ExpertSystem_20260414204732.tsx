@@ -467,7 +467,7 @@ export default function ExpertSystem() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 700 }}>DWINMS - Expert Assistant</div>
+              <div style={{ fontWeight: 700 }}>DWI NMS - Expert Assistant</div>
               <div style={{ fontSize: 12, opacity: 0.85 }}>Please choose an option to proceed.</div>
             </div>
             <div>

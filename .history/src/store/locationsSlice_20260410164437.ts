@@ -75,18 +75,18 @@ interface MessageResponse {
   message: string;
 }
 
-// interface ApiResponse<T> {
-//   data?: T[];
-//   locations?: T[];
-//   pagination?: {
-//     current_page: number;
-//     page_size: number;
-//     total_pages: number;
-//     total_records: number;
-//     has_next: boolean;
-//     has_prev: boolean;
-//   };
-// }
+interface ApiResponse<T> {
+  data?: T[];
+  locations?: T[];
+  pagination?: {
+    current_page: number;
+    page_size: number;
+    total_pages: number;
+    total_records: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
 
 // State interface
 interface PaginationMeta {

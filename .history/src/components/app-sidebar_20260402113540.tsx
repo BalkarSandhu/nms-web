@@ -29,13 +29,13 @@ import {
 // This is sample data.
 // const data = {
 //   user: {
-//     name: "DWI",
+//     name: "dadhwal",
 //     email: "m@example.com",
 //     avatar: "/avatars/shadcn.jpg",
 //   },
 //   teams: [
 //     {
-//       name: "DWI NMS",
+//       name: "Dadhwal NMS",
 //       logo: Network,
 //       plan: "Enterprise",
 //     },
@@ -129,7 +129,7 @@ const baseNavItems = [
 
 const teams = [
   {
-    name: "DWINMS",
+    name: "Dadhwal NMS",
     logo: Network,
     plan: "Enterprise",
   },

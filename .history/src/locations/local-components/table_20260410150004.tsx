@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { fetchLocationsPaginated, fetchLocationTypes } from '@/store/locationsSlice';
+import { fetchLocationsPaginated } from '@/store/locationsSlice';
 import LocationsFilters, { type FilterConfig } from './filters';
 import { EditLocationForm } from './EditLocationForm';
 import { DeleteLocationForm } from './DeleteLocationForm';
@@ -24,7 +24,7 @@ export type EnrichedLocation = {
     status: string;
     status_reason: string;
     location_type_id: number;
-    project?: string;
+    project: string;
     area: string;
     worker_id?: string;
     created_at?: string;
@@ -35,6 +35,57 @@ export type EnrichedLocation = {
     devices_offline: number;
     devices_total: number;
     device_ids: number[];
+};
+
+export const useEnrichedLocations = (): EnrichedLocation[] => {
+    const { locations = [], locationTypes = [] } = useAppSelector(state => state.locations);
+    const { workers = [] } = useAppSelector(state => state.workers);
+    const { devices = [] } = useAppSelector(state => state.devices);
+
+    const normalizeStatus = (status: any): boolean | 'false' => {
+        if (status === 'unknown' || status === 'Unknown' || status === null || status === undefined) {
+            return false;
+        }
+        return status;
+    };
+
+    return useMemo(() => {
+        // Ensure we have arrays to work with
+        const safeLocations = Array.isArray(locations) ? locations : [];
+        const safeLocationTypes = Array.isArray(locationTypes) ? locationTypes : [];
+        const safeWorkers = Array.isArray(workers) ? workers : [];
+        const safeDevices = Array.isArray(devices) ? devices : [];
+
+        return safeLocations.map((location) => {
+            const locationType = safeLocationTypes.find(lt => lt.id === location.location_type_id);
+            const type_name = locationType?.name || locationType?.location_type || 'Unknown';
+
+            const worker_id = (location as any).worker_id;
+            // Handle both string and number worker_id types
+            const worker = worker_id ? safeWorkers.find(w => {
+                // Compare both as strings and numbers to handle type mismatches
+                return w.id === worker_id || w.id === parseInt(String(worker_id), 10);
+            }) : undefined;
+            const worker_hostname = worker?.name;
+
+            const locationDevices = safeDevices.filter(device => device.location_id === location.id);
+            const devices_online = locationDevices.filter(d => normalizeStatus(d.is_reachable) === true).length;
+            const devices_offline = locationDevices.filter(d => normalizeStatus(d.is_reachable) === false).length;
+            const devices_total = locationDevices.length;
+            const device_ids = locationDevices.map(d => d.id);
+
+            return {
+                ...location,
+                worker_id,
+                type_name,
+                worker_hostname,
+                devices_online,
+                devices_offline,
+                devices_total,
+                device_ids,
+            };
+        });
+    }, [locations, locationTypes, workers, devices]);
 };
 
 export default function LocationsTable({
@@ -50,25 +101,10 @@ export default function LocationsTable({
     initialFilters?: Record<string, string>;
     onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
-    const dispatch = useAppDispatch();
+    const enrichedLocations = useEnrichedLocations();
     const [searchParams] = useSearchParams();
-
-    // ─── Redux state ──────────────────────────────────────────────────────────
-    // Use ONLY pagedLocations (a local slice of data) — never allLocations
-    const { locationTypes = [], pagination, paginationLoading: loading } = useAppSelector(state => state.locations);
-    const pagedLocations = useAppSelector(state => state.locations.locations); // current page only
-    const { workers = [] } = useAppSelector(state => state.workers);
-    const { devices = [] } = useAppSelector(state => state.devices);
-
-    // ─── Local UI state ───────────────────────────────────────────────────────
     const [localSelectedId, setLocalSelectedId] = useState<number | null>(selectedLocationId || null);
     const [hasProcessedUrlId, setHasProcessedUrlId] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [perPage, setPerPage] = useState(50);
-    const [pageInputValue, setPageInputValue] = useState('1');
-    const [editDialogOpen, setEditDialogOpen] = useState(false);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [selectedLocationForAction, setSelectedLocationForAction] = useState<number | null>(null);
 
     const [filters, setFilters] = useState<Record<string, string>>(() => {
         if (initialFilters) return initialFilters;
@@ -80,116 +116,72 @@ export default function LocationsTable({
             const p = params.get('project');if (p) init.project = p.trim();
             const a = params.get('area');   if (a) init.area = a.trim();
             return init;
-        } catch { return {}; }
+        } catch {
+            return {};
+        }
     });
 
-    // ─── Fetch location types if missing ─────────────────────────────────────
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedLocationForAction, setSelectedLocationForAction] = useState<number | null>(null);
+
+    const dispatch = useAppDispatch();
+    const { pagination = { currentPage: 1, perPage: 50, total: 0, totalPages: 0 }, paginationLoading: loading = false } = useAppSelector(state => state.locations);
+
+    // ─── Pagination state ────────────────────────────────────────────────────
+    const [currentPage, setCurrentPage] = useState(1);
+    const [perPage, setPerPage] = useState(50);
+    // Local draft for the page-number input so the user can type freely
+    const [pageInputValue, setPageInputValue] = useState('1');
+
+    // Keep input in sync when currentPage changes from buttons
     useEffect(() => {
-        if (locationTypes.length === 0) {
-            dispatch(fetchLocationTypes() as any);
+        setPageInputValue(String(currentPage));
+    }, [currentPage]);
+
+    // Keep local currentPage in sync with pagination metadata from backend
+    useEffect(() => {
+        if (pagination.currentPage && pagination.currentPage !== currentPage) {
+            setCurrentPage(pagination.currentPage);
         }
-    }, [dispatch, locationTypes.length]);
+    }, [pagination.currentPage]);
 
-    // ─── Pagination fetch ─────────────────────────────────────────────────────
-    const lastFetchRef = useRef<{ page: number; perPage: number } | null>(null);
-    const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // ─── Fetch on page / perPage change ─────────────────────────────────────
+    const lastFetchParamsRef = useRef<{ page: number; perPage: number } | null>(null);
+    const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
 
         const alreadyFetched =
-            lastFetchRef.current?.page === currentPage &&
-            lastFetchRef.current?.perPage === perPage;
+            lastFetchParamsRef.current?.page === currentPage &&
+            lastFetchParamsRef.current?.perPage === perPage;
 
         if (alreadyFetched) return;
 
-        fetchTimerRef.current = setTimeout(() => {
-        lastFetchRef.current = { page: currentPage, perPage }; // ← moved here
-        dispatch(fetchLocationsPaginated({ page: currentPage, perPage }) as any);
-    }, 100);
+        lastFetchParamsRef.current = { page: currentPage, perPage };
 
-        return () => { if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current); };
+        fetchTimeoutRef.current = setTimeout(() => {
+            dispatch(fetchLocationsPaginated({ page: currentPage, perPage }) as any);
+        }, 100);
+
+        return () => {
+            if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+        };
     }, [currentPage, perPage, dispatch]);
 
-    // ─── Pagination helpers ───────────────────────────────────────────────────
-    const totalPages = Math.max(1, pagination?.totalPages || 0);
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    const totalPages = Math.max(1, pagination.totalPages || 0);
 
     const goToPage = (page: number) => {
         const clamped = Math.max(1, Math.min(page, totalPages));
         if (clamped === currentPage) return;
-        lastFetchRef.current = null; // clear cache so fetch runs
+        // Clear cache so the fetch always runs for the new page
+        lastFetchParamsRef.current = null;
         setCurrentPage(clamped);
     };
 
-    // Keep page input in sync with currentPage
-    useEffect(() => { setPageInputValue(String(currentPage)); }, [currentPage]);
-
-    // ─── Enrich current page locations ────────────────────────────────────────
-    const enrichedLocations = useMemo((): EnrichedLocation[] => {
-        const safeLocations = Array.isArray(pagedLocations) ? pagedLocations : [];
-        const safeLocationTypes = Array.isArray(locationTypes) ? locationTypes : [];
-        const safeWorkers = Array.isArray(workers) ? workers : [];
-        const safeDevices = Array.isArray(devices) ? devices : [];
-
-        return safeLocations.map((location) => {
-            const locationType = safeLocationTypes.find(lt => lt.id === location.location_type_id);
-            const type_name = locationType?.name || locationType?.location_type || 'Unknown';
-
-            const worker_id = location.worker_id;
-            const worker = worker_id
-                ? safeWorkers.find(w => w.id === worker_id || w.id === String(worker_id))
-                : undefined;
-            const worker_hostname = worker?.name;
-
-            const locationDevices = safeDevices.filter(d => d.location_id === location.id);
-            const devices_online  = locationDevices.filter(d => d.is_reachable === true).length;
-            const devices_offline = locationDevices.filter(d => d.is_reachable === false).length;
-            const devices_total   = locationDevices.length;
-            const device_ids      = locationDevices.map(d => d.id);
-
-            return {
-                ...location,
-                worker_id,
-                type_name,
-                worker_hostname,
-                devices_online,
-                devices_offline,
-                devices_total,
-                device_ids,
-            };
-        });
-    }, [pagedLocations, locationTypes, workers, devices]);
-
-    // ─── Client-side filter (on current page only) ────────────────────────────
-    const filteredLocations = useMemo(() => {
-        return enrichedLocations.filter(loc => {
-            if (filters.type    && loc.type_name.trim().toLowerCase() !== filters.type.trim().toLowerCase()) return false;
-            if (filters.status  && loc.status !== filters.status) return false;
-            if (filters.project && loc.project?.trim() !== filters.project.trim()) return false;
-            if (filters.area    && loc.area?.trim() !== filters.area.trim()) return false;
-            return true;
-        });
-    }, [enrichedLocations, filters]);
-
-    // ─── Filter options (built from current page) ─────────────────────────────
-    const filterOptions = useMemo(() => {
-        const uniq = <T,>(arr: T[]) => [...new Set(arr)].sort() as T[];
-        return {
-            types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
-            statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
-            projects: uniq(enrichedLocations.map(l => l.project).filter((p): p is string => p != null)).map(v => ({ label: v, value: v })),
-            areas:    uniq(enrichedLocations.map(l => l.area).filter((a): a is string => a != null)).map(v => ({ label: v, value: v })),
-        };
-    }, [enrichedLocations]);
-
-    const filterConfigs: FilterConfig[] = [
-        { label: "Type",    key: "type",    options: filterOptions.types    },
-        { label: "Status",  key: "status",  options: filterOptions.statuses },
-        { label: "Project", key: "project", options: filterOptions.projects },
-        { label: "Area",    key: "area",    options: filterOptions.areas    },
-    ];
-
-    // ─── Sync filters from URL ────────────────────────────────────────────────
+    // ─── Sync filters from URL search params ─────────────────────────────────
     useEffect(() => {
         setFilters(prev => {
             const next = { ...prev };
@@ -202,10 +194,8 @@ export default function LocationsTable({
     }, [searchParams]);
 
     useEffect(() => { onFiltersChange?.(filters); }, [filters, onFiltersChange]);
-    useEffect(() => { onDataChange?.(filteredLocations); }, [filteredLocations, onDataChange]);
-    useEffect(() => { setLocalSelectedId(selectedLocationId || null); }, [selectedLocationId]);
 
-    // ─── Handle ?id= in URL ───────────────────────────────────────────────────
+    // ─── Handle location ID from URL ─────────────────────────────────────────
     useEffect(() => {
         try {
             const raw = searchParams.get('id');
@@ -226,6 +216,38 @@ export default function LocationsTable({
         }
     }, [searchParams, onRowClick, hasProcessedUrlId]);
 
+    useEffect(() => { setLocalSelectedId(selectedLocationId || null); }, [selectedLocationId]);
+
+    // ─── Filter options ───────────────────────────────────────────────────────
+    const filterOptions = useMemo(() => {
+        const uniq = <T,>(arr: T[]) => [...new Set(arr)].sort() as T[];
+        return {
+            types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
+            statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
+            projects: uniq(enrichedLocations.map(l => l.project)).filter(v => v).map(v => ({ label: v, value: v })),
+            areas:    uniq(enrichedLocations.map(l => l.area)).filter(v => v).map(v => ({ label: v, value: v })),
+        };
+    }, [enrichedLocations]);
+
+    const filterConfigs: FilterConfig[] = [
+        { label: "Type",    key: "type",    options: filterOptions.types    },
+        { label: "Status",  key: "status",  options: filterOptions.statuses },
+        { label: "Project", key: "project", options: filterOptions.projects },
+        { label: "Area",    key: "area",    options: filterOptions.areas    },
+    ];
+
+    const filteredLocations = useMemo(() => {
+        return enrichedLocations.filter(loc => {
+            if (filters.type    && loc.type_name.trim().toLowerCase() !== filters.type.trim().toLowerCase()) return false;
+            if (filters.status  && loc.status !== filters.status) return false;
+            if (filters.project && loc.project && loc.project.trim() !== filters.project.trim()) return false;
+            if (filters.area    && loc.area && loc.area.trim() !== filters.area.trim()) return false;
+            return true;
+        });
+    }, [enrichedLocations, filters]);
+
+    useEffect(() => { onDataChange?.(filteredLocations); }, [filteredLocations, onDataChange]);
+
     const handleRowClick = (id: number) => { setLocalSelectedId(id); onRowClick?.(id); };
 
     // ─── Render ───────────────────────────────────────────────────────────────
@@ -237,6 +259,7 @@ export default function LocationsTable({
                 initialFilters={filters}
             />
 
+            {/* ── Inline loading indicator (table stays mounted) ── */}
             {loading && (
                 <div className="px-4 py-2 text-sm text-blue-600 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                     <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
@@ -286,9 +309,7 @@ export default function LocationsTable({
                                     }`}
                                     onClick={() => handleRowClick(location.id)}
                                 >
-                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">
-                                        {(currentPage - 1) * perPage + index + 1}
-                                    </TableCell>
+                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">{(currentPage - 1) * perPage + index + 1}</TableCell>
 
                                     <TableCell className="font-medium py-2">
                                         <span className={`text-sm font-semibold ${localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'}`} title={location.name}>
@@ -382,6 +403,7 @@ export default function LocationsTable({
             {/* ── Pagination ── */}
             <div className="flex items-center justify-between mt-6 px-4 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
                 <div className="flex items-center gap-4">
+                    {/* Items per page */}
                     <div className="flex items-center gap-2">
                         <label htmlFor="perPage" className="text-sm font-medium text-gray-700">Items per page:</label>
                         <select
@@ -389,8 +411,7 @@ export default function LocationsTable({
                             value={perPage}
                             onChange={(e) => {
                                 setPerPage(Number(e.target.value));
-                                lastFetchRef.current = null;
-                                setCurrentPage(1);
+                                goToPage(1);
                             }}
                             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
@@ -401,18 +422,20 @@ export default function LocationsTable({
                         </select>
                     </div>
 
+                    {/* Page info */}
                     <div className="text-sm text-gray-600">
                         Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
-                        {pagination?.total > 0 && (
+                        {pagination.total && pagination.total > 0 && (
                             <span> • Total: <span className="font-semibold">{pagination.total}</span> items</span>
                         )}
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Previous */}
                     <Button
                         onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1 || loading}
+                        disabled={currentPage === 1}
                         variant="outline"
                         size="sm"
                         className="gap-1"
@@ -421,17 +444,23 @@ export default function LocationsTable({
                         Previous
                     </Button>
 
+                    {/* Page number input */}
                     <div className="flex items-center gap-1 border border-gray-300 rounded-md px-3 py-2">
                         <input
                             type="number"
                             min={1}
                             max={totalPages}
                             value={pageInputValue}
-                            onChange={(e) => setPageInputValue(e.target.value)}
+                            onChange={(e) => {
+                                setPageInputValue(e.target.value);
+                            }}
                             onBlur={() => {
                                 const parsed = parseInt(pageInputValue, 10);
-                                if (!isNaN(parsed)) goToPage(parsed);
-                                else setPageInputValue(String(currentPage));
+                                if (!isNaN(parsed)) {
+                                    goToPage(parsed);
+                                } else {
+                                    setPageInputValue(String(currentPage));
+                                }
                             }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -445,9 +474,10 @@ export default function LocationsTable({
                         />
                     </div>
 
+                    {/* Next */}
                     <Button
                         onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage >= totalPages || loading}
+                        disabled={currentPage >= totalPages}
                         variant="outline"
                         size="sm"
                         className="gap-1"

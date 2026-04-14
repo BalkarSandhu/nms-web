@@ -409,7 +409,7 @@ export default function ExpertSystem() {
     doc.setFontSize(8)
     doc.setTextColor(150)
     doc.text(`Page ${i} of ${pageCount}`, pageWidth - 40, pageHeight - 20, { align: 'right' })
-    doc.text('DWINMS', 40, pageHeight - 20)
+    doc.text('Dadhwal NMS', 40, pageHeight - 20)
   }
 
   doc.save(`${reportTitle.replace(/\s+/g, '-')}-${Date.now()}.pdf`)
@@ -467,7 +467,7 @@ export default function ExpertSystem() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 700 }}>DWINMS - Expert Assistant</div>
+              <div style={{ fontWeight: 700 }}>Dadhwal NMS - Expert Assistant</div>
               <div style={{ fontSize: 12, opacity: 0.85 }}>Please choose an option to proceed.</div>
             </div>
             <div>

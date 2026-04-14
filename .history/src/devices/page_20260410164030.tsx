@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
 import { fetchLocations } from '@/store/locationsSlice';
-import { fetchLocationsForMap } from '@/store/locationsSlice';
+import {fetchAllLocationsPaginated} from '@/store/locationsSlice';
+import { fetchLocationsforMap } from '@/store/locationsSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local_components/header';
 import DevicesTable from './local_components/table';
@@ -20,7 +21,6 @@ export default function DevicesPage() {
     const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
     const [exportRows, setExportRows] = useState<readDeviceType[]>([]);
-
     const exportColumns = useMemo<CsvColumn<readDeviceType>[]>(() => [
         { header: 'S.No', accessor: (_row, index) => index + 1 },
         { header: 'Display Name', accessor: (row) => row.display },
@@ -45,13 +45,13 @@ export default function DevicesPage() {
     //     setSearchParams(params);
     //     setSelectedDeviceId(null);
     // };
-
     useEffect(() => {
         // Only fetch if devices are not loaded OR data is stale (older than 5 minutes)
         if (isDataStale(lastFetched)) {
             dispatch(fetchAllDevices());
             // dispatch(fetchLocations());
-            dispatch(fetchLocationsForMap());
+            // dispatch(fetchLocationsforMap());
+            dispatch(fetchAllLocationsPaginated());
             dispatch(fetchDeviceTypes());
         }
     }, [dispatch, devices.length, lastFetched]);
@@ -70,12 +70,10 @@ export default function DevicesPage() {
             </div>
         );
     }
-
     const handleDeviceNavigate = (deviceId: number) => {
         setSelectedDeviceId(deviceId);
         navigate(`/device-info?id=${deviceId}`);
     };
-
     return (
         <div className="flex h-full p-2 w-full bg-(--contrast) gap-2 ">
             {/* Main Content */}
@@ -87,7 +85,6 @@ export default function DevicesPage() {
                     onDataChange={setExportRows}
                 />
             </div>
-
             {/* Sidebar */}
             {/* <DeviceDetailsSidebar 
                 deviceId={selectedDeviceId}

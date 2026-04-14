@@ -22,16 +22,20 @@ export interface Worker {
 
 // Types for API responses
 interface WorkersResponse {
-  page: number;
-  page_size: number;
-  total_count: number;
-  total_pages: number;
-  workers: Worker[];
+  data: Worker[];
+  pagination: {
+    current_page: number;
+    page_size: number;
+    total_pages: number;
+    total_records: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
 }
+
 interface MessageResponse {
   message: string;
 }
-
 
 interface WorkerStatsResponse {
   active_workers: number;
@@ -41,8 +45,6 @@ interface WorkerStatsResponse {
   pending_workers: number;
   total_workers: number;
 }
-
-
 
 // Types for API payloads
 export interface UpdateWorkerPayload {
@@ -91,14 +93,13 @@ interface WorkerState {
   loading: boolean;
   error: string | null;
   lastFetched: number | null;
-  
 }
 
 // Initial state
 const initialState: WorkerState = {
   workers: [],
-  stats:{
-     total_workers: 0,
+  stats: {
+    total_workers: 0,
     active_workers: 0,
     offline_workers: 0,
     pending_workers: 0,
@@ -124,17 +125,13 @@ export const fetchWorkers = createAsyncThunk(
 
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers?page_size=100&${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
-      
-      // Handle 401 globally
+      const response = await fetch(url, { headers: getAuthHeaders() });
+
       if (response.status === 401) {
         handle401Unauthorized();
         throw new Error('Unauthorized - please log in again');
       }
-      
+
       if (!response.ok) throw new Error('Failed to fetch workers');
       const data: WorkersResponse = await response.json();
       return data;
@@ -154,10 +151,7 @@ export const searchWorkers = createAsyncThunk(
 
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/workers/search?${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to search workers');
       const data: WorkersResponse = await response.json();
       return data;
@@ -167,17 +161,12 @@ export const searchWorkers = createAsyncThunk(
   }
 );
 
-
-
 export const fetchWorkerById = createAsyncThunk(
   'workers/fetchById',
   async (id: string, { rejectWithValue }) => {
     try {
       const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/workers/${id}`);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
+      const response = await fetch(url, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch worker');
       const data: Worker = await response.json();
       return data;
@@ -248,22 +237,19 @@ export const approveWorker = createAsyncThunk(
     }
   }
 );
+
 export const fetchWorkerStats = createAsyncThunk(
   'workers/stats',
   async (_, { rejectWithValue }) => {
     try {
       const url = buildUrlWithWorkerId(`${import.meta.env.VITE_NMS_HOST}/workers/stats`);
-      const response = await fetch(
-        url,
-        { headers: getAuthHeaders() }
-      );
-      
-      // Handle 401 globally
+      const response = await fetch(url, { headers: getAuthHeaders() });
+
       if (response.status === 401) {
         handle401Unauthorized();
         throw new Error('Unauthorized - please log in again');
       }
-      
+
       if (!response.ok) throw new Error('Failed to fetch worker stats');
       const data: WorkerStatsResponse = await response.json();
       return data;
@@ -272,7 +258,6 @@ export const fetchWorkerStats = createAsyncThunk(
     }
   }
 );
-
 
 export const pauseWorker = createAsyncThunk(
   'workers/pause',
@@ -341,10 +326,7 @@ export const broadcastPause = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/workers/broadcast/pause`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to pause all workers');
       const data: MessageResponse = await response.json();
@@ -361,10 +343,7 @@ export const broadcastResume = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/workers/broadcast/resume`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to resume all workers');
       const data: MessageResponse = await response.json();
@@ -381,10 +360,7 @@ export const broadcastReloadConfig = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/workers/broadcast/reload-config`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to reload all workers config');
       const data: MessageResponse = await response.json();
@@ -401,10 +377,7 @@ export const broadcastStatusCheck = createAsyncThunk(
     try {
       const response = await fetch(
         `${import.meta.env.VITE_NMS_HOST}/workers/broadcast/status-check`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(),
-        }
+        { method: 'POST', headers: getAuthHeaders() }
       );
       if (!response.ok) throw new Error('Failed to check all workers status');
       const data: MessageResponse = await response.json();
@@ -476,19 +449,20 @@ const workerSlice = createSlice({
       })
       .addCase(fetchWorkers.fulfilled, (state, action) => {
         state.loading = false;
-        state.workers = action.payload.workers;
+        state.workers = action.payload.data ?? [];
         state.pagination = {
-          page: action.payload.page,
-          page_size: action.payload.page_size,
-          total_count: action.payload.total_count,
-          total_pages: action.payload.total_pages,
+          page: action.payload.pagination.current_page,
+          page_size: action.payload.pagination.page_size,
+          total_count: action.payload.pagination.total_records,
+          total_pages: action.payload.pagination.total_pages,
         };
-        state.lastFetched = Date.now(); // Track when data was fetched
+        state.lastFetched = Date.now();
       })
       .addCase(fetchWorkers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Search workers
       .addCase(searchWorkers.pending, (state) => {
         state.loading = true;
@@ -496,18 +470,19 @@ const workerSlice = createSlice({
       })
       .addCase(searchWorkers.fulfilled, (state, action) => {
         state.loading = false;
-        state.workers = action.payload.workers;
+        state.workers = action.payload.data ?? [];
         state.pagination = {
-          page: action.payload.page,
-          page_size: action.payload.page_size,
-          total_count: action.payload.total_count,
-          total_pages: action.payload.total_pages,
+          page: action.payload.pagination.current_page,
+          page_size: action.payload.pagination.page_size,
+          total_count: action.payload.pagination.total_records,
+          total_pages: action.payload.pagination.total_pages,
         };
       })
       .addCase(searchWorkers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch worker stats
       .addCase(fetchWorkerStats.pending, (state) => {
         state.loading = true;
@@ -521,6 +496,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Fetch worker by ID
       .addCase(fetchWorkerById.pending, (state) => {
         state.loading = true;
@@ -539,6 +515,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Update worker
       .addCase(updateWorker.pending, (state) => {
         state.loading = true;
@@ -555,6 +532,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Delete worker
       .addCase(deleteWorker.pending, (state) => {
         state.loading = true;
@@ -568,6 +546,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Approve worker
       .addCase(approveWorker.pending, (state) => {
         state.loading = true;
@@ -584,6 +563,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Pause worker
       .addCase(pauseWorker.pending, (state) => {
         state.loading = true;
@@ -596,6 +576,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Resume worker
       .addCase(resumeWorker.pending, (state) => {
         state.loading = true;
@@ -608,6 +589,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Reload worker config
       .addCase(reloadWorkerConfig.pending, (state) => {
         state.loading = true;
@@ -620,6 +602,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Broadcast operations
       .addCase(broadcastPause.pending, (state) => {
         state.loading = true;
@@ -665,6 +648,7 @@ const workerSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
       // Bulk operations
       .addCase(bulkUpdateStatus.pending, (state) => {
         state.loading = true;

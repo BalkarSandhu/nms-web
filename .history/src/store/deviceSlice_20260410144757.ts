@@ -25,25 +25,25 @@ interface PaginatedDevicesResponse {
   };
 }
 
-// interface AllDevicesResponse {
-//   count?: number;
-//   devices?: readDeviceType[];
-//   data?: readDeviceType[];
-//   pagination?: {
-//     current_page: number;
-//     page_size: number;
-//     total_pages: number;
-//     total_records: number;
-//     has_next: boolean;
-//     has_prev: boolean;
-//   };
-// }
+interface AllDevicesResponse {
+  count?: number;
+  devices?: readDeviceType[];
+  data?: readDeviceType[];
+  pagination?: {
+    current_page: number;
+    page_size: number;
+    total_pages: number;
+    total_records: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
 
-// interface DeviceTypesResponse {
-//   count?: number;
-//   device_types?: DeviceType[];
-//   data?: DeviceType[];
-// }
+interface DeviceTypesResponse {
+  count?: number;
+  device_types?: DeviceType[];
+  data?: DeviceType[];
+}
 
 interface CreateDeviceTypeResponse {
   device_type: DeviceType;
