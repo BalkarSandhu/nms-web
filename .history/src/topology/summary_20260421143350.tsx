@@ -38,14 +38,13 @@ interface AreaSummary {
 }
 
 const STATUS = {
-  online:  { hex: '#00e5a0', glow: 'rgba(0,229,160,0.6)',   bg: 'rgba(0,229,160,0.07)',  text: '#00e5a0', label: 'ONLINE',border: 'rgba(0,229,160,0.4)' },
-  offline: { hex: '#ff4d6d', glow: 'rgba(255,77,109,0.7)',  bg: 'rgba(255,77,109,0.07)', text: '#ff4d6d', label: 'OFFLINE',border: 'rgba(255,77,109,0.4)' },
-  partial: { hex: '#ffb830', glow: 'rgba(255,184,48,0.55)', bg: 'rgba(255,184,48,0.07)', text: '#ffb830', label: 'PARTIAL',border: 'rgba(255,184,48,0.4)' },
-  unknown: { hex: '#4a5568', glow: 'rgba(74,85,104,0.3)',   bg: 'rgba(74,85,104,0.06)', text: '#718096', label: 'UNKNOWN',border: 'rgba(74,85,104,0.4)' },
+  online:  { hex: '#00e5a0', glow: 'rgba(0,229,160,0.6)',   bg: 'rgba(0,229,160,0.07)',  text: '#00e5a0', label: 'ONLINE' },
+  offline: { hex: '#ff4d6d', glow: 'rgba(255,77,109,0.7)',  bg: 'rgba(255,77,109,0.07)', text: '#ff4d6d', label: 'OFFLINE' },
+  partial: { hex: '#ffb830', glow: 'rgba(255,184,48,0.55)', bg: 'rgba(255,184,48,0.07)', text: '#ffb830', label: 'PARTIAL' },
+  unknown: { hex: '#4a5568', glow: 'rgba(74,85,104,0.3)',   bg: 'rgba(74,85,104,0.06)', text: '#718096', label: 'UNKNOWN' },
 };
 
 const getS = (status: string) => STATUS[status as keyof typeof STATUS] ?? STATUS.unknown;
-
 
 /* ─── Build hierarchical tree for cluster view ──────────── */
 function buildHierarchy(locations: Location[], parentId: number | null = null): SummaryNode[] {
@@ -108,7 +107,6 @@ const ClusterCard: React.FC<{
   const [expanded, setExpanded] = useState(false);
   const loc = node.location;
   const s = getS(loc.status);
-
   const hasChildren = node.children.length > 0;
 
   return (

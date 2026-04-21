@@ -108,6 +108,7 @@ const ClusterCard: React.FC<{
   const [expanded, setExpanded] = useState(false);
   const loc = node.location;
   const s = getS(loc.status);
+  const b=getBorderColor(loc.status);
 
   const hasChildren = node.children.length > 0;
 

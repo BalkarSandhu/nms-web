@@ -93,6 +93,15 @@ const AreaSummary: React.FC<AreaSummaryProps> = ({ allLocations, onAreaSelect })
     return '#ef4444';
   };
 
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      online: '#10b981',
+      offline: '#ef4444',
+      partial: '#f59e0b',
+      unknown: '#6b7280',
+    };
+    return colors[status] || colors.unknown;
+  };
 
   return (
     <div className="area-summary-container">

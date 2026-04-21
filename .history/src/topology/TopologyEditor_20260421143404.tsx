@@ -185,7 +185,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
         .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', s.hex).attr('opacity', 0.9);
     });
 
-    Object.entries(STATUS).forEach(([key,_]) => {
+    Object.entries(STATUS).forEach(([key, s]) => {
       const f = defs.append('filter').attr('id', `gf-${key}`)
         .attr('x', '-50%').attr('y', '-50%').attr('width', '200%').attr('height', '200%');
       f.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'b');
