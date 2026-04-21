@@ -5,11 +5,9 @@ import * as d3 from 'd3';
 import {
   AlertCircle, RefreshCw, Network, Search,
   Signal, X, Info, Cpu, Clock, Hash, MapPin, Layers,
-  Grid3x3,
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
-import AreaSummary from './AreaSummary'; 
-import ClusterView from './ClusterView'; 
+import SummaryPanel from '@/components/Summary'; // ← ADD THIS IMPORT
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Location {
@@ -119,7 +117,7 @@ function applyHierarchicalLayout(nodes: GraphNode[], links: GraphLink[]) {
   roots.forEach(r => place(r.id, 0));
 }
 
-/* ─── Cubic Bézier path ──────────────────────────────────── */
+/* ─── Cubic Bézier path from bottom of source to top of target ── */
 function edgePath(s: GraphNode, t: GraphNode): string {
   const sh = getNodeH(s), th = getNodeH(t);
   const x1 = s.x ?? 0, y1 = (s.y ?? 0) + sh / 2;
@@ -128,6 +126,7 @@ function edgePath(s: GraphNode, t: GraphNode): string {
   return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
 }
 
+/* ─── Evaluate cubic Bézier at t ─────────────────────────── */
 function cubicBezier(
   x1: number, y1: number,
   cx1: number, cy1: number,
@@ -143,7 +142,10 @@ function cubicBezier(
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TopoCanvas (unchanged from original)
+   TopoCanvas
+   – SVG initialised ONCE, never remounted
+   – data synced via a separate useEffect
+   – zoom/pan state never touched on refresh
    ═══════════════════════════════════════════════════════════ */
 interface CanvasProps {
   nodes: GraphNode[];
@@ -160,6 +162,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
   const rafRef  = useRef<number>(0);
   const readyRef = useRef(false);
 
+  /* ── ONE-TIME SVG bootstrap ──────────────────────────── */
   useEffect(() => {
     if (!svgRef.current || readyRef.current) return;
     const svg = d3.select(svgRef.current);
@@ -168,6 +171,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
 
     const defs = svg.append('defs');
 
+    /* dot grid */
     const pat = defs.append('pattern').attr('id', 'topo-grid')
       .attr('width', 40).attr('height', 40).attr('patternUnits', 'userSpaceOnUse');
     pat.append('circle').attr('cx', 0).attr('cy', 0).attr('r', 0.8).attr('fill', 'rgba(255,255,255,0.06)');
@@ -175,6 +179,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
     pat.append('circle').attr('cx', 0).attr('cy', 40).attr('r', 0.8).attr('fill', 'rgba(255,255,255,0.06)');
     pat.append('circle').attr('cx', 40).attr('cy', 40).attr('r', 0.8).attr('fill', 'rgba(255,255,255,0.06)');
 
+    /* arrowhead per status */
     Object.entries(STATUS).forEach(([key, s]) => {
       defs.append('marker')
         .attr('id', `arr-${key}`)
@@ -185,6 +190,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
         .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', s.hex).attr('opacity', 0.9);
     });
 
+    /* glow filter per status */
     Object.entries(STATUS).forEach(([key, s]) => {
       const f = defs.append('filter').attr('id', `gf-${key}`)
         .attr('x', '-50%').attr('y', '-50%').attr('width', '200%').attr('height', '200%');
@@ -194,6 +200,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
       m.append('feMergeNode').attr('in', 'SourceGraphic');
     });
 
+    /* card drop shadow */
     const ds = defs.append('filter').attr('id', 'card-shadow')
       .attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%');
     ds.append('feDropShadow').attr('dx', 0).attr('dy', 5)
@@ -218,8 +225,9 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
 
     svg.on('click', () => onSelect(null));
     readyRef.current = true;
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── DATA SYNC ──────────────────────────────────────── */
   useEffect(() => {
     if (!readyRef.current || !rootRef.current || !nodes.length) return;
 
@@ -231,6 +239,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
     simRef.current?.stop();
     cancelAnimationFrame(rafRef.current);
 
+    /* ── LINKS ─────────────────────────────────────── */
     const linkSel = root.select<SVGGElement>('.link-layer')
       .selectAll<SVGGElement, GraphLink>('g.edge')
       .data(links, d => d.id);
@@ -238,14 +247,15 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
     linkSel.exit().remove();
 
     const linkEnter = linkSel.enter().append('g').attr('class', 'edge');
-    linkEnter.append('path').attr('class', 'e-halo');
-    linkEnter.append('path').attr('class', 'e-core');
-    linkEnter.append('path').attr('class', 'e-shine');
+    linkEnter.append('path').attr('class', 'e-halo');   // wide blurred aura
+    linkEnter.append('path').attr('class', 'e-core');   // solid coloured line
+    linkEnter.append('path').attr('class', 'e-shine');  // brighter thin highlight
     linkEnter.append('circle').attr('class', 'e-photon').attr('r', 4);
-    linkEnter.append('circle').attr('class', 'e-photon2').attr('r', 2.5);
+    linkEnter.append('circle').attr('class', 'e-photon2').attr('r', 2.5); // second offset photon
 
     const linkAll = root.select('.link-layer').selectAll<SVGGElement, GraphLink>('g.edge');
 
+    /* ── NODES ─────────────────────────────────────── */
     const nodeSel = root.select<SVGGElement>('.node-layer')
       .selectAll<SVGGElement, GraphNode>('g.node-card')
       .data(nodes, d => d.id);
@@ -266,6 +276,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
 
     const nodeAll = root.select('.node-layer').selectAll<SVGGElement, GraphNode>('g.node-card');
 
+    /* ── SIMULATION ─────────────────────────────────── */
     const sim = d3.forceSimulation<GraphNode, GraphLink>(nodes)
       .force('link',    d3.forceLink<GraphNode, GraphLink>(links).id(n => n.id).distance(230).strength(0.85))
       .force('charge',  d3.forceManyBody().strength(-700))
@@ -274,6 +285,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
       .velocityDecay(0.4);
     simRef.current = sim;
 
+    /* shared helper to get link geometry */
     const getLinkGeom = (d: GraphLink) => {
       const s = d.source as GraphNode;
       const t = d.target as GraphNode;
@@ -285,6 +297,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
       return { x1, y1, x2, y2, dy, cx1: x1, cy1: y1 + dy, cx2: x2, cy2: y2 - dy };
     };
 
+    /* tick */
     sim.on('tick', () => {
       linkAll.each(function(d) {
         const g = getLinkGeom(d);
@@ -294,16 +307,19 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
         const sel = d3.select(this);
         const isDead = (d.target as GraphNode).data.status === 'offline';
 
+        /* halo – thick blurred background glow */
         sel.select('.e-halo').attr('d', p).attr('fill', 'none')
           .attr('stroke', st.hex).attr('stroke-width', 10).attr('opacity', 0.12)
           .attr('filter', `url(#gf-${(d.target as GraphNode).data.status})`);
 
+        /* core line */
         sel.select('.e-core').attr('d', p).attr('fill', 'none')
           .attr('stroke', st.hex).attr('stroke-width', isDead ? 2 : 2.5)
           .attr('stroke-dasharray', isDead ? '8 6' : null)
           .attr('opacity', isDead ? 0.55 : 0.85)
           .attr('marker-end', `url(#arr-${(d.target as GraphNode).data.status})`);
 
+        /* shine overlay – thin bright stripe on top of core */
         sel.select('.e-shine').attr('d', p).attr('fill', 'none')
           .attr('stroke', 'rgba(255,255,255,0.25)').attr('stroke-width', 0.7)
           .attr('opacity', isDead ? 0 : 0.6);
@@ -312,11 +328,13 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
       nodeAll.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
+    /* ── PHOTON ANIMATION (RAF, independent of simulation) ── */
+    // Each link gets two photons at different offsets for depth
     const LINK_OFFSETS: Map<string, number> = new Map();
     links.forEach((l, i) => LINK_OFFSETS.set(l.id, (i * 0.37) % 1));
 
     let t0 = performance.now();
-    const SPEED = 0.28;
+    const SPEED = 0.28; // full path per second
 
     function animatePhotons(now: number) {
       const elapsed = (now - t0) / 1000;
@@ -335,6 +353,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
           return;
         }
 
+        // photon 1
         const t1 = (elapsed * SPEED + offset) % 1;
         const p1 = cubicBezier(g2.x1, g2.y1, g2.cx1, g2.cy1, g2.cx2, g2.cy2, g2.x2, g2.y2, t1);
         sel.select('.e-photon')
@@ -342,6 +361,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
           .attr('fill', st.hex).attr('opacity', 0.95)
           .attr('filter', `url(#gf-${(d.target as GraphNode).data.status})`);
 
+        // photon 2 – offset by 0.5, smaller
         const t2 = (t1 + 0.5) % 1;
         const p2 = cubicBezier(g2.x1, g2.y1, g2.cx1, g2.cy1, g2.cx2, g2.cy2, g2.x2, g2.y2, t2);
         sel.select('.e-photon2')
@@ -354,6 +374,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
     }
     rafRef.current = requestAnimationFrame(animatePhotons);
 
+    /* auto-fit once settled */
     sim.on('end', () => {
       const xs = nodes.map(n => n.x ?? 0);
       const ys = nodes.map(n => n.y ?? 0);
@@ -375,8 +396,9 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
       sim.stop();
       cancelAnimationFrame(rafRef.current);
     };
-  }, [nodes, links]);
+  }, [nodes, links]); // ONLY rebuild when graph topology data changes
 
+  /* ── SELECTION HIGHLIGHT – no rebuild ──────────────── */
   useEffect(() => {
     if (!rootRef.current) return;
     d3.select(rootRef.current)
@@ -401,7 +423,7 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
   );
 };
 
-/* ─── Build HTML card ────────────────────────────────────── */
+/* ─── Build HTML card inside a foreignObject ────────────── */
 function buildCard(g: d3.Selection<SVGGElement, GraphNode, null, undefined>, d: GraphNode) {
   const s  = getS(d.data.status);
   const nh = getNodeH(d);
@@ -491,7 +513,9 @@ function buildCard(g: d3.Selection<SVGGElement, GraphNode, null, undefined>, d: 
   }
 }
 
-/* ─── Detail Panel ──────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   Detail Panel
+   ═══════════════════════════════════════════════════════════ */
 const DetailPanel: React.FC<{ data: Location; onClose: () => void }> = ({ data, onClose }) => {
   const s  = getS(data.status);
   const hp = data.health_percentage ?? 0;
@@ -567,28 +591,26 @@ const DetailPanel: React.FC<{ data: Location; onClose: () => void }> = ({ data, 
 };
 
 /* ═══════════════════════════════════════════════════════════
-   Main TopologyGraph Component
+   Main page component
    ═══════════════════════════════════════════════════════════ */
 const TopologyGraph: React.FC = () => {
-  const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
-  const [graphLinks, setGraphLinks] = useState<GraphLink[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [graphNodes,   setGraphNodes]   = useState<GraphNode[]>([]);
+  const [graphLinks,   setGraphLinks]   = useState<GraphLink[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [searchTerm,   setSearchTerm]   = useState('');
   const [filterStatus, setFilterStatus] = useState<'all'|'online'|'offline'|'partial'>('all');
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [autoRefresh,  setAutoRefresh]  = useState(true);
+  const [selectedId,   setSelectedId]   = useState<string | null>(null);
   const [selectedData, setSelectedData] = useState<Location | null>(null);
-  const [viewMode, setViewMode] = useState<'tree'|'subtree'>('tree');
-  const [locationId, setLocationId] = useState<number>(1);
+  const [viewMode,     setViewMode]     = useState<'tree'|'subtree'>('tree');
+  const [locationId,   setLocationId]   = useState<number>(1);
   const [selectedArea, setSelectedArea] = useState('all');
   const [availableAreas, setAvailableAreas] = useState<string[]>([]);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
-  // NEW: State for area summary and cluster views
-  const [currentView, setCurrentView] = useState<'topology' | 'area-summary' | 'cluster'>('topology');
-  const [clusterArea, setClusterArea] = useState<string>('');
+  const [lastUpdated,  setLastUpdated]  = useState<Date | null>(null);
+  const [showSummary,  setShowSummary]  = useState(false); // ← ADD THIS STATE
 
+  /* filter helpers */
   const filterByArea = (locs: Location[], area: string): Location[] => {
     if (area === 'all') return locs;
     const f = (n: Location): Location | null => {
@@ -599,16 +621,19 @@ const TopologyGraph: React.FC = () => {
     return locs.map(f).filter(Boolean) as Location[];
   };
 
+  /* ── FULL FETCH (rebuilds layout) ─────────────────────
+     Only triggered when viewMode / locationId / selectedArea
+     actually change. The 10-second auto-refresh uses a
+     SEPARATE lighter patch path below.                   */
   const fetchTopology = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true); setError(null);
       const url = viewMode === 'subtree' && locationId
         ? `${import.meta.env.VITE_NMS_HOST}/locations/${locationId}/subtree`
         : `${import.meta.env.VITE_NMS_HOST}/locations/tree`;
       const res = await fetch(url, { headers: getAuthHeaders() });
       if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-      const data = await res.json();
+      const data  = await res.json();
       const raw: Location[] = Array.isArray(data.tree ?? data) ? (data.tree ?? data) : [data.tree ?? data];
 
       const areaSet = new Set<string>();
@@ -631,6 +656,10 @@ const TopologyGraph: React.FC = () => {
 
   useEffect(() => { fetchTopology(); }, [fetchTopology]);
 
+  /* ── STATUS-ONLY REFRESH (every 10s) ─────────────────
+     Fetches fresh data but ONLY patches .status and
+     device counts on existing nodes.
+     Positions, zoom, and layout are never touched.      */
   useEffect(() => {
     if (!autoRefresh) return;
     const id = setInterval(async () => {
@@ -643,10 +672,12 @@ const TopologyGraph: React.FC = () => {
         const data = await res.json();
         const raw: Location[] = Array.isArray(data.tree ?? data) ? (data.tree ?? data) : [data.tree ?? data];
 
+        /* index by id */
         const byId = new Map<number, Location>();
         const idx = (locs: Location[]) => locs.forEach(l => { byId.set(l.id, l); idx(l.children ?? []); });
         idx(raw);
 
+        /* patch in-place, preserving x/y/fx/fy so simulation & zoom are untouched */
         setGraphNodes(prev => prev.map(n => {
           const fresh = byId.get(n.data.id);
           if (!fresh) return n;
@@ -654,27 +685,28 @@ const TopologyGraph: React.FC = () => {
             ...n,
             data: {
               ...n.data,
-              status: fresh.status,
-              device_count: fresh.device_count,
-              online_device_count: fresh.online_device_count,
-              offline_device_count: fresh.offline_device_count,
-              health_percentage: fresh.health_percentage,
+              status:                fresh.status,
+              device_count:          fresh.device_count,
+              online_device_count:   fresh.online_device_count,
+              offline_device_count:  fresh.offline_device_count,
+              health_percentage:     fresh.health_percentage,
             },
           };
         }));
         setLastUpdated(new Date());
-      } catch { }
+      } catch { /* silently swallow refresh errors */ }
     }, 10_000);
     return () => clearInterval(id);
   }, [autoRefresh, viewMode, locationId]);
 
+  /* filtered nodes for search/status pills */
   const { filteredNodes, filteredLinks } = useMemo(() => {
     const fn = graphNodes.filter(n =>
       (filterStatus === 'all' || n.data.status === filterStatus) &&
-      (searchTerm === '' || n.data.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (searchTerm   === ''    || n.data.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     const ids = new Set(fn.map(n => n.id));
-    const fl = graphLinks.filter(l => {
+    const fl  = graphLinks.filter(l => {
       const s = typeof l.source === 'string' ? l.source : (l.source as GraphNode).id;
       const t = typeof l.target === 'string' ? l.target : (l.target as GraphNode).id;
       return ids.has(s) && ids.has(t);
@@ -683,8 +715,8 @@ const TopologyGraph: React.FC = () => {
   }, [graphNodes, graphLinks, filterStatus, searchTerm]);
 
   const stats = useMemo(() => ({
-    total: graphNodes.length,
-    online: graphNodes.filter(n => n.data.status === 'online').length,
+    total:   graphNodes.length,
+    online:  graphNodes.filter(n => n.data.status === 'online').length,
     offline: graphNodes.filter(n => n.data.status === 'offline').length,
     partial: graphNodes.filter(n => n.data.status === 'partial').length,
   }), [graphNodes]);
@@ -694,39 +726,7 @@ const TopologyGraph: React.FC = () => {
     setSelectedData(data ?? null);
   };
 
-  // NEW: Handle area summary navigation
-  const handleAreaSelect = (area: string) => {
-    setClusterArea(area);
-    setCurrentView('cluster');
-  };
-
-  // NEW: Handle cluster node selection
-  const handleClusterNodeSelect = (location: Location) => {
-    handleSelect(`n-${location.id}`, location);
-  };
-
-  // NEW: Render appropriate view based on currentView state
-  if (currentView === 'area-summary') {
-    return (
-      <AreaSummary
-        allLocations={graphNodes.map(n => n.data)}
-        onAreaSelect={handleAreaSelect}
-      />
-    );
-  }
-
-  if (currentView === 'cluster') {
-    return (
-      <ClusterView
-        allLocations={graphNodes.map(n => n.data)}
-        selectedArea={clusterArea}
-        onBack={() => setCurrentView('area-summary')}
-        onNodeSelect={handleClusterNodeSelect}
-      />
-    );
-  }
-
-  // Default topology view
+  /* ── RENDER ─────────────────────────────────────────── */
   return (
     <div style={{ height: '100vh', background: '#060d18', color: '#c8d6e5', display: 'flex', flexDirection: 'column', fontFamily: "'JetBrains Mono','Fira Code','Cascadia Code',monospace", overflow: 'hidden' }}>
 
@@ -770,10 +770,10 @@ const TopologyGraph: React.FC = () => {
               style={{ padding: '5px 11px', background: autoRefresh ? 'rgba(0,229,160,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${autoRefresh ? 'rgba(0,229,160,0.22)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 7, cursor: 'pointer', color: autoRefresh ? '#00e5a0' : '#556677', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, letterSpacing: .5 }}>
               <Signal size={12} />{autoRefresh ? 'LIVE' : 'PAUSED'}
             </button>
-            {/* NEW: Area Summary Button */}
-            <button onClick={() => setCurrentView('area-summary')}
-              style={{ padding: '5px 11px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, cursor: 'pointer', color: '#556677', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, letterSpacing: .5 }}>
-              <Grid3x3 size={12} />CLUSTER
+            {/* ← ADD SUMMARY BUTTON HERE */}
+            <button onClick={() => setShowSummary(v => !v)}
+              style={{ padding: '5px 11px', background: showSummary ? 'rgba(0,229,160,0.07)' : 'rgba(255,255,255,0.03)', border: `1px solid ${showSummary ? 'rgba(0,229,160,0.22)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 7, cursor: 'pointer', color: showSummary ? '#00e5a0' : '#556677', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, letterSpacing: .5 }}>
+              <Layers size={12} />SUMMARY
             </button>
           </div>
         </div>
@@ -842,6 +842,8 @@ const TopologyGraph: React.FC = () => {
           </div>
         )}
 
+        {/* TopoCanvas is ALWAYS mounted – never conditionally rendered,
+            so zoom/pan state persists across re-renders             */}
         <TopoCanvas nodes={filteredNodes} links={filteredLinks} selectedId={selectedId} onSelect={handleSelect} />
 
         <div style={{ position: 'absolute', bottom: 36, left: 16, display: 'flex', gap: 8, pointerEvents: 'none' }}>
@@ -856,6 +858,19 @@ const TopologyGraph: React.FC = () => {
         {selectedData && (
           <DetailPanel data={selectedData} onClose={() => { setSelectedId(null); setSelectedData(null); }} />
         )}
+
+        {/* ← RENDER SUMMARY PANEL HERE */}
+        <SummaryPanel
+          allLocations={graphNodes.map(n => n.data)}
+          onLocationSelect={(location) => {
+            if (location) {
+              handleSelect(`n-${location.id}`, location);
+              setShowSummary(false);
+            }
+          }}
+          isOpen={showSummary}
+          onClose={() => setShowSummary(false)}
+        />
       </div>
 
       {/* Status bar */}
@@ -868,7 +883,7 @@ const TopologyGraph: React.FC = () => {
       </div>
 
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:.3} }
         * { scrollbar-width: thin; scrollbar-color: #182030 transparent; }
         ::-webkit-scrollbar { width: 4px; }

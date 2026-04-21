@@ -173,7 +173,7 @@ export const fetchAllLocationsPaginated = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const queryParams = new URLSearchParams({
-        page_size: '500', // Fetch up to 2000 locations in single request
+        page_size: '50', // Fetch up to 2000 locations in single request
       });
       const baseUrl = `${import.meta.env.VITE_NMS_HOST}/locations?${queryParams}`;
       const url = buildUrlWithWorkerId(baseUrl);

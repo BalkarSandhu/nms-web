@@ -8,8 +8,8 @@ import {
   Grid3x3,
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
-import AreaSummary from './AreaSummary'; 
-import ClusterView from './ClusterView'; 
+import AreaSummary from './AreaSummary'; // NEW: Import area summary
+import ClusterView from './ClusterView'; // NEW: Import cluster view
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Location {

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
 import AreaSummary from './AreaSummary'; 
-import ClusterView from './ClusterView'; 
+import CellTableView from './ClusterView'; 
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Location {
@@ -717,7 +717,7 @@ const TopologyGraph: React.FC = () => {
 
   if (currentView === 'cluster') {
     return (
-      <ClusterView
+      <CellTableView
         allLocations={graphNodes.map(n => n.data)}
         selectedArea={clusterArea}
         onBack={() => setCurrentView('area-summary')}

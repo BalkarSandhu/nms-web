@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
 import AreaSummary from './AreaSummary'; 
-import ClusterView from './ClusterView'; 
+import CellTableView from './ClusterView'; 
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Location {
