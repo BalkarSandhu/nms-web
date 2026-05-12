@@ -415,13 +415,13 @@ const DetailPanel: React.FC<{
 
         <section className="cv-panel-section">
           <div className="cv-panel-section-title">INFORMATION</div>
-          {/* <InfoRow label="Project"  value={location.project || '—'} /> */}
+          <InfoRow label="Project"  value={location.project || '—'} />
           <InfoRow label="Area"     value={location.area    || '—'} />
           <InfoRow label="Parent"   value={parent ? parent.name : 'None'} />
           <InfoRow label="Children" value={String(childLocations.length)} />
-          {/* {location.status_reason && (
+          {location.status_reason && (
             <InfoRow label="Reason" value={location.status_reason} />
-          )} */}
+          )}
         </section>
 
         <section className="cv-panel-section">

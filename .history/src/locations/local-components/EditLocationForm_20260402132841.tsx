@@ -21,16 +21,11 @@ export const EditLocationForm = ({
     { message: string; type: "error" | "success" | "info" } | undefined
   >(undefined);
 
-  const [openStates, setOpenStates] = useState({
-    status: false,
-    locationType: false,
-    parentLocation: false,
-  });
-
   // Form fields state
   const [formData, setFormData] = useState({
     name: "",
     area: "",
+    project: "",
     status: "",
     location_type_id: "",
     parent_id: "" as string | null,
@@ -42,6 +37,7 @@ export const EditLocationForm = ({
       setFormData({
         name: location.name || "",
         area: location.area || "",
+        project: location.project || "",
         status: location.status || "",
         location_type_id: String(location.location_type_id || ""),
         parent_id: location && (location as any).parent_id ? String((location as any).parent_id) : null,
@@ -58,15 +54,14 @@ export const EditLocationForm = ({
   }, [locationTypes]);
 
   // Get parent locations (exclude current location)
-  // FIXED: Using comboboxOptions instead of selectBoxOptions for search functionality
   const parentLocationOptions = useMemo(() => {
-    const filtered = locations
-      .filter((l) => l.id !== locationId)
-      .map((l) => l.name)
-      .filter((name, index, self) => self.indexOf(name) === index) // Remove duplicates
-      .sort((a, b) => a.localeCompare(b));
-    
-    return filtered;
+    return locations
+      .filter((l) => l.id !== locationId) // Exclude the current location
+      .map((l) => ({
+        label: l.name,
+        value: String(l.id),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [locations, locationId]);
 
   // Get status options from existing locations
@@ -77,13 +72,6 @@ export const EditLocationForm = ({
 
   const handleInputChange = (field: string, value: string | null) => {
     setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleOpenChange = (field: string, value: boolean) => {
-    setOpenStates((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -109,30 +97,31 @@ export const EditLocationForm = ({
       return;
     }
 
-    
+    if (!formData.project.trim()) {
+      setStatus({
+        message: "Project is required.",
+        type: "error",
+      });
+      return;
+    }
+
     setStatus({ message: "Updating location...", type: "info" });
 
     try {
-      // Find parent_id from parent location name
-      let parentId = undefined;
-      if (formData.parent_id && formData.parent_id.trim()) {
-        const parentLocation = locations.find((l) => l.name === formData.parent_id && l.id !== locationId);
-        parentId = parentLocation ? parentLocation.id : undefined;
-      }
-
       const updates: any = {
         name: formData.name.trim(),
         area: formData.area.trim(),
+        project: formData.project.trim(),
         status: formData.status || undefined,
         location_type_id: formData.location_type_id
           ? parseInt(formData.location_type_id)
           : undefined,
       };
 
-      // Add parent_id if found
-      if (parentId) {
-        updates.parent_id = parentId;
-      } else if (formData.parent_id === null || formData.parent_id === "") {
+      // Add parent_id if selected
+      if (formData.parent_id) {
+        updates.parent_id = parseInt(formData.parent_id);
+      } else if (formData.parent_id === null) {
         updates.parent_id = null;
       }
 
@@ -182,13 +171,13 @@ export const EditLocationForm = ({
       />
 
       {/* Project */}
-      {/* <InputField
+      <InputField
         label="Project"
         placeholder="Enter project"
         type="input"
         stateValue={formData.project}
         stateAction={(value) => handleInputChange("project", value)}
-      /> */}
+      />
 
       {/* Status */}
       <InputField
@@ -198,8 +187,6 @@ export const EditLocationForm = ({
         selectBoxOptions={statusOptions}
         stateValue={formData.status}
         stateAction={(value) => handleInputChange("status", value)}
-        openState={openStates.status}
-        openStateAction={(value) => handleOpenChange("status", value)}
       />
 
       {/* Location Type */}
@@ -210,20 +197,16 @@ export const EditLocationForm = ({
         selectBoxOptions={locationTypeOptions}
         stateValue={formData.location_type_id}
         stateAction={(value) => handleInputChange("location_type_id", value)}
-        openState={openStates.locationType}
-        openStateAction={(value) => handleOpenChange("locationType", value)}
       />
 
-      {/* Parent Location - Using combobox for better search */}
+      {/* Parent Location with Search */}
       <InputField
         label="Parent Location (Optional)"
         placeholder="Search and select parent location"
-        type="combobox"
-        comboboxOptions={parentLocationOptions}
+        type="selectbox"
+        selectBoxOptions={parentLocationOptions}
         stateValue={formData.parent_id || ""}
         stateAction={(value) => handleInputChange("parent_id", value)}
-        openState={openStates.parentLocation}
-        openStateAction={(value) => handleOpenChange("parentLocation", value)}
       />
     </Form>
   );

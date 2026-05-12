@@ -1,17 +1,30 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Map as MapGL, Marker, Source, Layer } from 'react-map-gl/maplibre';
+import type { MapRef, StyleSpecification } from 'react-map-gl/maplibre';
+import maplibregl from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {
-  ArrowLeft, Filter, MoreVertical, Search, Activity, Camera, X, ChevronRight,
+  ArrowLeft, Search, Filter, X, ChevronRight, Activity, MapPin,
 } from 'lucide-react';
 
-/* ─── Types — unchanged contract ───────────────────────────────────────── */
+const protocol = new Protocol();
+maplibregl.addProtocol("pmtiles", protocol.tile);
+/* ─── PMTiles protocol (same setup MapViewer uses) ─────────────────────── */
+// const protocol = new Protocol();
+// if (!maplibregl.getProtocol?.('pmtiles')) {
+//   maplibregl.addProtocol('pmtiles', protocol.tile);
+// }
+
+/* ─── Types ────────────────────────────────────────────────────────────── */
 interface Location {
   id: number;
   name: string;
   parent_id: number | null;
   status: 'online' | 'offline' | 'unknown' | 'partial';
-  // project: string;
+  project: string;
   area: string;
   description?: string;
   device_count?: number;
@@ -23,6 +36,10 @@ interface Location {
   created_at?: string;
   updated_at?: string;
   status_reason?: string;
+  /* NEW — optional. Locations without coordinates are listed under
+     "Unmapped" and don't render on the map. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface ClusterDevice {
@@ -30,6 +47,7 @@ export interface ClusterDevice {
   hostname?: string;
   display?: string;
   ip?: string;
+  protocol?: string;
   is_reachable?: boolean;
   location_id: number;
 }
@@ -39,32 +57,48 @@ interface ClusterViewProps {
   selectedArea: string;
   onBack: () => void;
   onNodeSelect: (location: Location) => void;
-  /** OPTIONAL — flat device list to populate the detail panel. */
+  /** Optional — pass devices to populate the panel device list. */
   devices?: ClusterDevice[];
+  /** Optional — override basemap. Defaults to CartoDB Dark Matter raster.
+   *  Pass your MapViewer config here to match the rest of the app. */
+  mapStyle?: StyleSpecification | string;
 }
+
+/* ─── Default basemap (CartoDB Dark Matter raster) ─────────────────────── */
+const DEFAULT_MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors, © CARTO',
+    },
+  },
+  layers: [
+    { id: 'bg', type: 'background', paint: { 'background-color': '#060d18' } },
+    { id: 'carto', type: 'raster', source: 'carto-dark', paint: { 'raster-opacity': 0.92 } },
+  ],
+};
 
 /* ─── Status palette ───────────────────────────────────────────────────── */
 const STATUS_PALETTE = {
-  online:  { ring: '#3ea7ff', accent: '#9cc8ff', label: 'ONLINE',   text: '#cfe5ff' },
-  offline: { ring: '#f25c5c', accent: '#ffb8b8', label: 'OFFLINE',  text: '#ffd6d6' },
-  partial: { ring: '#f5a623', accent: '#ffd58a', label: 'DEGRADED', text: '#ffe6b8' },
-  unknown: { ring: '#6b7a8d', accent: '#9aa8bd', label: 'UNKNOWN',  text: '#bdc7d6' },
+  online:  { ring: '#3ea7ff', text: '#cfe5ff', label: 'ONLINE'   },
+  offline: { ring: '#f25c5c', text: '#ffd6d6', label: 'OFFLINE'  },
+  partial: { ring: '#f5a623', text: '#ffe6b8', label: 'DEGRADED' },
+  unknown: { ring: '#6b7a8d', text: '#bdc7d6', label: 'UNKNOWN'  },
 } as const;
+
 const getPalette = (s: string) =>
   STATUS_PALETTE[s as keyof typeof STATUS_PALETTE] || STATUS_PALETTE.unknown;
 
-/* ─── Seeded RNG (stable layout) ───────────────────────────────────────── */
-function makeRng(seed: number) {
-  let s = seed || 1;
-  return () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
-}
-
-/* ─── Word wrap ≤ 2 lines ──────────────────────────────────────────────── */
+/* ─── Helpers ──────────────────────────────────────────────────────────── */
 function wrapText(text: string, max: number): string[] {
-  const words = (text || '').split(/\s+/);
+  const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = '';
   for (const w of words) {
@@ -76,258 +110,116 @@ function wrapText(text: string, max: number): string[] {
   return lines.slice(0, 2);
 }
 
-/* ─── Cluster sizing ───────────────────────────────────────────────────── */
 function sizeFor(loc: Location): number {
   const c = loc.device_count ?? 0;
-  const min = 30, max = 50;
+  const min = 38, max = 56; // diameter of inner disk in px
   return min + Math.min(1, c / 30) * (max - min);
 }
-/** Approximate label box width in px from text content */
-function labelWidth(name: string): number {
-  const wrapped = wrapText(name, 18);
-  const longest = wrapped.reduce((m, l) => Math.max(m, l.length), 0);
-  return Math.min(longest * 7 + 8, 160); // ~7px per char, capped
-}
-/** Total footprint dimensions for a cluster (rings + label area) */
-function footprint(loc: Location) {
-  const r = sizeFor(loc) * 1.05;     // outer ring radius
-  const lw = labelWidth(loc.name);   // label half-width on each side
-  const lh = wrapText(loc.name, 18).length * 13 + 18; // label height + gap
-  return {
-    halfW: Math.max(r, lw / 2),
-    topR: r,            // rings extend upward this much
-    bottomR: r + lh,    // rings + label extend downward this much
-  };
-}
 
-/* ─── Force-directed layout that respects labels ───────────────────────── */
-function forceLayout(
-  nodes: Location[],
-  width: number,
-  height: number,
-  iterations = 260
-): Map<number, { x: number; y: number }> {
-  if (nodes.length === 0) return new Map();
+const hasCoords = (l: Location): l is Location & { lat: number; lng: number } =>
+  typeof l.lat === 'number' && typeof l.lng === 'number';
 
-  const cx = width / 2, cy = height / 2;
-  const padX = 100, padTop = 80, padBottom = 60;
-  const rng = makeRng(nodes.length * 31 + 7);
-
-  type P = {
-    id: number;
-    x: number; y: number;
-    vx: number; vy: number;
-    halfW: number; topR: number; bottomR: number;
-  };
-
-  // Pre-compute footprints
-  const meta = new Map<number, ReturnType<typeof footprint>>();
-  for (const n of nodes) meta.set(n.id, footprint(n));
-
-  // Initial scatter
-  const positions: P[] = nodes.map((n, i) => {
-    const a = (i / nodes.length) * Math.PI * 2;
-    const r = Math.min(width, height) * 0.25 * (0.7 + rng() * 0.6);
-    const fp = meta.get(n.id)!;
-    return {
-      id: n.id,
-      x: cx + Math.cos(a) * r + (rng() - 0.5) * 60,
-      y: cy + Math.sin(a) * r + (rng() - 0.5) * 60,
-      vx: 0, vy: 0,
-      halfW: fp.halfW,
-      topR: fp.topR,
-      bottomR: fp.bottomR,
-    };
-  });
-  const idx = new Map(positions.map(p => [p.id, p]));
-
-  const edges: [number, number][] = [];
-  for (const n of nodes) {
-    if (n.parent_id !== null && idx.has(n.parent_id)) {
-      edges.push([n.id, n.parent_id]);
-    }
-  }
-
-  const linkLen = 220;
-  const linkK = 0.025;
-  const centerK = 0.004;
-  const damping = 0.86;
-
-  for (let it = 0; it < iterations; it++) {
-    // Pairwise label-aware repulsion
-    for (let i = 0; i < positions.length; i++) {
-      const a = positions[i];
-      let fx = 0, fy = 0;
-
-      for (let j = 0; j < positions.length; j++) {
-        if (i === j) continue;
-        const b = positions[j];
-
-        // Required minimum separation depends on which side is closer
-        const dy = a.y - b.y;
-        const dx = a.x - b.x;
-
-        // Vertical: label of upper extends down, rings of lower extend up
-        const verticalNeed =
-          dy > 0
-            ? a.topR + b.bottomR + 14   // a is below b → a.top vs b.bottom (b's label)
-            : a.bottomR + b.topR + 14;  // a is above b → a.bottom (a's label) vs b.top
-
-        const horizontalNeed = a.halfW + b.halfW + 18;
-
-        const adx = Math.abs(dx);
-        const ady = Math.abs(dy);
-
-        // Soft-AABB repulsion: only push if boxes overlap (or nearly do)
-        const overlapX = horizontalNeed - adx;
-        const overlapY = verticalNeed - ady;
-
-        if (overlapX > 0 && overlapY > 0) {
-          // Push along the smaller-overlap axis (separating axis)
-          if (overlapX < overlapY) {
-            const sign = dx >= 0 ? 1 : -1;
-            fx += sign * overlapX * 0.15;
-          } else {
-            const sign = dy >= 0 ? 1 : -1;
-            fy += sign * overlapY * 0.18;
-          }
-        } else {
-          // Mild radial repulsion at intermediate distances to encourage spread
-          const d2 = adx * adx + ady * ady + 1;
-          const d = Math.sqrt(d2);
-          if (d < 260) {
-            const f = 1500 / d2;
-            fx += (dx / d) * f;
-            fy += (dy / d) * f;
-          }
-        }
-      }
-
-      // Center pull
-      fx += (cx - a.x) * centerK;
-      fy += (cy - a.y) * centerK;
-
-      a.vx = (a.vx + fx) * damping;
-      a.vy = (a.vy + fy) * damping;
-    }
-
-    // Spring along parent edges
-    for (const [from, to] of edges) {
-      const a = idx.get(from)!;
-      const b = idx.get(to)!;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = (d - linkLen) * linkK;
-      a.vx += (dx / d) * f;
-      a.vy += (dy / d) * f;
-      b.vx -= (dx / d) * f;
-      b.vy -= (dy / d) * f;
-    }
-
-    // Integrate + clamp using actual footprint
-    for (const a of positions) {
-      a.x += a.vx;
-      a.y += a.vy;
-      a.x = Math.max(padX + a.halfW * 0.5, Math.min(width - padX - a.halfW * 0.5, a.x));
-      a.y = Math.max(padTop + a.topR, Math.min(height - padBottom - a.bottomR, a.y));
-    }
-  }
-
-  return new Map(positions.map(p => [p.id, { x: p.x, y: p.y }]));
+/* Fit bounds helper */
+function computeBounds(coords: { lat: number; lng: number }[]):
+  [[number, number], [number, number]] | null {
+  if (coords.length === 0) return null;
+  const lats = coords.map(c => c.lat);
+  const lngs = coords.map(c => c.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  // Add 5% padding around the bbox
+  const padLat = Math.max((maxLat - minLat) * 0.1, 0.005);
+  const padLng = Math.max((maxLng - minLng) * 0.1, 0.005);
+  return [
+    [minLng - padLng, minLat - padLat],
+    [maxLng + padLng, maxLat + padLat],
+  ];
 }
 
-/* ─── Cluster node SVG ─────────────────────────────────────────────────── */
-const ClusterNode: React.FC<{
+/* ─── Ring marker (HTML/CSS, anchored via <Marker>) ────────────────────── */
+const RingMarker: React.FC<{
   location: Location;
-  x: number; y: number; size: number;
   hovered: boolean;
   selected: boolean;
   dimmed: boolean;
   onClick: () => void;
   onHover: (h: boolean) => void;
-  index: number;
-}> = ({ location, x, y, size, hovered, selected, dimmed, onClick, onHover, index }) => {
+}> = ({ location, hovered, selected, dimmed, onClick, onHover }) => {
   const palette = getPalette(location.status);
   const count = location.device_count ?? 0;
   const wrapped = wrapText(location.name, 18);
   const active = hovered || selected;
-
-  const rings = [
-    { r: size * 0.55, op: active ? 0.8 : 0.55 },
-    { r: size * 0.78, op: active ? 0.55 : 0.32 },
-    { r: size * 1.05, op: active ? 0.35 : 0.18 },
-  ];
-  const begin = `${(index * 0.18) % 3}s`;
+  const innerSize = sizeFor(location);
+  // Outermost decorative ring diameter
+  const outerSize = innerSize * 2.2;
 
   return (
-    <g
-      transform={`translate(${x},${y})`}
-      style={{ cursor: 'pointer', opacity: dimmed ? 0.32 : 1, transition: 'opacity .25s' }}
+    <div
+      className={`cv-ring ${active ? 'is-active' : ''} ${selected ? 'is-selected' : ''} ${dimmed ? 'is-dimmed' : ''}`}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      className="cv-cluster"
+      style={{ width: outerSize, height: outerSize }}
     >
-      {/* Pulse ring — runs always, gentle */}
-      <circle cx={0} cy={0} r={size * 0.55} fill="none"
-              stroke={palette.ring} strokeWidth={1} opacity={0}>
-        <animate attributeName="r"
-                 values={`${size * 0.55};${size * 1.45}`}
-                 dur="3.2s" begin={begin} repeatCount="indefinite" />
-        <animate attributeName="opacity"
-                 values={active ? '0.85;0' : '0.45;0'}
-                 dur="3.2s" begin={begin} repeatCount="indefinite" />
-      </circle>
-
-      {/* Static rings */}
-      {rings.map((ring, i) => (
-        <circle key={i} cx={0} cy={0} r={ring.r}
-                fill="none" stroke={palette.ring} strokeWidth={1}
-                opacity={ring.op} />
-      ))}
-
-      {/* Inner glow */}
-      <circle cx={0} cy={0} r={size * 0.40}
-              fill={palette.ring} opacity={active ? 0.18 : 0.10} />
-
-      {/* Inner solid disk */}
-      <circle cx={0} cy={0} r={size * 0.34}
-              fill="rgba(8, 18, 30, 0.95)"
-              stroke={palette.ring}
-              strokeWidth={selected ? 1.8 : 1.3} />
-
-      {/* Count */}
-      <text x={0} y={1}
-            textAnchor="middle" dominantBaseline="middle"
-            fill={palette.text}
-            fontSize={size * 0.34}
-            fontWeight={300}
-            fontFamily="'JetBrains Mono','Fira Code',monospace"
-            style={{ pointerEvents: 'none', letterSpacing: '0.5px' }}>
+      {/* Outer ring */}
+      <span
+        className="cv-ring-outer"
+        style={{
+          width: outerSize,
+          height: outerSize,
+          borderColor: palette.ring,
+        }}
+      />
+      {/* Mid ring */}
+      <span
+        className="cv-ring-mid"
+        style={{
+          width: outerSize * 0.72,
+          height: outerSize * 0.72,
+          borderColor: palette.ring,
+        }}
+      />
+      {/* Glow halo (active only) */}
+      {active && (
+        <span
+          className="cv-ring-glow"
+          style={{
+            width: innerSize * 1.4,
+            height: innerSize * 1.4,
+            background: palette.ring,
+          }}
+        />
+      )}
+      {/* Pulse ring (active only) */}
+      {active && (
+        <span
+          className="cv-ring-pulse"
+          style={{
+            width: innerSize,
+            height: innerSize,
+            borderColor: palette.ring,
+          }}
+        />
+      )}
+      {/* Inner disk with count */}
+      <span
+        className="cv-ring-inner"
+        style={{
+          width: innerSize,
+          height: innerSize,
+          borderColor: palette.ring,
+          color: palette.text,
+        }}
+      >
         {String(count).padStart(2, '0')}
-      </text>
-
-      {/* Label — with paint-order halo so it stays readable on grazing */}
-      <g transform={`translate(0, ${size * 1.12 + 14})`}>
+      </span>
+      {/* Label below */}
+      <span className="cv-ring-label">
         {wrapped.map((line, i) => (
-          <text key={i}
-                x={0} y={i * 13}
-                textAnchor="middle"
-                fill={selected ? '#f0f6ff' : '#cdd9e8'}
-                fontSize={11}
-                fontWeight={selected ? 600 : 500}
-                fontFamily="'Inter',system-ui,sans-serif"
-                stroke="#060d18"
-                strokeWidth={3}
-                strokeLinejoin="round"
-                paintOrder="stroke"
-                style={{ pointerEvents: 'none' }}>
-            {line}
-          </text>
+          <span key={i} className="cv-ring-label-line">{line}</span>
         ))}
-      </g>
-    </g>
+      </span>
+    </div>
   );
 };
 
@@ -356,6 +248,7 @@ const DetailPanel: React.FC<{
     ?? devices.filter(d => d.is_reachable === false).length;
   const health = location.health_percentage
     ?? (total > 0 ? Math.round((online / total) * 100) : 0);
+
   const healthColor =
     health >= 80 ? '#22d3a5' :
     health >= 50 ? '#f5a623' : '#f25c5c';
@@ -373,9 +266,9 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-substatus">
               <span className="cv-panel-dot" style={{ background: palette.ring }} />
               <span style={{ color: palette.ring }}>{palette.label}</span>
-              {/* {location.project && (
+              {location.project && (
                 <span className="cv-panel-meta-pill">{location.project}</span>
-              )} */}
+              )}
             </div>
           </div>
         </div>
@@ -415,13 +308,19 @@ const DetailPanel: React.FC<{
 
         <section className="cv-panel-section">
           <div className="cv-panel-section-title">INFORMATION</div>
-          {/* <InfoRow label="Project"  value={location.project || '—'} /> */}
+          <InfoRow label="Project"  value={location.project || '—'} />
           <InfoRow label="Area"     value={location.area    || '—'} />
           <InfoRow label="Parent"   value={parent ? parent.name : 'None'} />
           <InfoRow label="Children" value={String(childLocations.length)} />
-          {/* {location.status_reason && (
+          {hasCoords(location) && (
+            <InfoRow
+              label="Coords"
+              value={`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
+            />
+          )}
+          {location.status_reason && (
             <InfoRow label="Reason" value={location.status_reason} />
-          )} */}
+          )}
         </section>
 
         <section className="cv-panel-section">
@@ -433,8 +332,10 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-devices">
               {devices.map(d => (
                 <div key={d.id} className="cv-dev-row">
-                  <span className="cv-dev-dot"
-                        style={{ background: d.is_reachable ? '#22d3a5' : '#f25c5c' }} />
+                  <span
+                    className="cv-dev-dot"
+                    style={{ background: d.is_reachable ? '#22d3a5' : '#f25c5c' }}
+                  />
                   <span className="cv-dev-name">
                     {d.display || d.hostname || `Device #${d.id}`}
                   </span>
@@ -457,8 +358,10 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-children">
               {childLocations.map(c => (
                 <div key={c.id} className="cv-child-row">
-                  <span className="cv-dev-dot"
-                        style={{ background: getPalette(c.status).ring }} />
+                  <span
+                    className="cv-dev-dot"
+                    style={{ background: getPalette(c.status).ring }}
+                  />
                   <span className="cv-dev-name">{c.name}</span>
                   <span className="cv-dev-ip">{c.device_count ?? 0} dev</span>
                 </div>
@@ -485,31 +388,18 @@ const ClusterView: React.FC<ClusterViewProps> = ({
   onBack,
   onNodeSelect,
   devices = [],
+  mapStyle,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dims, setDims] = useState({ w: 1200, h: 700 });
+  const mapRef = useRef<MapRef>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] =
     useState<'all' | 'online' | 'offline' | 'partial'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const r = el.getBoundingClientRect();
-      setDims({ w: Math.max(700, r.width), h: Math.max(500, r.height) });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   const filtered = useMemo(
     () =>
-      (allLocations || []).filter(
+      allLocations.filter(
         (l) =>
           l.area === selectedArea &&
           (filterStatus === 'all' || l.status === filterStatus) &&
@@ -518,8 +408,11 @@ const ClusterView: React.FC<ClusterViewProps> = ({
     [allLocations, selectedArea, filterStatus, searchTerm]
   );
 
+  const mapped = useMemo(() => filtered.filter(hasCoords), [filtered]);
+  const unmapped = filtered.length - mapped.length;
+
   const stats = useMemo(() => {
-    const a = (allLocations || []).filter((l) => l.area === selectedArea);
+    const a = allLocations.filter((l) => l.area === selectedArea);
     return {
       total: a.length,
       online: a.filter((l) => l.status === 'online').length,
@@ -532,52 +425,94 @@ const ClusterView: React.FC<ClusterViewProps> = ({
     };
   }, [allLocations, selectedArea]);
 
-  const SVG_W = dims.w;
-  const SVG_H = Math.max(420, dims.h - 110);
-  const positions = useMemo(
-    () => forceLayout(filtered, SVG_W, SVG_H),
-    [filtered, SVG_W, SVG_H]
-  );
+  // Initial view state (rough — refined by fitBounds onLoad)
+  const initialViewState = useMemo(() => {
+    if (mapped.length === 0) return { longitude: 78.96, latitude: 22.59, zoom: 4 };
+    const lats = mapped.map(l => l.lat!);
+    const lngs = mapped.map(l => l.lng!);
+    return {
+      longitude: (Math.min(...lngs) + Math.max(...lngs)) / 2,
+      latitude:  (Math.min(...lats) + Math.max(...lats)) / 2,
+      zoom: 5,
+    };
+    // intentionally not depending on `mapped` after first compute
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Connected lookup for dim/highlight
+  // Re-fit bounds when area changes or first mount completes
+  const fittedFor = useRef<string | null>(null);
+  const fitToBounds = useCallback(() => {
+    if (!mapRef.current || mapped.length === 0) return;
+    const bounds = computeBounds(mapped);
+    if (!bounds) return;
+    mapRef.current.fitBounds(bounds, {
+      padding: { top: 100, right: selectedId ? 380 : 100, bottom: 100, left: 100 },
+      duration: 800,
+      maxZoom: 13,
+    });
+  }, [mapped, selectedId]);
+
+  const handleMapLoad = () => {
+    if (fittedFor.current !== selectedArea) {
+      fitToBounds();
+      fittedFor.current = selectedArea;
+    }
+  };
+
+  useEffect(() => {
+    if (fittedFor.current !== selectedArea) {
+      fitToBounds();
+      fittedFor.current = selectedArea;
+    }
+  }, [selectedArea, fitToBounds]);
+
+  // Edges as GeoJSON (parent → child)
   const connectedToSelected = useMemo(() => {
     const set = new Set<number>();
     if (selectedId === null) return set;
     set.add(selectedId);
-    for (const n of filtered) {
+    for (const n of mapped) {
       if (n.id === selectedId && n.parent_id !== null) set.add(n.parent_id);
       if (n.parent_id === selectedId) set.add(n.id);
     }
     return set;
-  }, [filtered, selectedId]);
+  }, [mapped, selectedId]);
 
-  // Edges
-  const edges = useMemo(() => {
-    const list: { id: string; from: { x: number; y: number }; to: { x: number; y: number };
-                  status: string; involvesSelected: boolean }[] = [];
-    for (const n of filtered) {
+  const edgesGeoJson = useMemo(() => {
+    const features: any[] = [];
+    const byId = new Map<number, Location & { lat: number; lng: number }>(
+      mapped.map(l => [l.id, l])
+    );
+    for (const n of mapped) {
       if (n.parent_id !== null) {
-        const a = positions.get(n.id);
-        const b = positions.get(n.parent_id);
-        if (a && b) {
-          list.push({
-            id: `${n.id}-${n.parent_id}`,
-            from: a, to: b, status: n.status,
-            involvesSelected: selectedId !== null &&
-              (n.id === selectedId || n.parent_id === selectedId),
+        const p = byId.get(n.parent_id);
+        if (p) {
+          const involves = selectedId !== null &&
+            (n.id === selectedId || n.parent_id === selectedId);
+          features.push({
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: [[n.lng, n.lat], [p.lng, p.lat]],
+            },
+            properties: {
+              color: getPalette(n.status).ring,
+              involves,
+            },
           });
         }
       }
     }
-    return list;
-  }, [filtered, positions, selectedId]);
+    return { type: 'FeatureCollection' as const, features };
+  }, [mapped, selectedId]);
 
+  // Selection lookups
   const selectedLocation = selectedId !== null
     ? filtered.find((l) => l.id === selectedId) || null : null;
   const selectedParent = selectedLocation && selectedLocation.parent_id !== null
-    ? (allLocations || []).find((l) => l.id === selectedLocation.parent_id) || null : null;
+    ? allLocations.find((l) => l.id === selectedLocation.parent_id) || null : null;
   const selectedChildren = selectedLocation
-    ? (allLocations || []).filter((l) => l.parent_id === selectedLocation.id) : [];
+    ? allLocations.filter((l) => l.parent_id === selectedLocation.id) : [];
   const selectedDevices = useMemo(() => {
     if (!selectedLocation) return [];
     return devices.filter((d) => d.location_id === selectedLocation.id);
@@ -587,10 +522,18 @@ const ClusterView: React.FC<ClusterViewProps> = ({
 
   const handleClusterClick = (loc: Location) => {
     setSelectedId(prev => prev === loc.id ? null : loc.id);
+    // Pan the selected cluster into view (offset for the panel)
+    if (mapRef.current && hasCoords(loc) && selectedId !== loc.id) {
+      mapRef.current.flyTo({
+        center: [loc.lng, loc.lat],
+        duration: 600,
+        // Zoom level kept stable; we just pan
+      });
+    }
   };
 
   return (
-    <div className="cv-root" ref={containerRef}>
+    <div className="cv-root">
       {/* Header */}
       <header className="cv-header">
         <div className="cv-left">
@@ -601,15 +544,18 @@ const ClusterView: React.FC<ClusterViewProps> = ({
             <div className="cv-area-tag">CLUSTER · AREA</div>
             <div className="cv-area-name">{selectedArea}</div>
           </div>
-          {stats.offline > 0 && (
-            <span className="cv-malicious-badge">
-              <span className="cv-malicious-dot" />
-              CRITICAL ALERT
-            </span>
-          )}
         </div>
 
         <div className="cv-right">
+          <span className="cv-summary">
+            <b>{stats.total}</b> nodes
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#22d3a5' }}>{stats.online}</b> up
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#f25c5c' }}>{stats.offline}</b> down
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#9cc8ff' }}>{stats.avgHealth}%</b> avg
+          </span>
           <div className="cv-search">
             <Search size={13} />
             <input
@@ -618,29 +564,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#9cc8ff' }}>{stats.total}</span>
-            <span className="cv-stat-lbl">TOTAL</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#22d3a5' }}>{stats.online}</span>
-            <span className="cv-stat-lbl">UP</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#f25c5c' }}>{stats.offline}</span>
-            <span className="cv-stat-lbl">DOWN</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#f5a623' }}>{stats.partial}</span>
-            <span className="cv-stat-lbl">DEG</span>
-          </div>
-
           <button className="cv-icon-btn" title="Filter">
             <Filter size={14} />
           </button>
-          <button className="cv-icon-btn" title="More">
-            <MoreVertical size={14} />
+          <button
+            className="cv-icon-btn cv-icon-btn-text"
+            title="Refit to bounds"
+            onClick={fitToBounds}
+          >
+            FIT
           </button>
         </div>
       </header>
@@ -667,77 +599,81 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           );
         })}
         <span className="cv-chip-spacer" />
-        <span className="cv-result-count">
-          {filtered.length} node{filtered.length !== 1 ? 's' : ''} · avg health {stats.avgHealth}%
-        </span>
+        <span className="cv-result-count">{mapped.length} mapped</span>
       </div>
 
-      {/* Canvas */}
+      {/* Map canvas */}
       <div className="cv-canvas-wrap">
-        <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          width="100%"
-          height="100%"
-          preserveAspectRatio="xMidYMid meet"
-          style={{ display: 'block' }}
-          onClick={(e) => {
-            const t = e.target as SVGElement;
-            if (t.tagName === 'rect' || t.tagName === 'svg') {
-              setSelectedId(null);
-            }
-          }}
+        <MapGL
+          ref={mapRef}
+          initialViewState={initialViewState}
+          mapStyle={mapStyle ?? DEFAULT_MAP_STYLE}
+          mapLib={maplibregl}
+          attributionControl={false}
+          dragRotate={false}
+          boxZoom={false}
+          onLoad={handleMapLoad}
+          onClick={() => setSelectedId(null)}
+          style={{ width: '100%', height: '100%' }}
         >
-          <defs>
-            <radialGradient id="cv-bg" cx="50%" cy="50%" r="75%">
-              <stop offset="0%" stopColor="#13243b" />
-              <stop offset="60%" stopColor="#0a1626" />
-              <stop offset="100%" stopColor="#060d18" />
-            </radialGradient>
-          </defs>
-
-          <rect x={0} y={0} width={SVG_W} height={SVG_H} fill="url(#cv-bg)" />
-
-          {/* Edges */}
-          {edges.map((e) => (
-            <line
-              key={`e-${e.id}`}
-              x1={e.from.x} y1={e.from.y}
-              x2={e.to.x}   y2={e.to.y}
-              stroke={getPalette(e.status).ring}
-              strokeWidth={e.involvesSelected ? 1.5 : 0.8}
-              opacity={
-                selectedId === null ? 0.18 :
-                e.involvesSelected ? 0.6 : 0.05
-              }
-              style={{ transition: 'opacity .25s, stroke-width .25s' }}
+          {/* Edges (parent → child) */}
+          <Source id="cv-edges" type="geojson" data={edgesGeoJson}>
+            <Layer
+              id="cv-edges-glow"
+              type="line"
+              paint={{
+                'line-color': ['get', 'color'],
+                'line-width': ['case', ['get', 'involves'], 4, 2],
+                'line-opacity': ['case',
+                  ['get', 'involves'], 0.45,
+                  selectedId === null ? 0.18 : 0.06,
+                ],
+                'line-blur': 3,
+              }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
             />
-          ))}
+            <Layer
+              id="cv-edges-line"
+              type="line"
+              paint={{
+                'line-color': ['get', 'color'],
+                'line-width': ['case', ['get', 'involves'], 1.5, 0.9],
+                'line-opacity': ['case',
+                  ['get', 'involves'], 0.85,
+                  selectedId === null ? 0.4 : 0.15,
+                ],
+              }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+            />
+          </Source>
 
-          {/* Cluster nodes */}
-          {filtered.map((loc, i) => {
-            const p = positions.get(loc.id);
-            if (!p) return null;
+          {/* Ring markers */}
+          {mapped.map((loc) => {
             const isSelected = selectedId === loc.id;
             const isHovered = hoveredId === loc.id;
             const isDimmed = selectedId !== null && !connectedToSelected.has(loc.id);
             return (
-              <ClusterNode
+              <Marker
                 key={loc.id}
-                location={loc}
-                x={p.x}
-                y={p.y}
-                size={sizeFor(loc)}
-                hovered={isHovered}
-                selected={isSelected}
-                dimmed={isDimmed}
-                onClick={() => handleClusterClick(loc)}
-                onHover={(h) => setHoveredId(h ? loc.id : null)}
-                index={i}
-              />
+                longitude={loc.lng}
+                latitude={loc.lat}
+                anchor="center"
+                style={{ zIndex: isSelected ? 5 : isHovered ? 4 : 1 }}
+              >
+                <RingMarker
+                  location={loc}
+                  hovered={isHovered}
+                  selected={isSelected}
+                  dimmed={isDimmed}
+                  onClick={() => handleClusterClick(loc)}
+                  onHover={(h) => setHoveredId(h ? loc.id : null)}
+                />
+              </Marker>
             );
           })}
-        </svg>
+        </MapGL>
 
+        {/* Empty / unmapped notices */}
         {filtered.length === 0 && (
           <div className="cv-empty">
             <Activity size={36} style={{ opacity: 0.25 }} />
@@ -745,6 +681,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({
             <div className="cv-empty-sub">
               {searchTerm ? 'Try a different search term' : 'Adjust the filter to see nodes'}
             </div>
+          </div>
+        )}
+
+        {unmapped > 0 && (
+          <div className="cv-unmapped">
+            <MapPin size={12} />
+            <span>
+              <b>{unmapped}</b> location{unmapped !== 1 ? 's' : ''} without coordinates
+            </span>
           </div>
         )}
 
@@ -760,10 +705,6 @@ const ClusterView: React.FC<ClusterViewProps> = ({
             onViewFull={() => onNodeSelect(selectedLocation)}
           />
         )}
-
-        <div className="cv-camera">
-          <Camera size={18} />
-        </div>
       </div>
 
       {/* Styles */}
@@ -771,23 +712,31 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         *, *::before, *::after { box-sizing: border-box; }
 
         .cv-root {
-          width: 100%; height: 100%;
-          display: flex; flex-direction: column;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
           background: #060d18;
           color: #c8d6e5;
-          font-family: 'JetBrains Mono','Fira Code',ui-monospace,monospace;
-          overflow: hidden; position: relative;
+          font-family: 'Inter', system-ui, sans-serif;
+          overflow: hidden;
+          position: relative;
         }
 
+        /* Header */
         .cv-header {
-          display: flex; align-items: center; justify-content: space-between;
-          gap: 16px; padding: 12px 22px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 12px 22px;
           border-bottom: 1px solid rgba(255,255,255,0.05);
-          background: rgba(8,18,30,0.65);
-          backdrop-filter: blur(6px);
-          flex-shrink: 0; z-index: 5;
+          background: rgba(8,18,30,0.8);
+          backdrop-filter: blur(8px);
+          flex-shrink: 0;
+          z-index: 5;
         }
-        .cv-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .cv-left { display: flex; align-items: center; gap: 14px; }
         .cv-back {
           width: 32px; height: 32px;
           border-radius: 6px;
@@ -799,49 +748,49 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           transition: background .2s, color .2s;
         }
         .cv-back:hover { color: #c5cdd8; background: rgba(255,255,255,0.07); }
-        .cv-area-tag { font-size: 9px; letter-spacing: 1.5px; color: #4a5568; margin-bottom: 1px; }
-        .cv-area-name { font-size: 16px; font-weight: 600; color: #f0f6ff; letter-spacing: 0.3px; }
-
-        .cv-malicious-badge {
-          display: inline-flex; align-items: center; gap: 6px;
-          background: linear-gradient(90deg, #ff3a6e, #d6244e);
-          color: #fff;
-          padding: 4px 11px;
-          border-radius: 99px;
-          font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
-          box-shadow: 0 0 14px rgba(255,58,110,0.35);
+        .cv-area-tag {
+          font-size: 9px;
+          letter-spacing: 1.5px;
+          color: #4a5568;
+          margin-bottom: 1px;
+          font-family: 'JetBrains Mono', monospace;
         }
-        .cv-malicious-dot {
-          width: 5px; height: 5px;
-          background: #fff; border-radius: 50%;
-          animation: cvBlink 1.5s ease-in-out infinite;
+        .cv-area-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #f0f6ff;
+          letter-spacing: 0.3px;
         }
-
-        .cv-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .cv-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .cv-summary {
+          font-size: 11px;
+          color: #6b7a8d;
+          display: inline-flex;
+          gap: 6px;
+          align-items: center;
+          font-family: 'JetBrains Mono', monospace;
+        }
+        .cv-summary b { color: #c5cdd8; font-weight: 600; }
+        .cv-summary-dot { color: #2c3a52; }
 
         .cv-search { position: relative; display: flex; align-items: center; }
-        .cv-search svg { position: absolute; left: 9px; color: #4a5568; pointer-events: none; }
+        .cv-search svg {
+          position: absolute; left: 9px;
+          color: #4a5568; pointer-events: none;
+        }
         .cv-search input {
           padding: 6px 10px 6px 28px;
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 5px;
           color: #c5cdd8;
-          font-family: inherit; font-size: 11px;
+          font-family: inherit;
+          font-size: 11px;
           width: 180px;
           transition: border-color .2s;
         }
         .cv-search input::placeholder { color: #3a4556; }
         .cv-search input:focus { outline: none; border-color: rgba(62,167,255,0.4); }
-
-        .cv-stat {
-          display: flex; flex-direction: column; align-items: center;
-          padding: 0 10px;
-          border-left: 1px solid rgba(255,255,255,0.06);
-        }
-        .cv-stat:first-of-type { border-left: none; }
-        .cv-stat-val { font-size: 14px; font-weight: 700; line-height: 1; }
-        .cv-stat-lbl { font-size: 9px; color: #4a5568; letter-spacing: 1px; margin-top: 2px; }
 
         .cv-icon-btn {
           width: 28px; height: 28px;
@@ -851,13 +800,20 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           color: #6b7a8d;
           display: flex; align-items: center; justify-content: center;
           cursor: pointer;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 0.5px;
         }
+        .cv-icon-btn-text { width: auto; padding: 0 8px; }
         .cv-icon-btn:hover { color: #c5cdd8; }
 
+        /* Chips */
         .cv-chips {
           display: flex; align-items: center; gap: 6px;
           padding: 8px 22px;
           border-bottom: 1px solid rgba(255,255,255,0.04);
+          background: rgba(8,18,30,0.6);
+          backdrop-filter: blur(6px);
           flex-shrink: 0; z-index: 4;
         }
         .cv-chip {
@@ -866,7 +822,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 99px;
           color: #6b7a8d;
-          font-family: inherit;
+          font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.8px;
           cursor: pointer;
@@ -874,17 +830,111 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         }
         .cv-chip:hover { color: #c5cdd8; border-color: rgba(255,255,255,0.18); }
         .cv-chip-spacer { flex: 1; }
-        .cv-result-count { font-size: 10px; color: #4a5568; letter-spacing: 0.5px; }
-
-        .cv-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
-
-        .cv-cluster text { user-select: none; }
-
-        @keyframes cvBlink {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.3; }
+        .cv-result-count {
+          font-size: 10px;
+          color: #4a5568;
+          letter-spacing: 0.5px;
+          font-family: 'JetBrains Mono', monospace;
         }
 
+        /* Map canvas */
+        .cv-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+        .cv-canvas-wrap .maplibregl-canvas { outline: none; }
+        .cv-canvas-wrap .maplibregl-ctrl-attrib { display: none; }
+
+        /* ── Ring marker ── */
+        .cv-ring {
+          position: relative;
+          display: flex; align-items: center; justify-content: center;
+          opacity: 1;
+          transition: opacity .25s;
+          cursor: pointer;
+        }
+        .cv-ring.is-dimmed { opacity: 0.3; }
+
+        .cv-ring-outer, .cv-ring-mid, .cv-ring-pulse, .cv-ring-glow {
+          position: absolute;
+          left: 50%; top: 50%;
+          transform: translate(-50%, -50%);
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .cv-ring-outer {
+          border: 1px solid;
+          opacity: 0.18;
+          transition: opacity .25s;
+        }
+        .cv-ring-mid {
+          border: 1px solid;
+          opacity: 0.32;
+          transition: opacity .25s;
+        }
+        .cv-ring.is-active .cv-ring-outer { opacity: 0.55; }
+        .cv-ring.is-active .cv-ring-mid { opacity: 0.75; }
+        .cv-ring-glow {
+          opacity: 0.18;
+          filter: blur(4px);
+        }
+        .cv-ring-pulse {
+          border: 1px solid;
+          opacity: 0;
+          animation: cvPulse 1.8s ease-out infinite;
+        }
+        @keyframes cvPulse {
+          0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
+          100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+        }
+
+        .cv-ring-inner {
+          position: relative;
+          z-index: 2;
+          border: 1.2px solid;
+          border-radius: 50%;
+          background: rgba(8, 18, 30, 0.92);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+          font-weight: 300;
+          font-size: 14px;
+          letter-spacing: 0.5px;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+          transition: border-width .15s, transform .15s;
+        }
+        .cv-ring.is-active .cv-ring-inner {
+          transform: scale(1.05);
+        }
+        .cv-ring.is-selected .cv-ring-inner {
+          border-width: 2px;
+          box-shadow: 0 4px 18px rgba(62, 167, 255, 0.35);
+        }
+
+        .cv-ring-label {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          margin-top: 6px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
+          pointer-events: none;
+          white-space: nowrap;
+        }
+        .cv-ring-label-line {
+          font-size: 11px;
+          font-weight: 500;
+          color: #cdd9e8;
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.7);
+          line-height: 1.2;
+        }
+        .cv-ring.is-selected .cv-ring-label-line {
+          color: #f0f6ff;
+          font-weight: 600;
+        }
+
+        /* Empty */
         .cv-empty {
           position: absolute; inset: 0;
           display: flex; flex-direction: column;
@@ -893,37 +943,45 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           color: #4a5568;
           text-align: center;
           pointer-events: none;
+          z-index: 3;
         }
         .cv-empty-title { font-size: 14px; color: #6b7a8d; }
         .cv-empty-sub   { font-size: 11px; color: #4a5568; }
 
-        .cv-camera {
+        /* Unmapped pill */
+        .cv-unmapped {
           position: absolute;
-          left: 18px; bottom: 18px;
-          width: 40px; height: 40px;
-          border-radius: 8px;
-          background: rgba(255,255,255,0.04);
+          left: 16px;
+          bottom: 16px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 11px;
+          background: rgba(8, 18, 30, 0.85);
+          backdrop-filter: blur(6px);
           border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 99px;
+          font-size: 11px;
           color: #8892a4;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          transition: background .2s, color .2s;
+          font-family: 'JetBrains Mono', monospace;
+          letter-spacing: 0.3px;
+          z-index: 6;
         }
-        .cv-camera:hover { background: rgba(255,255,255,0.08); color: #c5cdd8; }
+        .cv-unmapped b { color: #f5a623; font-weight: 700; }
 
         /* ── Detail Panel ── */
         .cv-panel {
           position: absolute;
           top: 0; right: 0; bottom: 0;
           width: 340px;
-          background: linear-gradient(180deg, rgba(12,23,38,0.97) 0%, rgba(8,18,30,0.97) 100%);
+          background: linear-gradient(180deg, rgba(12,23,38,0.96) 0%, rgba(8,18,30,0.96) 100%);
           backdrop-filter: blur(12px);
           border-left: 1px solid rgba(255,255,255,0.08);
-          display: flex; flex-direction: column;
-          box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+          display: flex;
+          flex-direction: column;
+          box-shadow: -8px 0 32px rgba(0,0,0,0.4);
           animation: cvPanelIn .3s cubic-bezier(0.22, 1, 0.36, 1);
           z-index: 20;
-          font-family: 'Inter', system-ui, sans-serif;
         }
         @keyframes cvPanelIn {
           from { transform: translateX(100%); opacity: 0; }
@@ -934,7 +992,10 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           gap: 10px; padding: 16px 18px 14px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .cv-panel-head-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+        .cv-panel-head-left {
+          display: flex; align-items: center; gap: 12px;
+          min-width: 0; flex: 1;
+        }
         .cv-panel-num {
           width: 44px; height: 44px;
           border-radius: 50%;
@@ -969,6 +1030,10 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           letter-spacing: 0.3px;
           margin-left: 4px;
         }
+        @keyframes cvBlink {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.3; }
+        }
         .cv-panel-close {
           width: 28px; height: 28px;
           border-radius: 4px;
@@ -984,6 +1049,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         .cv-panel-body { flex: 1; overflow-y: auto; padding: 4px 0; }
         .cv-panel-body::-webkit-scrollbar { width: 4px; }
         .cv-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
         .cv-panel-section {
           padding: 14px 18px;
           border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -995,6 +1061,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           font-family: 'JetBrains Mono', monospace;
           font-weight: 700; margin-bottom: 10px;
         }
+
         .cv-panel-health-row {
           display: flex; justify-content: space-between; align-items: baseline;
           margin-bottom: 6px;
@@ -1135,9 +1202,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         }
 
         @media (max-width: 768px) {
+          .cv-summary { display: none; }
           .cv-search input { width: 130px; }
-          .cv-stat { padding: 0 7px; }
-          .cv-stat-val { font-size: 12px; }
           .cv-panel { width: 100%; }
         }
       `}</style>

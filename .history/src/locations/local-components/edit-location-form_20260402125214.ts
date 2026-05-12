@@ -48,7 +48,7 @@ export async function editLocationBulk(
   updates: {
     name?: string;
     area?: string;
-    // project?: string;
+    project?: string;
     status?: string;
     location_type_id?: number;
     parent_id?: number | null;

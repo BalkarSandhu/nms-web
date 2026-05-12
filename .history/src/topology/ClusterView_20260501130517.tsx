@@ -2,16 +2,16 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  ArrowLeft, Filter, MoreVertical, Search, Activity, Camera, X, ChevronRight,
+  ArrowLeft, Search, Filter, X, ChevronRight, Activity,
 } from 'lucide-react';
 
-/* ─── Types — unchanged contract ───────────────────────────────────────── */
+/* ─── Types ────────────────────────────────────────────────────────────── */
 interface Location {
   id: number;
   name: string;
   parent_id: number | null;
   status: 'online' | 'offline' | 'unknown' | 'partial';
-  // project: string;
+  project: string;
   area: string;
   description?: string;
   device_count?: number;
@@ -25,11 +25,14 @@ interface Location {
   status_reason?: string;
 }
 
+/* Optional in-panel device list shape — supply if you want the actual
+   device rows. Component still works without it. */
 export interface ClusterDevice {
   id: number;
   hostname?: string;
   display?: string;
   ip?: string;
+  protocol?: string;
   is_reachable?: boolean;
   location_id: number;
 }
@@ -39,17 +42,17 @@ interface ClusterViewProps {
   selectedArea: string;
   onBack: () => void;
   onNodeSelect: (location: Location) => void;
-  /** OPTIONAL — flat device list to populate the detail panel. */
-  devices?: ClusterDevice[];
+  devices?: ClusterDevice[]; // OPTIONAL — pass to populate panel device list
 }
 
 /* ─── Status palette ───────────────────────────────────────────────────── */
 const STATUS_PALETTE = {
-  online:  { ring: '#3ea7ff', accent: '#9cc8ff', label: 'ONLINE',   text: '#cfe5ff' },
-  offline: { ring: '#f25c5c', accent: '#ffb8b8', label: 'OFFLINE',  text: '#ffd6d6' },
-  partial: { ring: '#f5a623', accent: '#ffd58a', label: 'DEGRADED', text: '#ffe6b8' },
-  unknown: { ring: '#6b7a8d', accent: '#9aa8bd', label: 'UNKNOWN',  text: '#bdc7d6' },
+  online:  { ring: '#3ea7ff', text: '#cfe5ff', label: 'ONLINE'   },
+  offline: { ring: '#f25c5c', text: '#ffd6d6', label: 'OFFLINE'  },
+  partial: { ring: '#f5a623', text: '#ffe6b8', label: 'DEGRADED' },
+  unknown: { ring: '#6b7a8d', text: '#bdc7d6', label: 'UNKNOWN'  },
 } as const;
+
 const getPalette = (s: string) =>
   STATUS_PALETTE[s as keyof typeof STATUS_PALETTE] || STATUS_PALETTE.unknown;
 
@@ -64,7 +67,7 @@ function makeRng(seed: number) {
 
 /* ─── Word wrap ≤ 2 lines ──────────────────────────────────────────────── */
 function wrapText(text: string, max: number): string[] {
-  const words = (text || '').split(/\s+/);
+  const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = '';
   for (const w of words) {
@@ -76,71 +79,39 @@ function wrapText(text: string, max: number): string[] {
   return lines.slice(0, 2);
 }
 
-/* ─── Cluster sizing ───────────────────────────────────────────────────── */
+/* ─── Smaller node sizing ──────────────────────────────────────────────── */
 function sizeFor(loc: Location): number {
   const c = loc.device_count ?? 0;
-  const min = 30, max = 50;
+  const min = 18, max = 28; // roughly 1/3 of the previous size
   return min + Math.min(1, c / 30) * (max - min);
 }
-/** Approximate label box width in px from text content */
-function labelWidth(name: string): number {
-  const wrapped = wrapText(name, 18);
-  const longest = wrapped.reduce((m, l) => Math.max(m, l.length), 0);
-  return Math.min(longest * 7 + 8, 160); // ~7px per char, capped
-}
-/** Total footprint dimensions for a cluster (rings + label area) */
-function footprint(loc: Location) {
-  const r = sizeFor(loc) * 1.05;     // outer ring radius
-  const lw = labelWidth(loc.name);   // label half-width on each side
-  const lh = wrapText(loc.name, 18).length * 13 + 18; // label height + gap
-  return {
-    halfW: Math.max(r, lw / 2),
-    topR: r,            // rings extend upward this much
-    bottomR: r + lh,    // rings + label extend downward this much
-  };
-}
 
-/* ─── Force-directed layout that respects labels ───────────────────────── */
+/* ─── Force-directed layout ────────────────────────────────────────────── */
 function forceLayout(
   nodes: Location[],
   width: number,
   height: number,
-  iterations = 260
+  iterations = 220
 ): Map<number, { x: number; y: number }> {
   if (nodes.length === 0) return new Map();
 
   const cx = width / 2, cy = height / 2;
-  const padX = 100, padTop = 80, padBottom = 60;
+  const pad = 70;
   const rng = makeRng(nodes.length * 31 + 7);
 
-  type P = {
-    id: number;
-    x: number; y: number;
-    vx: number; vy: number;
-    halfW: number; topR: number; bottomR: number;
-  };
-
-  // Pre-compute footprints
-  const meta = new Map<number, ReturnType<typeof footprint>>();
-  for (const n of nodes) meta.set(n.id, footprint(n));
-
-  // Initial scatter
+  type P = { id: number; x: number; y: number; vx: number; vy: number };
   const positions: P[] = nodes.map((n, i) => {
     const a = (i / nodes.length) * Math.PI * 2;
-    const r = Math.min(width, height) * 0.25 * (0.7 + rng() * 0.6);
-    const fp = meta.get(n.id)!;
+    const r = Math.min(width, height) * 0.22 * (0.7 + rng() * 0.5);
     return {
       id: n.id,
-      x: cx + Math.cos(a) * r + (rng() - 0.5) * 60,
-      y: cy + Math.sin(a) * r + (rng() - 0.5) * 60,
+      x: cx + Math.cos(a) * r + (rng() - 0.5) * 50,
+      y: cy + Math.sin(a) * r + (rng() - 0.5) * 50,
       vx: 0, vy: 0,
-      halfW: fp.halfW,
-      topR: fp.topR,
-      bottomR: fp.bottomR,
     };
   });
-  const idx = new Map(positions.map(p => [p.id, p]));
 
+  const idx = new Map(positions.map(p => [p.id, p]));
   const edges: [number, number][] = [];
   for (const n of nodes) {
     if (n.parent_id !== null && idx.has(n.parent_id)) {
@@ -148,75 +119,33 @@ function forceLayout(
     }
   }
 
-  const linkLen = 220;
-  const linkK = 0.025;
-  const centerK = 0.004;
-  const damping = 0.86;
+  // Tighter values, since the nodes are smaller
+  const repel    = 9000;
+  const linkK    = 0.04;
+  const linkLen  = 130;
+  const centerK  = 0.005;
+  const damping  = 0.85;
 
   for (let it = 0; it < iterations; it++) {
-    // Pairwise label-aware repulsion
-    for (let i = 0; i < positions.length; i++) {
-      const a = positions[i];
+    for (const a of positions) {
       let fx = 0, fy = 0;
-
-      for (let j = 0; j < positions.length; j++) {
-        if (i === j) continue;
-        const b = positions[j];
-
-        // Required minimum separation depends on which side is closer
-        const dy = a.y - b.y;
-        const dx = a.x - b.x;
-
-        // Vertical: label of upper extends down, rings of lower extend up
-        const verticalNeed =
-          dy > 0
-            ? a.topR + b.bottomR + 14   // a is below b → a.top vs b.bottom (b's label)
-            : a.bottomR + b.topR + 14;  // a is above b → a.bottom (a's label) vs b.top
-
-        const horizontalNeed = a.halfW + b.halfW + 18;
-
-        const adx = Math.abs(dx);
-        const ady = Math.abs(dy);
-
-        // Soft-AABB repulsion: only push if boxes overlap (or nearly do)
-        const overlapX = horizontalNeed - adx;
-        const overlapY = verticalNeed - ady;
-
-        if (overlapX > 0 && overlapY > 0) {
-          // Push along the smaller-overlap axis (separating axis)
-          if (overlapX < overlapY) {
-            const sign = dx >= 0 ? 1 : -1;
-            fx += sign * overlapX * 0.15;
-          } else {
-            const sign = dy >= 0 ? 1 : -1;
-            fy += sign * overlapY * 0.18;
-          }
-        } else {
-          // Mild radial repulsion at intermediate distances to encourage spread
-          const d2 = adx * adx + ady * ady + 1;
-          const d = Math.sqrt(d2);
-          if (d < 260) {
-            const f = 1500 / d2;
-            fx += (dx / d) * f;
-            fy += (dy / d) * f;
-          }
-        }
+      for (const b of positions) {
+        if (a.id === b.id) continue;
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = Math.max(50, dx * dx + dy * dy);
+        const d = Math.sqrt(d2);
+        const f = repel / d2;
+        fx += (dx / d) * f;
+        fy += (dy / d) * f;
       }
-
-      // Center pull
       fx += (cx - a.x) * centerK;
       fy += (cy - a.y) * centerK;
-
       a.vx = (a.vx + fx) * damping;
       a.vy = (a.vy + fy) * damping;
     }
-
-    // Spring along parent edges
     for (const [from, to] of edges) {
-      const a = idx.get(from)!;
-      const b = idx.get(to)!;
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
+      const a = idx.get(from)!, b = idx.get(to)!;
+      const dx = b.x - a.x, dy = b.y - a.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       const f = (d - linkLen) * linkK;
       a.vx += (dx / d) * f;
@@ -224,20 +153,17 @@ function forceLayout(
       b.vx -= (dx / d) * f;
       b.vy -= (dy / d) * f;
     }
-
-    // Integrate + clamp using actual footprint
     for (const a of positions) {
-      a.x += a.vx;
-      a.y += a.vy;
-      a.x = Math.max(padX + a.halfW * 0.5, Math.min(width - padX - a.halfW * 0.5, a.x));
-      a.y = Math.max(padTop + a.topR, Math.min(height - padBottom - a.bottomR, a.y));
+      a.x += a.vx; a.y += a.vy;
+      a.x = Math.max(pad, Math.min(width - pad, a.x));
+      a.y = Math.max(pad + 20, Math.min(height - pad, a.y));
     }
   }
 
   return new Map(positions.map(p => [p.id, { x: p.x, y: p.y }]));
 }
 
-/* ─── Cluster node SVG ─────────────────────────────────────────────────── */
+/* ─── Cluster node ─────────────────────────────────────────────────────── */
 const ClusterNode: React.FC<{
   location: Location;
   x: number; y: number; size: number;
@@ -246,83 +172,95 @@ const ClusterNode: React.FC<{
   dimmed: boolean;
   onClick: () => void;
   onHover: (h: boolean) => void;
-  index: number;
-}> = ({ location, x, y, size, hovered, selected, dimmed, onClick, onHover, index }) => {
+}> = ({ location, x, y, size, hovered, selected, dimmed, onClick, onHover }) => {
   const palette = getPalette(location.status);
   const count = location.device_count ?? 0;
   const wrapped = wrapText(location.name, 18);
   const active = hovered || selected;
-
-  const rings = [
-    { r: size * 0.55, op: active ? 0.8 : 0.55 },
-    { r: size * 0.78, op: active ? 0.55 : 0.32 },
-    { r: size * 1.05, op: active ? 0.35 : 0.18 },
-  ];
-  const begin = `${(index * 0.18) % 3}s`;
+  const baseOpacity = dimmed ? 0.35 : 1;
 
   return (
     <g
       transform={`translate(${x},${y})`}
-      style={{ cursor: 'pointer', opacity: dimmed ? 0.32 : 1, transition: 'opacity .25s' }}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{ cursor: 'pointer', opacity: baseOpacity, transition: 'opacity .25s' }}
+      onClick={onClick}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
-      className="cv-cluster"
     >
-      {/* Pulse ring — runs always, gentle */}
-      <circle cx={0} cy={0} r={size * 0.55} fill="none"
-              stroke={palette.ring} strokeWidth={1} opacity={0}>
-        <animate attributeName="r"
-                 values={`${size * 0.55};${size * 1.45}`}
-                 dur="3.2s" begin={begin} repeatCount="indefinite" />
-        <animate attributeName="opacity"
-                 values={active ? '0.85;0' : '0.45;0'}
-                 dur="3.2s" begin={begin} repeatCount="indefinite" />
-      </circle>
-
-      {/* Static rings */}
-      {rings.map((ring, i) => (
-        <circle key={i} cx={0} cy={0} r={ring.r}
-                fill="none" stroke={palette.ring} strokeWidth={1}
-                opacity={ring.op} />
-      ))}
-
-      {/* Inner glow */}
-      <circle cx={0} cy={0} r={size * 0.40}
-              fill={palette.ring} opacity={active ? 0.18 : 0.10} />
-
+      {/* Outer ring */}
+      <circle
+        cx={0} cy={0} r={size * 1.0}
+        fill="none"
+        stroke={palette.ring}
+        strokeWidth={1}
+        opacity={active ? 0.5 : 0.18}
+      />
+      {/* Mid ring */}
+      <circle
+        cx={0} cy={0} r={size * 0.72}
+        fill="none"
+        stroke={palette.ring}
+        strokeWidth={1}
+        opacity={active ? 0.7 : 0.32}
+      />
+      {/* Glow halo (only when active) */}
+      {active && (
+        <circle cx={0} cy={0} r={size * 0.6} fill={palette.ring} opacity={0.12} />
+      )}
       {/* Inner solid disk */}
-      <circle cx={0} cy={0} r={size * 0.34}
-              fill="rgba(8, 18, 30, 0.95)"
-              stroke={palette.ring}
-              strokeWidth={selected ? 1.8 : 1.3} />
+      <circle
+        cx={0} cy={0} r={size * 0.5}
+        fill="rgba(8, 18, 30, 0.95)"
+        stroke={palette.ring}
+        strokeWidth={selected ? 1.6 : 1.2}
+      />
+
+      {/* Pulse — only when active. No constant animation. */}
+      {active && (
+        <circle
+          cx={0} cy={0} r={size * 0.55}
+          fill="none"
+          stroke={palette.ring}
+          strokeWidth={1}
+          opacity={0}
+        >
+          <animate attributeName="r"
+            values={`${size * 0.55};${size * 1.4}`}
+            dur="1.8s" repeatCount="indefinite" />
+          <animate attributeName="opacity"
+            values="0.7;0"
+            dur="1.8s" repeatCount="indefinite" />
+        </circle>
+      )}
 
       {/* Count */}
-      <text x={0} y={1}
-            textAnchor="middle" dominantBaseline="middle"
-            fill={palette.text}
-            fontSize={size * 0.34}
-            fontWeight={300}
-            fontFamily="'JetBrains Mono','Fira Code',monospace"
-            style={{ pointerEvents: 'none', letterSpacing: '0.5px' }}>
+      <text
+        x={0} y={1}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={palette.text}
+        fontSize={size * 0.55}
+        fontWeight={300}
+        fontFamily="'JetBrains Mono','Fira Code',monospace"
+        style={{ pointerEvents: 'none', letterSpacing: '0.5px' }}
+      >
         {String(count).padStart(2, '0')}
       </text>
 
-      {/* Label — with paint-order halo so it stays readable on grazing */}
-      <g transform={`translate(0, ${size * 1.12 + 14})`}>
+      {/* Label */}
+      <g transform={`translate(0, ${size + 14})`}>
         {wrapped.map((line, i) => (
-          <text key={i}
-                x={0} y={i * 13}
-                textAnchor="middle"
-                fill={selected ? '#f0f6ff' : '#cdd9e8'}
-                fontSize={11}
-                fontWeight={selected ? 600 : 500}
-                fontFamily="'Inter',system-ui,sans-serif"
-                stroke="#060d18"
-                strokeWidth={3}
-                strokeLinejoin="round"
-                paintOrder="stroke"
-                style={{ pointerEvents: 'none' }}>
+          <text
+            key={i}
+            x={0}
+            y={i * 13}
+            textAnchor="middle"
+            fill={selected ? '#f0f6ff' : '#9aa8bd'}
+            fontSize={11}
+            fontWeight={selected ? 600 : 500}
+            fontFamily="'Inter',system-ui,sans-serif"
+            style={{ pointerEvents: 'none' }}
+          >
             {line}
           </text>
         ))}
@@ -356,12 +294,14 @@ const DetailPanel: React.FC<{
     ?? devices.filter(d => d.is_reachable === false).length;
   const health = location.health_percentage
     ?? (total > 0 ? Math.round((online / total) * 100) : 0);
+
   const healthColor =
     health >= 80 ? '#22d3a5' :
     health >= 50 ? '#f5a623' : '#f25c5c';
 
   return (
     <aside className="cv-panel">
+      {/* Head */}
       <div className="cv-panel-head">
         <div className="cv-panel-head-left">
           <div className="cv-panel-num"
@@ -373,9 +313,9 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-substatus">
               <span className="cv-panel-dot" style={{ background: palette.ring }} />
               <span style={{ color: palette.ring }}>{palette.label}</span>
-              {/* {location.project && (
+              {location.project && (
                 <span className="cv-panel-meta-pill">{location.project}</span>
-              )} */}
+              )}
             </div>
           </div>
         </div>
@@ -384,7 +324,9 @@ const DetailPanel: React.FC<{
         </button>
       </div>
 
+      {/* Body */}
       <div className="cv-panel-body">
+        {/* Health */}
         <section className="cv-panel-section">
           <div className="cv-panel-health-row">
             <span className="cv-panel-health-label">HEALTH</span>
@@ -396,6 +338,7 @@ const DetailPanel: React.FC<{
           </div>
         </section>
 
+        {/* Stats */}
         <section className="cv-panel-section">
           <div className="cv-panel-stats">
             <div className="cv-panel-stat">
@@ -413,17 +356,19 @@ const DetailPanel: React.FC<{
           </div>
         </section>
 
+        {/* Information */}
         <section className="cv-panel-section">
           <div className="cv-panel-section-title">INFORMATION</div>
-          {/* <InfoRow label="Project"  value={location.project || '—'} /> */}
+          <InfoRow label="Project"  value={location.project || '—'} />
           <InfoRow label="Area"     value={location.area    || '—'} />
           <InfoRow label="Parent"   value={parent ? parent.name : 'None'} />
           <InfoRow label="Children" value={String(childLocations.length)} />
-          {/* {location.status_reason && (
+          {location.status_reason && (
             <InfoRow label="Reason" value={location.status_reason} />
-          )} */}
+          )}
         </section>
 
+        {/* Devices */}
         <section className="cv-panel-section">
           <div className="cv-panel-section-title">
             DEVICES {hasDevicesProp ? `· ${devices.length}` : `· ${total}`}
@@ -433,8 +378,10 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-devices">
               {devices.map(d => (
                 <div key={d.id} className="cv-dev-row">
-                  <span className="cv-dev-dot"
-                        style={{ background: d.is_reachable ? '#22d3a5' : '#f25c5c' }} />
+                  <span
+                    className="cv-dev-dot"
+                    style={{ background: d.is_reachable ? '#22d3a5' : '#f25c5c' }}
+                  />
                   <span className="cv-dev-name">
                     {d.display || d.hostname || `Device #${d.id}`}
                   </span>
@@ -451,14 +398,17 @@ const DetailPanel: React.FC<{
           )}
         </section>
 
+        {/* Sub-locations */}
         {childLocations.length > 0 && (
           <section className="cv-panel-section">
             <div className="cv-panel-section-title">SUB-LOCATIONS</div>
             <div className="cv-panel-children">
               {childLocations.map(c => (
                 <div key={c.id} className="cv-child-row">
-                  <span className="cv-dev-dot"
-                        style={{ background: getPalette(c.status).ring }} />
+                  <span
+                    className="cv-dev-dot"
+                    style={{ background: getPalette(c.status).ring }}
+                  />
                   <span className="cv-dev-name">{c.name}</span>
                   <span className="cv-dev-ip">{c.device_count ?? 0} dev</span>
                 </div>
@@ -468,6 +418,7 @@ const DetailPanel: React.FC<{
         )}
       </div>
 
+      {/* Footer */}
       <div className="cv-panel-foot">
         <button className="cv-panel-cta" onClick={onViewFull}>
           View Full Details
@@ -509,7 +460,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
 
   const filtered = useMemo(
     () =>
-      (allLocations || []).filter(
+      allLocations.filter(
         (l) =>
           l.area === selectedArea &&
           (filterStatus === 'all' || l.status === filterStatus) &&
@@ -519,7 +470,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
   );
 
   const stats = useMemo(() => {
-    const a = (allLocations || []).filter((l) => l.area === selectedArea);
+    const a = allLocations.filter((l) => l.area === selectedArea);
     return {
       total: a.length,
       online: a.filter((l) => l.status === 'online').length,
@@ -539,21 +490,9 @@ const ClusterView: React.FC<ClusterViewProps> = ({
     [filtered, SVG_W, SVG_H]
   );
 
-  // Connected lookup for dim/highlight
-  const connectedToSelected = useMemo(() => {
-    const set = new Set<number>();
-    if (selectedId === null) return set;
-    set.add(selectedId);
-    for (const n of filtered) {
-      if (n.id === selectedId && n.parent_id !== null) set.add(n.parent_id);
-      if (n.parent_id === selectedId) set.add(n.id);
-    }
-    return set;
-  }, [filtered, selectedId]);
-
-  // Edges
   const edges = useMemo(() => {
-    const list: { id: string; from: { x: number; y: number }; to: { x: number; y: number };
+    const list: { id: string; from: { x: number; y: number };
+                  to: { x: number; y: number };
                   status: string; involvesSelected: boolean }[] = [];
     for (const n of filtered) {
       if (n.parent_id !== null) {
@@ -573,11 +512,13 @@ const ClusterView: React.FC<ClusterViewProps> = ({
   }, [filtered, positions, selectedId]);
 
   const selectedLocation = selectedId !== null
-    ? filtered.find((l) => l.id === selectedId) || null : null;
+    ? filtered.find((l) => l.id === selectedId) : null;
   const selectedParent = selectedLocation && selectedLocation.parent_id !== null
-    ? (allLocations || []).find((l) => l.id === selectedLocation.parent_id) || null : null;
+    ? allLocations.find((l) => l.id === selectedLocation.parent_id) || null
+    : null;
   const selectedChildren = selectedLocation
-    ? (allLocations || []).filter((l) => l.parent_id === selectedLocation.id) : [];
+    ? allLocations.filter((l) => l.parent_id === selectedLocation.id)
+    : [];
   const selectedDevices = useMemo(() => {
     if (!selectedLocation) return [];
     return devices.filter((d) => d.location_id === selectedLocation.id);
@@ -586,8 +527,21 @@ const ClusterView: React.FC<ClusterViewProps> = ({
   const hasDevicesProp = devices.length > 0;
 
   const handleClusterClick = (loc: Location) => {
+    // Toggle: clicking the open one closes the panel
     setSelectedId(prev => prev === loc.id ? null : loc.id);
   };
+
+  // Set of ids connected to the selection — used to keep their nodes bright
+  const connectedToSelected = useMemo(() => {
+    const set = new Set<number>();
+    if (selectedId === null) return set;
+    set.add(selectedId);
+    for (const n of filtered) {
+      if (n.id === selectedId && n.parent_id !== null) set.add(n.parent_id);
+      if (n.parent_id === selectedId) set.add(n.id);
+    }
+    return set;
+  }, [filtered, selectedId]);
 
   return (
     <div className="cv-root" ref={containerRef}>
@@ -601,15 +555,18 @@ const ClusterView: React.FC<ClusterViewProps> = ({
             <div className="cv-area-tag">CLUSTER · AREA</div>
             <div className="cv-area-name">{selectedArea}</div>
           </div>
-          {stats.offline > 0 && (
-            <span className="cv-malicious-badge">
-              <span className="cv-malicious-dot" />
-              CRITICAL ALERT
-            </span>
-          )}
         </div>
 
         <div className="cv-right">
+          <span className="cv-summary">
+            <b>{stats.total}</b> nodes
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#22d3a5' }}>{stats.online}</b> up
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#f25c5c' }}>{stats.offline}</b> down
+            <span className="cv-summary-dot">·</span>
+            <b style={{ color: '#9cc8ff' }}>{stats.avgHealth}%</b> avg
+          </span>
           <div className="cv-search">
             <Search size={13} />
             <input
@@ -618,29 +575,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#9cc8ff' }}>{stats.total}</span>
-            <span className="cv-stat-lbl">TOTAL</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#22d3a5' }}>{stats.online}</span>
-            <span className="cv-stat-lbl">UP</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#f25c5c' }}>{stats.offline}</span>
-            <span className="cv-stat-lbl">DOWN</span>
-          </div>
-          <div className="cv-stat">
-            <span className="cv-stat-val" style={{ color: '#f5a623' }}>{stats.partial}</span>
-            <span className="cv-stat-lbl">DEG</span>
-          </div>
-
           <button className="cv-icon-btn" title="Filter">
             <Filter size={14} />
-          </button>
-          <button className="cv-icon-btn" title="More">
-            <MoreVertical size={14} />
           </button>
         </div>
       </header>
@@ -667,9 +603,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           );
         })}
         <span className="cv-chip-spacer" />
-        <span className="cv-result-count">
-          {filtered.length} node{filtered.length !== 1 ? 's' : ''} · avg health {stats.avgHealth}%
-        </span>
+        <span className="cv-result-count">{filtered.length} shown</span>
       </div>
 
       {/* Canvas */}
@@ -681,16 +615,17 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           preserveAspectRatio="xMidYMid meet"
           style={{ display: 'block' }}
           onClick={(e) => {
-            const t = e.target as SVGElement;
-            if (t.tagName === 'rect' || t.tagName === 'svg') {
+            // Clicking on the SVG background closes any open panel
+            const target = e.target as SVGElement;
+            if (target.tagName === 'rect' || target.tagName === 'svg') {
               setSelectedId(null);
             }
           }}
         >
           <defs>
             <radialGradient id="cv-bg" cx="50%" cy="50%" r="75%">
-              <stop offset="0%" stopColor="#13243b" />
-              <stop offset="60%" stopColor="#0a1626" />
+              <stop offset="0%"   stopColor="#13243b" />
+              <stop offset="60%"  stopColor="#0a1626" />
               <stop offset="100%" stopColor="#060d18" />
             </radialGradient>
           </defs>
@@ -707,14 +642,14 @@ const ClusterView: React.FC<ClusterViewProps> = ({
               strokeWidth={e.involvesSelected ? 1.5 : 0.8}
               opacity={
                 selectedId === null ? 0.18 :
-                e.involvesSelected ? 0.6 : 0.05
+                e.involvesSelected ? 0.6 : 0.06
               }
               style={{ transition: 'opacity .25s, stroke-width .25s' }}
             />
           ))}
 
           {/* Cluster nodes */}
-          {filtered.map((loc, i) => {
+          {filtered.map((loc) => {
             const p = positions.get(loc.id);
             if (!p) return null;
             const isSelected = selectedId === loc.id;
@@ -732,7 +667,6 @@ const ClusterView: React.FC<ClusterViewProps> = ({
                 dimmed={isDimmed}
                 onClick={() => handleClusterClick(loc)}
                 onHover={(h) => setHoveredId(h ? loc.id : null)}
-                index={i}
               />
             );
           })}
@@ -760,10 +694,6 @@ const ClusterView: React.FC<ClusterViewProps> = ({
             onViewFull={() => onNodeSelect(selectedLocation)}
           />
         )}
-
-        <div className="cv-camera">
-          <Camera size={18} />
-        </div>
       </div>
 
       {/* Styles */}
@@ -771,23 +701,31 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         *, *::before, *::after { box-sizing: border-box; }
 
         .cv-root {
-          width: 100%; height: 100%;
-          display: flex; flex-direction: column;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
           background: #060d18;
           color: #c8d6e5;
-          font-family: 'JetBrains Mono','Fira Code',ui-monospace,monospace;
-          overflow: hidden; position: relative;
+          font-family: 'Inter', system-ui, sans-serif;
+          overflow: hidden;
+          position: relative;
         }
 
+        /* Header */
         .cv-header {
-          display: flex; align-items: center; justify-content: space-between;
-          gap: 16px; padding: 12px 22px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 12px 22px;
           border-bottom: 1px solid rgba(255,255,255,0.05);
-          background: rgba(8,18,30,0.65);
+          background: rgba(8, 18, 30, 0.65);
           backdrop-filter: blur(6px);
-          flex-shrink: 0; z-index: 5;
+          flex-shrink: 0;
+          z-index: 5;
         }
-        .cv-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .cv-left { display: flex; align-items: center; gap: 14px; }
         .cv-back {
           width: 32px; height: 32px;
           border-radius: 6px;
@@ -799,49 +737,50 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           transition: background .2s, color .2s;
         }
         .cv-back:hover { color: #c5cdd8; background: rgba(255,255,255,0.07); }
-        .cv-area-tag { font-size: 9px; letter-spacing: 1.5px; color: #4a5568; margin-bottom: 1px; }
-        .cv-area-name { font-size: 16px; font-weight: 600; color: #f0f6ff; letter-spacing: 0.3px; }
-
-        .cv-malicious-badge {
-          display: inline-flex; align-items: center; gap: 6px;
-          background: linear-gradient(90deg, #ff3a6e, #d6244e);
-          color: #fff;
-          padding: 4px 11px;
-          border-radius: 99px;
-          font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
-          box-shadow: 0 0 14px rgba(255,58,110,0.35);
+        .cv-area-tag {
+          font-size: 9px;
+          letter-spacing: 1.5px;
+          color: #4a5568;
+          margin-bottom: 1px;
+          font-family: 'JetBrains Mono', monospace;
         }
-        .cv-malicious-dot {
-          width: 5px; height: 5px;
-          background: #fff; border-radius: 50%;
-          animation: cvBlink 1.5s ease-in-out infinite;
+        .cv-area-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: #f0f6ff;
+          letter-spacing: 0.3px;
         }
 
-        .cv-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .cv-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .cv-summary {
+          font-size: 11px;
+          color: #6b7a8d;
+          display: inline-flex;
+          gap: 6px;
+          align-items: center;
+          font-family: 'JetBrains Mono', monospace;
+        }
+        .cv-summary b { color: #c5cdd8; font-weight: 600; }
+        .cv-summary-dot { color: #2c3a52; }
 
         .cv-search { position: relative; display: flex; align-items: center; }
-        .cv-search svg { position: absolute; left: 9px; color: #4a5568; pointer-events: none; }
+        .cv-search svg {
+          position: absolute; left: 9px;
+          color: #4a5568; pointer-events: none;
+        }
         .cv-search input {
           padding: 6px 10px 6px 28px;
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 5px;
           color: #c5cdd8;
-          font-family: inherit; font-size: 11px;
+          font-family: inherit;
+          font-size: 11px;
           width: 180px;
           transition: border-color .2s;
         }
         .cv-search input::placeholder { color: #3a4556; }
         .cv-search input:focus { outline: none; border-color: rgba(62,167,255,0.4); }
-
-        .cv-stat {
-          display: flex; flex-direction: column; align-items: center;
-          padding: 0 10px;
-          border-left: 1px solid rgba(255,255,255,0.06);
-        }
-        .cv-stat:first-of-type { border-left: none; }
-        .cv-stat-val { font-size: 14px; font-weight: 700; line-height: 1; }
-        .cv-stat-lbl { font-size: 9px; color: #4a5568; letter-spacing: 1px; margin-top: 2px; }
 
         .cv-icon-btn {
           width: 28px; height: 28px;
@@ -854,6 +793,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         }
         .cv-icon-btn:hover { color: #c5cdd8; }
 
+        /* Chips */
         .cv-chips {
           display: flex; align-items: center; gap: 6px;
           padding: 8px 22px;
@@ -866,7 +806,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 99px;
           color: #6b7a8d;
-          font-family: inherit;
+          font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.8px;
           cursor: pointer;
@@ -874,17 +814,17 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         }
         .cv-chip:hover { color: #c5cdd8; border-color: rgba(255,255,255,0.18); }
         .cv-chip-spacer { flex: 1; }
-        .cv-result-count { font-size: 10px; color: #4a5568; letter-spacing: 0.5px; }
-
-        .cv-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
-
-        .cv-cluster text { user-select: none; }
-
-        @keyframes cvBlink {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.3; }
+        .cv-result-count {
+          font-size: 10px;
+          color: #4a5568;
+          letter-spacing: 0.5px;
+          font-family: 'JetBrains Mono', monospace;
         }
 
+        /* Canvas */
+        .cv-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+
+        /* Empty */
         .cv-empty {
           position: absolute; inset: 0;
           display: flex; flex-direction: column;
@@ -897,64 +837,69 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         .cv-empty-title { font-size: 14px; color: #6b7a8d; }
         .cv-empty-sub   { font-size: 11px; color: #4a5568; }
 
-        .cv-camera {
-          position: absolute;
-          left: 18px; bottom: 18px;
-          width: 40px; height: 40px;
-          border-radius: 8px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          color: #8892a4;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          transition: background .2s, color .2s;
-        }
-        .cv-camera:hover { background: rgba(255,255,255,0.08); color: #c5cdd8; }
-
-        /* ── Detail Panel ── */
+        /* Panel */
         .cv-panel {
           position: absolute;
           top: 0; right: 0; bottom: 0;
           width: 340px;
-          background: linear-gradient(180deg, rgba(12,23,38,0.97) 0%, rgba(8,18,30,0.97) 100%);
-          backdrop-filter: blur(12px);
+          background: linear-gradient(180deg, #0c1726 0%, #08121e 100%);
           border-left: 1px solid rgba(255,255,255,0.08);
-          display: flex; flex-direction: column;
-          box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+          display: flex;
+          flex-direction: column;
+          box-shadow: -8px 0 32px rgba(0,0,0,0.4);
           animation: cvPanelIn .3s cubic-bezier(0.22, 1, 0.36, 1);
           z-index: 20;
-          font-family: 'Inter', system-ui, sans-serif;
         }
         @keyframes cvPanelIn {
           from { transform: translateX(100%); opacity: 0; }
           to   { transform: translateX(0);    opacity: 1; }
         }
+
         .cv-panel-head {
-          display: flex; align-items: flex-start; justify-content: space-between;
-          gap: 10px; padding: 16px 18px 14px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 16px 18px 14px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .cv-panel-head-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+        .cv-panel-head-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+          flex: 1;
+        }
         .cv-panel-num {
           width: 44px; height: 44px;
           border-radius: 50%;
           border: 1.5px solid;
           display: flex; align-items: center; justify-content: center;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 16px; font-weight: 300;
+          font-size: 16px;
+          font-weight: 300;
           background: rgba(8, 18, 30, 0.7);
-          flex-shrink: 0; letter-spacing: 0.5px;
+          flex-shrink: 0;
+          letter-spacing: 0.5px;
         }
         .cv-panel-name {
-          font-size: 15px; font-weight: 600;
-          color: #f0f6ff; line-height: 1.3;
+          font-size: 15px;
+          font-weight: 600;
+          color: #f0f6ff;
+          line-height: 1.3;
           margin-bottom: 4px;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .cv-panel-substatus {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 10px; font-family: 'JetBrains Mono', monospace;
-          letter-spacing: 0.8px; font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-family: 'JetBrains Mono', monospace;
+          letter-spacing: 0.8px;
+          font-weight: 600;
         }
         .cv-panel-dot {
           width: 6px; height: 6px;
@@ -969,6 +914,11 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           letter-spacing: 0.3px;
           margin-left: 4px;
         }
+        @keyframes cvBlink {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.3; }
+        }
+
         .cv-panel-close {
           width: 28px; height: 28px;
           border-radius: 4px;
@@ -976,37 +926,48 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           background: transparent;
           color: #6b7a8d;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer; flex-shrink: 0;
+          cursor: pointer;
+          flex-shrink: 0;
           transition: all .2s;
         }
         .cv-panel-close:hover { color: #c5cdd8; background: rgba(255,255,255,0.05); }
 
-        .cv-panel-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+        .cv-panel-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 4px 0;
+        }
         .cv-panel-body::-webkit-scrollbar { width: 4px; }
         .cv-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
         .cv-panel-section {
           padding: 14px 18px;
           border-bottom: 1px solid rgba(255,255,255,0.04);
         }
         .cv-panel-section:last-child { border-bottom: none; }
         .cv-panel-section-title {
-          font-size: 9px; color: #4a5568;
+          font-size: 9px;
+          color: #4a5568;
           letter-spacing: 1.5px;
           font-family: 'JetBrains Mono', monospace;
-          font-weight: 700; margin-bottom: 10px;
+          font-weight: 700;
+          margin-bottom: 10px;
         }
+
         .cv-panel-health-row {
           display: flex; justify-content: space-between; align-items: baseline;
           margin-bottom: 6px;
         }
         .cv-panel-health-label {
-          font-size: 9px; color: #4a5568;
+          font-size: 9px;
+          color: #4a5568;
           letter-spacing: 1.5px;
           font-family: 'JetBrains Mono', monospace;
           font-weight: 700;
         }
         .cv-panel-health-val {
-          font-size: 18px; font-weight: 700;
+          font-size: 18px;
+          font-weight: 700;
           font-family: 'JetBrains Mono', monospace;
           letter-spacing: -0.3px;
         }
@@ -1017,7 +978,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           overflow: hidden;
         }
         .cv-panel-bar-fill {
-          height: 100%; border-radius: 99px;
+          height: 100%;
+          border-radius: 99px;
           transition: width .6s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
@@ -1034,35 +996,49 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           text-align: center;
         }
         .cv-panel-stat-num {
-          font-size: 18px; font-weight: 700;
+          font-size: 18px;
+          font-weight: 700;
           font-family: 'JetBrains Mono', monospace;
-          line-height: 1; margin-bottom: 4px;
+          line-height: 1;
+          margin-bottom: 4px;
         }
         .cv-panel-stat-lbl {
-          font-size: 9px; color: #4a5568;
+          font-size: 9px;
+          color: #4a5568;
           letter-spacing: 1px;
           font-family: 'JetBrains Mono', monospace;
         }
 
         .cv-info-row {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 6px 0; font-size: 12px; gap: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          font-size: 12px;
+          gap: 10px;
         }
         .cv-info-lbl {
           color: #4a5568;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 10px; letter-spacing: 0.8px;
+          font-size: 10px;
+          letter-spacing: 0.8px;
           flex-shrink: 0;
         }
         .cv-info-val {
-          color: #c5cdd8; font-weight: 500;
+          color: #c5cdd8;
+          font-weight: 500;
           text-align: right;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .cv-panel-devices, .cv-panel-children {
-          display: flex; flex-direction: column; gap: 4px;
-          max-height: 240px; overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 240px;
+          overflow-y: auto;
         }
         .cv-panel-devices::-webkit-scrollbar,
         .cv-panel-children::-webkit-scrollbar { width: 4px; }
@@ -1072,7 +1048,9 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           border-radius: 2px;
         }
         .cv-dev-row, .cv-child-row {
-          display: flex; align-items: center; gap: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
           padding: 6px 8px;
           background: rgba(255,255,255,0.02);
           border: 1px solid rgba(255,255,255,0.04);
@@ -1089,9 +1067,12 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           flex-shrink: 0;
         }
         .cv-dev-name {
-          color: #c5cdd8; font-weight: 500;
+          color: #c5cdd8;
+          font-weight: 500;
           flex: 1;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .cv-dev-ip {
           color: #6b7a8d;
@@ -1100,12 +1081,15 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           flex-shrink: 0;
         }
         .cv-panel-empty {
-          font-size: 11px; color: #4a5568;
+          font-size: 11px;
+          color: #4a5568;
           padding: 12px 0 4px;
-          text-align: center; font-style: italic;
+          text-align: center;
+          font-style: italic;
         }
         .cv-panel-empty-summary {
-          color: #8892a4; font-style: normal;
+          color: #8892a4;
+          font-style: normal;
           font-family: 'JetBrains Mono', monospace;
           letter-spacing: 0.5px;
         }
@@ -1123,9 +1107,14 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           border-radius: 6px;
           color: #9cc8ff;
           font-family: 'JetBrains Mono', monospace;
-          font-size: 11px; letter-spacing: 0.5px; font-weight: 600;
+          font-size: 11px;
+          letter-spacing: 0.5px;
+          font-weight: 600;
           cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
           transition: all .2s;
         }
         .cv-panel-cta:hover {
@@ -1135,9 +1124,8 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         }
 
         @media (max-width: 768px) {
+          .cv-summary { display: none; }
           .cv-search input { width: 130px; }
-          .cv-stat { padding: 0 7px; }
-          .cv-stat-val { font-size: 12px; }
           .cv-panel { width: 100%; }
         }
       `}</style>

@@ -11,7 +11,7 @@ interface Location {
   name: string;
   parent_id: number | null;
   status: 'online' | 'offline' | 'unknown' | 'partial';
-  // project: string;
+  project: string;
   area: string;
   description?: string;
   device_count?: number;
@@ -373,9 +373,9 @@ const DetailPanel: React.FC<{
             <div className="cv-panel-substatus">
               <span className="cv-panel-dot" style={{ background: palette.ring }} />
               <span style={{ color: palette.ring }}>{palette.label}</span>
-              {/* {location.project && (
+              {location.project && (
                 <span className="cv-panel-meta-pill">{location.project}</span>
-              )} */}
+              )}
             </div>
           </div>
         </div>
@@ -415,13 +415,13 @@ const DetailPanel: React.FC<{
 
         <section className="cv-panel-section">
           <div className="cv-panel-section-title">INFORMATION</div>
-          {/* <InfoRow label="Project"  value={location.project || '—'} /> */}
+          <InfoRow label="Project"  value={location.project || '—'} />
           <InfoRow label="Area"     value={location.area    || '—'} />
           <InfoRow label="Parent"   value={parent ? parent.name : 'None'} />
           <InfoRow label="Children" value={String(childLocations.length)} />
-          {/* {location.status_reason && (
+          {location.status_reason && (
             <InfoRow label="Reason" value={location.status_reason} />
-          )} */}
+          )}
         </section>
 
         <section className="cv-panel-section">
@@ -984,6 +984,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
         .cv-panel-body { flex: 1; overflow-y: auto; padding: 4px 0; }
         .cv-panel-body::-webkit-scrollbar { width: 4px; }
         .cv-panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
         .cv-panel-section {
           padding: 14px 18px;
           border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -995,6 +996,7 @@ const ClusterView: React.FC<ClusterViewProps> = ({
           font-family: 'JetBrains Mono', monospace;
           font-weight: 700; margin-bottom: 10px;
         }
+
         .cv-panel-health-row {
           display: flex; justify-content: space-between; align-items: baseline;
           margin-bottom: 6px;

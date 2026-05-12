@@ -31,6 +31,7 @@ export const EditLocationForm = ({
   const [formData, setFormData] = useState({
     name: "",
     area: "",
+    project: "",
     status: "",
     location_type_id: "",
     parent_id: "" as string | null,
@@ -42,6 +43,7 @@ export const EditLocationForm = ({
       setFormData({
         name: location.name || "",
         area: location.area || "",
+        project: location.project || "",
         status: location.status || "",
         location_type_id: String(location.location_type_id || ""),
         parent_id: location && (location as any).parent_id ? String((location as any).parent_id) : null,
@@ -109,7 +111,14 @@ export const EditLocationForm = ({
       return;
     }
 
-    
+    if (!formData.project.trim()) {
+      setStatus({
+        message: "Project is required.",
+        type: "error",
+      });
+      return;
+    }
+
     setStatus({ message: "Updating location...", type: "info" });
 
     try {
@@ -123,6 +132,7 @@ export const EditLocationForm = ({
       const updates: any = {
         name: formData.name.trim(),
         area: formData.area.trim(),
+        project: formData.project.trim(),
         status: formData.status || undefined,
         location_type_id: formData.location_type_id
           ? parseInt(formData.location_type_id)
@@ -182,13 +192,13 @@ export const EditLocationForm = ({
       />
 
       {/* Project */}
-      {/* <InputField
+      <InputField
         label="Project"
         placeholder="Enter project"
         type="input"
         stateValue={formData.project}
         stateAction={(value) => handleInputChange("project", value)}
-      /> */}
+      />
 
       {/* Status */}
       <InputField

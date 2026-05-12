@@ -100,7 +100,9 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
               <CommandInput 
                 placeholder="Search entry ..." 
                 className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50"
-                
+                onValueChange={(value) => {
+                  // This enables real-time filtering in Command component
+                }}
               />
               <CommandList className="max-h-[300px] overflow-y-auto">
                 <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>

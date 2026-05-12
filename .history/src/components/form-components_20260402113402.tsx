@@ -96,13 +96,9 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-90 p-0 border-(--dark)" align="start">
-            <Command className="bg-(--dark)/90 border-(--dark)" shouldFilter={true}>
-              <CommandInput 
-                placeholder="Search entry ..." 
-                className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50"
-                
-              />
-              <CommandList className="max-h-[300px] overflow-y-auto">
+            <Command className="bg-(--dark)/90 border-(--dark)">
+              <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+              <CommandList className="max-h-[200px]">
                 <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
                 <CommandGroup className="p-1.5">
                   {comboboxOptions?.map((option: string) => (
@@ -117,17 +113,17 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
                         ) : null;
                         openStateAction ? openStateAction(false) : null
                       }}
-                      className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-1.5 h-auto rounded-sm mb-0.5 last:mb-0 cursor-pointer hover:bg-(--dark)/30 transition-colors whitespace-normal break-words"
+                      className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
                     >
                       <Check
                         className={cn(
-                          "mr-1.5 size-3.5 flex-shrink-0",
+                          "mr-1.5 size-3.5",
                           stateValue === option
                             ? "opacity-100"
                             : "opacity-0"
                         )}
                       />
-                      <span className="flex-1">{option}</span>
+                      {option}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -145,7 +141,7 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
               role="combobox"
               aria-expanded={openState}
               className={cn(
-                "w-full justify-between bg-(--contrast)/80 border-(--dark) hover:text-(--contrast)",
+                "w-full justify-between bg-(--contrast)/80 border-(--dark)  hover:text-(--contrast)",
                 stateValue ? "text-(--contrast)" : "text-(--contrast)/50"
               )}
             >
@@ -156,12 +152,9 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
-            <Command className="bg-(--dark)/90 border-(--dark)" shouldFilter={true}>
-              <CommandInput 
-                placeholder="Search entry ..." 
-                className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50"
-              />
-              <CommandList className="max-h-[300px] overflow-y-auto">
+            <Command className="bg-(--dark)/90 border-(--dark)">
+              <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+              <CommandList className="max-h-[200px]">
                 <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
                 <CommandGroup className="p-1.5">
                   {selectBoxOptions?.map((option: {label: string; value: string}) => (
@@ -174,17 +167,17 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
                         ) : null;
                         openStateAction ? openStateAction(false) : null
                       }}
-                      className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-1.5 h-auto rounded-sm mb-0.5 last:mb-0 cursor-pointer hover:bg-(--dark)/30 transition-colors whitespace-normal break-words"
+                      className="text-(--contrast) text-sm data-[selected=true]:bg-(--dark)/50 data-[selected=true]:text-(--contrast) px-2 py-0.5 h-6 rounded-sm mb-0.5 last:mb-0 cursor-pointer"
                     >
                       <Check
                         className={cn(
-                          "mr-1.5 size-3.5 flex-shrink-0",
+                          "mr-1.5 size-3.5",
                           stateValue === option.value
                             ? "opacity-100"
                             : "opacity-0"
                         )}
                       />
-                      <span className="flex-1">{option.label}</span>
+                      {option.label}
                     </CommandItem>
                   ))}
                 </CommandGroup>

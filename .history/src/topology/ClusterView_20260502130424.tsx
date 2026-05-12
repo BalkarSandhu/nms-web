@@ -419,9 +419,9 @@ const DetailPanel: React.FC<{
           <InfoRow label="Area"     value={location.area    || '—'} />
           <InfoRow label="Parent"   value={parent ? parent.name : 'None'} />
           <InfoRow label="Children" value={String(childLocations.length)} />
-          {/* {location.status_reason && (
+          {location.status_reason && (
             <InfoRow label="Reason" value={location.status_reason} />
-          )} */}
+          )}
         </section>
 
         <section className="cv-panel-section">

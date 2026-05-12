@@ -96,13 +96,9 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-90 p-0 border-(--dark)" align="start">
-            <Command className="bg-(--dark)/90 border-(--dark)" shouldFilter={true}>
-              <CommandInput 
-                placeholder="Search entry ..." 
-                className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50"
-                
-              />
-              <CommandList className="max-h-[300px] overflow-y-auto">
+            <Command className="bg-(--dark)/90 border-(--dark)">
+              <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
+              <CommandList className="max-h-[200px] overflow-y-auto">
                 <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
                 <CommandGroup className="p-1.5">
                   {comboboxOptions?.map((option: string) => (
@@ -156,11 +152,8 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-60 p-0 border-(--dark)" align="start">
-            <Command className="bg-(--dark)/90 border-(--dark)" shouldFilter={true}>
-              <CommandInput 
-                placeholder="Search entry ..." 
-                className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50"
-              />
+            <Command className="bg-(--dark)/90 border-(--dark)">
+              <CommandInput placeholder="Search entry ..." className="text-(--contrast) h-9 text-sm border-b border-(--dark)/50" />
               <CommandList className="max-h-[300px] overflow-y-auto">
                 <CommandEmpty className="px-3 py-4 text-(--contrast)/70 text-sm">No entry found.</CommandEmpty>
                 <CommandGroup className="p-1.5">
