@@ -90,33 +90,33 @@ export default function Metric1({
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
             {viewMode === 'stats' ? (
-                <div className="flex items-center gap-4 min-h-[130px] py-1">
-                    <div className="flex flex-col items-center justify-center" style={{ width: '38%' }}>
-                        <Donut percent={onlinePercent} size={88} />
+                <div className="flex items-center gap-2 min-h-[130px] py-1">
+                    <div className="flex flex-col items-center justify-center shrink-0" style={{ width: '36%' }}>
+                        <Donut percent={onlinePercent} size={80} />
                         <div className="mt-1 text-center">
-                            <div className="text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--text-lo)' }}>Total</div>
+                            <div className="text-[9px] uppercase tracking-[0.12em]" style={{ color: 'var(--text-lo)' }}>Total</div>
                             <div className="text-base font-semibold tabular-nums" style={{ color: 'var(--text-hi)' }}>{total}</div>
                         </div>
                     </div>
 
-                    <div className="h-full w-px" style={{ backgroundColor: 'var(--border-soft)' }} />
+                    <div className="h-full w-px shrink-0" style={{ backgroundColor: 'var(--border-soft)' }} />
 
-                    <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                         <button
                             onClick={() => onStatusClick?.('online')}
-                            className="flex items-center justify-between px-2 py-1 rounded-md transition-colors text-left hover:bg-white/[0.04]"
+                            className="flex items-center justify-between gap-1 px-1.5 py-1 rounded-md transition-colors text-left hover:bg-white/[0.04]"
                         >
-                            <div className="flex items-center gap-2">
-                                <span className="nms-dot nms-dot-online" />
-                                <span className="text-xs" style={{ color: 'var(--text-mid)' }}>{labels.low}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="nms-dot nms-dot-online shrink-0" />
+                                <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-mid)' }}>{labels.low}</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 shrink-0">
                                 <span className="text-base font-bold tabular-nums" style={{ color: 'var(--text-hi)' }}>{data.low}</span>
-                                <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded badge-success">{onlinePercent}%</span>
+                                <span className="text-[10px] font-bold tabular-nums px-1 py-0.5 rounded badge-success whitespace-nowrap">{onlinePercent}%</span>
                             </div>
                         </button>
                         {showGraph && (
-                            <div className="h-1 mx-2 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.15)' }}>
+                            <div className="h-1 mx-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.15)' }}>
                                 <div
                                     className="h-full"
                                     style={{
@@ -130,19 +130,19 @@ export default function Metric1({
 
                         <button
                             onClick={() => onStatusClick?.('offline')}
-                            className="flex items-center justify-between px-2 py-1 rounded-md transition-colors text-left hover:bg-white/[0.04]"
+                            className="flex items-center justify-between gap-1 px-1.5 py-1 rounded-md transition-colors text-left hover:bg-white/[0.04]"
                         >
-                            <div className="flex items-center gap-2">
-                                <span className="nms-dot nms-dot-offline" />
-                                <span className="text-xs" style={{ color: 'var(--text-mid)' }}>{labels.high}</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="nms-dot nms-dot-offline shrink-0" />
+                                <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-mid)' }}>{labels.high}</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 shrink-0">
                                 <span className="text-base font-bold tabular-nums" style={{ color: 'var(--text-hi)' }}>{mergedHigh}</span>
-                                <span className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded badge-critical">{offlinePercent}%</span>
+                                <span className="text-[10px] font-bold tabular-nums px-1 py-0.5 rounded badge-critical whitespace-nowrap">{offlinePercent}%</span>
                             </div>
                         </button>
                         {showGraph && (
-                            <div className="h-1 mx-2 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.15)' }}>
+                            <div className="h-1 mx-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.15)' }}>
                                 <div
                                     className="h-full"
                                     style={{

@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
 
 import Section from "./local-components/Section";
 import Filters from "./local-components/Filters";
@@ -14,12 +13,6 @@ import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
 type DashboardProps = {
 	isButtonClicked?: boolean;
 	setIsButtonClicked?: (value: boolean) => void;
-}
-
-interface WorkerRow {
-	id: number;
-	name: string;
-	[key: string]: any;
 }
 
 export default function Dashboard({ isButtonClicked }: DashboardProps) {
@@ -49,6 +42,22 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		protocol_stats: {}, total_devices: 0, device_type_stats: {},
 	};
 
+	// ── LIVE TOPOLOGY — areas aggregated from locations ─────────────────────
+	// NOTE: must run BEFORE any early returns to preserve hook order.
+	const liveTopologyAreas = useMemo(() => {
+		const byArea = new Map<string, { online: number; offline: number; partial: number; total: number }>();
+		for (const l of activeLocations) {
+			const key = (l.area || 'Unassigned').toString();
+			const cur = byArea.get(key) || { online: 0, offline: 0, partial: 0, total: 0 };
+			cur.total += 1;
+			if (l.status === 'online') cur.online += 1;
+			else if (l.status === 'offline') cur.offline += 1;
+			else if (l.status === 'partial') cur.partial += 1;
+			byArea.set(key, cur);
+		}
+		return Array.from(byArea.entries()).map(([area, s]) => ({ area, ...s }));
+	}, [activeLocations]);
+
 	if (loading) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full w-full gap-3 fade-in">
@@ -61,44 +70,16 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		);
 	}
 
-	const calculateDowntime = (updatedAt: string): number => {
-		const now = new Date();
-		const lastUpdate = new Date(updatedAt);
-		const diffMs = now.getTime() - lastUpdate.getTime();
-		return Math.floor(diffMs / (1000 * 60 * 60));
-	};
-
-	const formatDowntime = (hours: number): string => {
-		if (hours < 1) return '< 1h';
-		if (hours < 24) return `${hours}h`;
-		const days = Math.floor(hours / 24);
-		const remainingHours = hours % 24;
-		return `${days}d ${remainingHours}h`;
-	};
-
 	// ── DEVICES ─────────────────────────────────────────────────────────────
-	const offlineDevices = activeDevices.filter(d => !d.is_reachable);
 	const onlineDevicesCount  = deviceStats.online_devices  || 0;
 	const offlineDevicesCount = deviceStats.offline_devices || 0;
 	const totalDevicesCount   = deviceStats.total_devices   || (onlineDevicesCount + offlineDevicesCount);
 
 	const deviceMetrics = { low: onlineDevicesCount, medium: 0, high: offlineDevicesCount };
 
-	const deviceDowntimeData = offlineDevices
-		.map(d => ({
-			id: d.id,
-			col1: d.display || d.hostname,
-			col2: formatDowntime(calculateDowntime(d.updated_at)),
-			downtime: calculateDowntime(d.updated_at),
-			link: `/devices?id=${d.id}`,
-		}))
-		.sort((a, b) => b.downtime - a.downtime)
-		.slice(0, 10);
-
 	// ── LOCATIONS ────────────────────────────────────────────────────────────
 	const onlineLocations   = activeLocations.filter(l => l.status === 'online');
 	const partialLocations  = activeLocations.filter(l => l.status === 'partial');
-	const unknownLocations  = activeLocations.filter(l => l.status === 'unknown');
 	const offlineLocations  = activeLocations.filter(l => l.status === 'offline');
 
 	const locationMetrics = {
@@ -106,17 +87,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		medium: partialLocations.length,
 		high:   offlineLocations.length,
 	};
-
-	const locationDowntimeData = [...offlineLocations, ...unknownLocations, ...partialLocations]
-		.map(l => ({
-			id: l.id,
-			col1: l.name,
-			col2: formatDowntime(calculateDowntime(l.updated_at || l.created_at || new Date().toISOString())),
-			downtime: calculateDowntime(l.updated_at || l.created_at || new Date().toISOString()),
-			link: `/locations?id=${l.id}`,
-		}))
-		.sort((a, b) => b.downtime - a.downtime)
-		.slice(0, 10);
 
 	// ── AREAS / WORKERS ──────────────────────────────────────────────────────
 	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
@@ -127,17 +97,6 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 		medium: 0,
 		high:   offlineWorkersList.length,
 	};
-
-	const workerDowntimeData = offlineWorkersList
-		.map(w => ({
-			id: w.id,
-			col1: w.name,
-			col2: formatDowntime(calculateDowntime(w.last_seen || w.updated_at)),
-			downtime: calculateDowntime(w.last_seen || w.updated_at),
-			link: `/workers?id=${w.id}`,
-		}))
-		.sort((a, b) => b.downtime - a.downtime)
-		.slice(0, 10);
 
 	// ── Navigation helpers ───────────────────────────────────────────────────
 	const handleDeviceStatusClick = (status: 'unknown' | 'online' | 'offline') => {
@@ -291,34 +250,18 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						labels: { low: "Online", medium: "", high: "Offline" },
 						onStatusClick: handleDeviceStatusClick,
 					},
-					metric2: {
-						title: (
-							<div className="flex items-center gap-2">
-								<AlertTriangle size={14} className="text-amber-400 alert-vibrate" />
-								<span className="badge-critical alert-shine">Critical</span>
-							</div>
-						),
-						headers: { col1: "Device", col2: "Downtime" },
-						data: deviceDowntimeData,
-						maxRows: 5,
-						onRowClick: (row: WorkerRow) => navigate(`/devices?id=${row.id}`),
+					reliability: {
+						devices: activeDevices.map(d => ({
+							id: d.id,
+							is_reachable: d.is_reachable,
+							consecutive_failures: d.consecutive_failures,
+						})),
 					},
-					metric3: undefined,
-					metric4: activeDevices
-						.reduce((acc, d) => {
-							const devicetype = deviceTypes.find(dt => dt.id === d.device_type_id);
-							const typeName = devicetype?.name || "Unknown";
-							const found = acc.find(item => item.label === typeName);
-							if (found) {
-								found.value += 1;
-								if (!found.navigateTarget) found.navigateTarget = '/devices';
-							} else {
-								acc.push({ label: typeName, value: 1, navigateTarget: '/devices' });
-							}
-							return acc;
-						}, [] as { label: string; value: number; navigateTarget?: string }[])
-						.sort((a, b) => b.value - a.value)
-						.slice(0, 5),
+					liveTopology: {
+						areas: liveTopologyAreas,
+						totalDevices: totalDevicesCount,
+						onlineDevices: onlineDevicesCount,
+					},
 				}}
 			/>
 
@@ -332,34 +275,13 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						labels: { low: "Online", medium: "Partial", high: "Offline" },
 						onStatusClick: handleLocationStatusClick,
 					},
-					metric2: {
-						title: (
-							<div className="flex items-center gap-2">
-								<AlertTriangle size={14} className="text-amber-400" />
-								<span className="badge-critical">Critical</span>
-							</div>
-						),
-						headers: { col1: "Location", col2: "Downtime" },
-						data: locationDowntimeData,
-						maxRows: 5,
-						onRowClick: (row: WorkerRow) => navigate(`/locations?id=${row.id}`),
+					trend: {
+						title: "Location Pulse",
+						total: activeLocations.length,
+						online: onlineLocations.length,
+						offline: offlineLocations.length,
+						partial: partialLocations.length,
 					},
-					metric3: undefined,
-					metric4: activeLocations
-						.reduce((acc, l) => {
-							const locationType = locationTypes.find(lt => lt.id === l.location_type_id);
-							const typeName = locationType?.name || "Unknown";
-							const found = acc.find(item => item.label === typeName);
-							if (found) {
-								found.value += 1;
-								if (!found.navigateTarget) found.navigateTarget = '/locations';
-							} else {
-								acc.push({ label: typeName, value: 1, navigateTarget: '/locations' });
-							}
-							return acc;
-						}, [] as { label: string; value: number; navigateTarget?: string }[])
-						.sort((a, b) => b.value - a.value)
-						.slice(0, 5),
 				}}
 			/>
 
@@ -373,20 +295,12 @@ export default function Dashboard({ isButtonClicked }: DashboardProps) {
 						labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
 						onStatusClick: handleWorkerStatusClick,
 					},
-					metric2: {
-						title: (
-							<div className="flex items-center gap-2">
-								<AlertTriangle size={14} className="text-amber-400" />
-								<span className="badge-critical">Critical</span>
-							</div>
-						),
-						headers: { col1: "Area", col2: "Downtime" },
-						data: workerDowntimeData,
-						maxRows: 5,
-						onRowClick: (row: WorkerRow) => navigate(`/workers?${row.id}`),
+					trend: {
+						title: "Area Pulse",
+						total: activeWorkers.length,
+						online: activeWorkersOnline.length,
+						offline: offlineWorkersList.length,
 					},
-					metric3: undefined,
-					metric4: undefined,
 				}}
 			/>
 		</div>

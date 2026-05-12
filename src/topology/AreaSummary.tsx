@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Grid3x3, MapPin, Activity, TrendingUp, ChevronRight, Search,
-  Wifi, WifiOff, AlertTriangle
+  MapPin, Activity, ChevronRight, Search, RefreshCw,
+  Wifi, WifiOff, AlertTriangle, LayoutGrid, Server, ArrowLeft, Map as MapIcon,
 } from 'lucide-react';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchLocationsforMap } from '@/store/locationsSlice';
+import AreaMapView, { buildAreaMarkers, type AreaMarker } from './AreaMapView';
 
 interface Location {
   id: number;
@@ -19,725 +23,795 @@ interface Location {
   offline_device_count?: number;
   health_percentage?: number;
   children?: Location[];
-  worker_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  status_reason?: string;
 }
 
 interface AreaSummaryProps {
   allLocations: Location[];
   onAreaSelect: (area: string) => void;
+  onOpenCluster?: (area: string) => void;
+  onRefresh?: () => void;
+  loading?: boolean;
+  lastUpdated?: Date | null;
 }
 
-const AreaSummary: React.FC<AreaSummaryProps> = ({ allLocations, onAreaSelect }) => {
+const AreaSummary: React.FC<AreaSummaryProps> = ({
+  allLocations,
+  onAreaSelect,
+  onOpenCluster,
+  onRefresh,
+  loading = false,
+  lastUpdated = null,
+}) => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [searchTerm, setSearchTerm] = useState('');
-  const [hoveredArea, setHoveredArea] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [view, setView] = useState<'map' | 'grid'>('map');
 
-  /* ─── Calculate Area Statistics ────────────────────── */
-  const areaSummaries = useMemo(() => {
-    const byArea = new Map<string, Location[]>();
+  // Use Redux locations for lat/lng since the topology tree response may not include them.
+  const reduxLocations = useAppSelector((state) => state.locations.locations) || [];
 
-    const collectByArea = (locs: Location[]) => {
-      locs.forEach((loc) => {
-        if (!byArea.has(loc.area)) byArea.set(loc.area, []);
-        byArea.get(loc.area)!.push(loc);
-        if (loc.children?.length) collectByArea(loc.children);
-      });
-    };
+  useEffect(() => {
+    if (reduxLocations.length === 0) {
+      dispatch(fetchLocationsforMap());
+    }
+  }, [dispatch, reduxLocations.length]);
 
-    collectByArea(allLocations);
+  // Merge: topology data (status, device_count, health) keyed by id with Redux geo (lat/lng)
+  const mergedLocations = useMemo(() => {
+    const geoById = new Map(reduxLocations.map((l: any) => [l.id, l]));
+    return allLocations.map((l) => {
+      const geo = geoById.get(l.id);
+      return {
+        id: l.id,
+        name: l.name,
+        area: l.area || (geo?.area ?? 'Unassigned'),
+        status: l.status as 'online' | 'offline' | 'unknown' | 'partial',
+        latitude: geo?.latitude,
+        longitude: geo?.longitude,
+        device_count: l.device_count,
+        online_device_count: l.online_device_count,
+        offline_device_count: l.offline_device_count,
+        health_percentage: l.health_percentage,
+      };
+    });
+  }, [allLocations, reduxLocations]);
 
-    return Array.from(byArea.entries())
-      .map(([area, locs]) => {
-        const online = locs.filter((l) => l.status === 'online').length;
-        const offline = locs.filter((l) => l.status === 'offline').length;
-        const partial = locs.filter((l) => l.status === 'partial').length;
-        const avgHealth = Math.round(
-          locs.reduce((sum, l) => sum + (l.health_percentage ?? 0), 0) / Math.max(locs.length, 1)
-        );
-        const totalDevices = locs.reduce((sum, l) => sum + (l.device_count ?? 0), 0);
+  const allAreaMarkers: AreaMarker[] = useMemo(
+    () => buildAreaMarkers(mergedLocations),
+    [mergedLocations]
+  );
 
-        return {
-          area,
-          total: locs.length,
-          online,
-          offline,
-          partial,
-          avgHealth,
-          totalDevices,
-        };
-      })
-      .filter((summary) =>
-        searchTerm === '' || summary.area.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .sort((a, b) => a.area.localeCompare(b.area));
-  }, [allLocations, searchTerm]);
+  const visibleAreas = useMemo(
+    () =>
+      searchTerm
+        ? allAreaMarkers.filter((a) =>
+            a.area.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        : allAreaMarkers,
+    [allAreaMarkers, searchTerm]
+  );
 
   const globalStats = useMemo(() => {
     return {
-      totalAreas: areaSummaries.length,
-      totalLocations: areaSummaries.reduce((sum, a) => sum + a.total, 0),
-      totalOnline: areaSummaries.reduce((sum, a) => sum + a.online, 0),
-      totalOffline: areaSummaries.reduce((sum, a) => sum + a.offline, 0),
-      totalPartial: areaSummaries.reduce((sum, a) => sum + a.partial, 0),
+      areas: allAreaMarkers.length,
+      locations: allAreaMarkers.reduce((s, a) => s + a.total, 0),
+      devices: allAreaMarkers.reduce((s, a) => s + a.totalDevices, 0),
+      onlineDevices: allAreaMarkers.reduce((s, a) => s + a.onlineDevices, 0),
+      offlineDevices: allAreaMarkers.reduce((s, a) => s + a.offlineDevices, 0),
       avgHealth: Math.round(
-        areaSummaries.reduce((sum, a) => sum + a.avgHealth, 0) / Math.max(areaSummaries.length, 1)
+        allAreaMarkers.reduce((s, a) => s + a.avgHealth, 0) /
+          Math.max(allAreaMarkers.length, 1)
       ),
     };
-  }, [areaSummaries]);
+  }, [allAreaMarkers]);
 
-  const getHealthColor = (health: number) => {
-    if (health >= 80) return '#10b981';
-    if (health >= 50) return '#f59e0b';
-    return '#ef4444';
+  const selected = selectedArea
+    ? allAreaMarkers.find((a) => a.area === selectedArea) ?? null
+    : null;
+
+  const healthColor = (h: number) =>
+    h >= 80 ? 'var(--status-online)' : h >= 50 ? 'var(--status-warning)' : 'var(--status-offline)';
+
+  const accentForArea = (a: AreaMarker) => {
+    if (a.offline > 0) return 'var(--status-offline)';
+    if (a.partial > 0) return 'var(--status-warning)';
+    if (a.online > 0) return 'var(--status-online)';
+    return 'var(--text-dim)';
   };
 
-
   return (
-    <div className="area-summary-container">
-      {/* Header Section */}
-      <header className="summary-header">
-        <div className="header-content">
-          <div className="header-icon">
-            <Grid3x3 size={28} />
+    <div
+      className="w-full h-full flex flex-col overflow-hidden"
+      style={{
+        background: 'var(--bg-app)',
+        color: 'var(--text-hi)',
+        fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      {/* Header */}
+      <header
+        className="flex-shrink-0 px-6 py-4 border-b"
+        style={{
+          background: 'rgba(11,18,32,0.85)',
+          borderColor: 'var(--border-soft)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => navigate('/')}
+              title="Back to Dashboard"
+              className="inline-flex items-center gap-2 rounded-md transition-colors"
+              style={{
+                padding: '7px 12px',
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border-soft)',
+                color: 'var(--text-mid)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <ArrowLeft size={14} />
+              Dashboard
+            </button>
+            <div
+              className="flex items-center justify-center rounded-lg shrink-0"
+              style={{
+                width: 42, height: 42,
+                background: 'var(--brand-soft)',
+                border: '1px solid var(--border-brand)',
+                color: 'var(--brand)',
+              }}
+            >
+              <LayoutGrid size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <h1 className="text-base font-semibold tracking-wide" style={{ color: 'var(--text-hi)' }}>
+                  Network Topology
+                </h1>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--brand)' }}>
+                  Area Overview
+                </span>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-lo)' }}>
+                Click an area on the map to inspect its topology · {globalStats.areas} areas monitored
+              </p>
+            </div>
           </div>
-          <div className="header-text">
-            <h1>Area Summary</h1>
-            <p>Select an area to view cluster visualization</p>
+
+          <div className="flex items-center gap-2">
+            {/* Map / Grid toggle */}
+            <div
+              className="flex rounded-md p-0.5"
+              style={{
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border-soft)',
+              }}
+            >
+              {(['map', 'grid'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className="inline-flex items-center gap-1.5 rounded transition-colors"
+                  style={{
+                    padding: '5px 11px',
+                    background: view === v ? 'var(--brand-soft)' : 'transparent',
+                    color: view === v ? 'var(--brand)' : 'var(--text-mid)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {v === 'map' ? <MapIcon size={12} /> : <LayoutGrid size={12} />}
+                  {v.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {lastUpdated && (
+              <span className="nms-chip nms-chip-live hidden md:inline-flex">
+                <span style={{ color: 'var(--text-mid)' }}>
+                  Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              </span>
+            )}
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={loading}
+                className="inline-flex items-center justify-center rounded-md border transition-colors"
+                style={{
+                  width: 34, height: 34,
+                  background: 'var(--bg-panel)',
+                  borderColor: 'var(--border-soft)',
+                  color: 'var(--text-mid)',
+                  cursor: loading ? 'wait' : 'pointer',
+                  opacity: loading ? 0.6 : 1,
+                }}
+                title="Refresh"
+              >
+                <RefreshCw size={14} style={{ animation: loading ? 'spin .8s linear infinite' : 'none' }} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Global Stats */}
-        <div className="global-stats">
+        {/* Global KPI strip */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-4">
           {[
-            {
-              label: 'AREAS',
-              value: globalStats.totalAreas,
-              icon: Grid3x3,
-              color: '#3b82f6',
-            },
-            {
-              label: 'LOCATIONS',
-              value: globalStats.totalLocations,
-              icon: MapPin,
-              color: '#10b981',
-            },
-            {
-              label: 'DEVICES',
-              value: allLocations.reduce((sum, l) => sum + (l.device_count ?? 0), 0),
-              icon: Activity,
-              color: '#f59e0b',
-            },
-            {
-              label: 'AVG HEALTH',
-              value: `${globalStats.avgHealth}%`,
-              icon: TrendingUp,
-              color: getHealthColor(globalStats.avgHealth),
-            },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="global-stat-card">
-              <div className="stat-icon" style={{ color }}>
-                <Icon size={20} />
+            { label: 'AREAS', value: globalStats.areas, color: 'var(--brand)', icon: <LayoutGrid size={14} /> },
+            { label: 'LOCATIONS', value: globalStats.locations, color: 'var(--text-hi)', icon: <MapPin size={14} /> },
+            { label: 'DEVICES', value: globalStats.devices, color: 'var(--text-hi)', icon: <Server size={14} /> },
+            { label: 'ONLINE', value: globalStats.onlineDevices, color: 'var(--status-online)', icon: <Wifi size={14} /> },
+            { label: 'OFFLINE', value: globalStats.offlineDevices, color: 'var(--status-offline)', icon: <WifiOff size={14} /> },
+            { label: 'HEALTH', value: `${globalStats.avgHealth}%`, color: healthColor(globalStats.avgHealth), icon: <Activity size={14} /> },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2"
+              style={{
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border-soft)',
+              }}
+            >
+              <div
+                className="flex items-center justify-center rounded-md shrink-0"
+                style={{
+                  width: 28, height: 28,
+                  background: `color-mix(in oklab, ${s.color} 14%, transparent)`,
+                  color: s.color,
+                  border: `1px solid color-mix(in oklab, ${s.color} 30%, transparent)`,
+                }}
+              >
+                {s.icon}
               </div>
-              <div className="stat-info">
-                <div className="stat-value">{value}</div>
-                <div className="stat-label">{label}</div>
+              <div className="min-w-0">
+                <div className="text-lg font-bold leading-none tabular-nums" style={{ color: s.color }}>
+                  {s.value}
+                </div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.14em] mt-1" style={{ color: 'var(--text-lo)' }}>
+                  {s.label}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </header>
 
-      {/* Search Bar */}
-      <div className="search-section">
-        <div className="search-container">
-          <Search size={18} />
+      {/* Search bar */}
+      <div
+        className="flex-shrink-0 px-6 py-3 border-b flex items-center gap-3"
+        style={{ borderColor: 'var(--border-soft)' }}
+      >
+        <div className="relative flex-1 max-w-md">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: 'var(--text-dim)' }}
+          />
           <input
             type="text"
-            placeholder="Search areas..."
+            placeholder="Search areas…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-md outline-none transition-colors"
+            style={{
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text-hi)',
+              padding: '7px 12px 7px 34px',
+              fontSize: 13,
+            }}
           />
         </div>
+        <span className="text-xs" style={{ color: 'var(--text-lo)' }}>
+          {visibleAreas.length} {visibleAreas.length === 1 ? 'area' : 'areas'}
+        </span>
       </div>
 
-      {/* Content Area */}
-      <main className="summary-content">
-        {areaSummaries.length === 0 ? (
-          <div className="empty-state">
-            <Grid3x3 size={48} />
-            <h2>No areas found</h2>
-            <p>No areas match your search criteria</p>
-          </div>
-        ) : (
-          <div className="areas-grid">
-            {areaSummaries.map((summary) => {
-              const healthColor = getHealthColor(summary.avgHealth);
-              const isHovered = hoveredArea === summary.area;
-
-              return (
+      {/* Body */}
+      <main className="flex-1 min-h-0 flex overflow-hidden">
+        {view === 'map' ? (
+          <>
+            <div className="flex-1 min-w-0 relative">
+              <AreaMapView
+                areas={visibleAreas}
+                selectedArea={selectedArea}
+                onAreaSelect={(a) => setSelectedArea(a)}
+                onAreaOpenTopology={(a) => onAreaSelect(a)}
+              />
+              {visibleAreas.length === 0 && (
                 <div
-                  key={summary.area}
-                  className={`area-card ${isHovered ? 'hovered' : ''}`}
-                  onMouseEnter={() => setHoveredArea(summary.area)}
-                  onMouseLeave={() => setHoveredArea(null)}
-                  onClick={() => onAreaSelect(summary.area)}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none"
+                  style={{ color: 'var(--text-lo)' }}
                 >
-                  {/* Card Background Gradient */}
-                  <div className="card-bg-gradient" />
+                  <MapIcon size={42} style={{ opacity: 0.3 }} />
+                  <p className="text-sm">No areas to plot</p>
+                </div>
+              )}
+            </div>
 
-                  {/* Card Content */}
-                  <div className="card-content">
-                    {/* Area Name */}
-                    <div className="area-header">
-                      <MapPin size={20} style={{ color: '#3b82f6' }} />
-                      <h3>{summary.area}</h3>
-                    </div>
-
-                    {/* Stats Row */}
-                    <div className="stats-row">
-                      <div className="stat-mini">
-                        <span className="stat-label">Locations</span>
-                        <span className="stat-value">{summary.total}</span>
+            {/* Side panel — selected area details */}
+            <aside
+              style={{
+                width: 340,
+                borderLeft: '1px solid var(--border-soft)',
+                background: 'linear-gradient(180deg, rgba(30,41,59,0.4) 0%, rgba(11,18,32,0.85) 100%)',
+                display: 'flex', flexDirection: 'column',
+                flexShrink: 0,
+              }}
+              className="hidden lg:flex"
+            >
+              {selected ? (
+                <AreaDetailPanel
+                  area={selected}
+                  onClose={() => setSelectedArea(null)}
+                  onOpenTopology={() => onAreaSelect(selected.area)}
+                  onOpenCluster={onOpenCluster ? () => onOpenCluster(selected.area) : undefined}
+                  accent={accentForArea(selected)}
+                />
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center" style={{ color: 'var(--text-lo)' }}>
+                  <div
+                    className="flex items-center justify-center rounded-xl"
+                    style={{
+                      width: 64, height: 64,
+                      background: 'var(--brand-soft)',
+                      border: '1px solid var(--border-brand)',
+                      color: 'var(--brand)',
+                    }}
+                  >
+                    <MapPin size={28} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-mid)' }}>
+                      Select an area
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-lo)' }}>
+                      Click a marker on the map to see its stats and open the topology.
+                    </p>
+                  </div>
+                  {allAreaMarkers.length > 0 && (
+                    <div className="w-full mt-4 flex flex-col gap-1.5">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-left" style={{ color: 'var(--text-lo)' }}>
+                        Quick Pick
                       </div>
-                      <div className="divider" />
-                      <div className="stat-mini">
-                        <span className="stat-label">Devices</span>
-                        <span className="stat-value">{summary.totalDevices}</span>
-                      </div>
-                    </div>
-
-                    {/* Health Score */}
-                    <div className="health-section">
-                      <div className="health-header">
-                        <span className="health-label">Health Score</span>
-                        <span className="health-value" style={{ color: healthColor }}>
-                          {summary.avgHealth}%
-                        </span>
-                      </div>
-                      <div className="health-bar">
-                        <div
-                          className="health-fill"
+                      {allAreaMarkers.slice(0, 6).map((a) => (
+                        <button
+                          key={a.area}
+                          onClick={() => setSelectedArea(a.area)}
+                          className="w-full flex items-center justify-between rounded-md transition-colors"
                           style={{
-                            width: `${summary.avgHealth}%`,
-                            backgroundColor: healthColor,
-                            boxShadow: `0 0 12px ${healthColor}`,
+                            padding: '7px 10px',
+                            background: 'var(--bg-panel)',
+                            border: '1px solid var(--border-soft)',
+                            color: 'var(--text-mid)',
+                            fontSize: 12,
+                            cursor: 'pointer',
                           }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Status Indicators */}
-                    <div className="status-indicators">
-                      {[
-                        { label: 'Online', value: summary.online, icon: Wifi, color: '#10b981' },
-                        {
-                          label: 'Offline',
-                          value: summary.offline,
-                          icon: WifiOff,
-                          color: '#ef4444',
-                        },
-                        {
-                          label: 'Partial',
-                          value: summary.partial,
-                          icon: AlertTriangle,
-                          color: '#f59e0b',
-                        },
-                      ].map(({ label, value, icon: Icon, color }) => (
-                        <div key={label} className="indicator">
-                          <Icon size={14} style={{ color }} />
-                          <div className="indicator-info">
-                            <span className="indicator-value">{value}</span>
-                            <span className="indicator-label">{label}</span>
-                          </div>
-                        </div>
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <span
+                              className="w-2 h-2 rounded-full"
+                              style={{ background: accentForArea(a) }}
+                            />
+                            <span className="truncate">{a.area}</span>
+                          </span>
+                          <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-lo)' }}>
+                            {a.total} loc
+                          </span>
+                        </button>
                       ))}
                     </div>
-
-                    {/* Action Button */}
-                    <button className="view-cluster-btn">
-                      <span>View Cluster</span>
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
+              )}
+            </aside>
+          </>
+        ) : (
+          /* Grid view */
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {visibleAreas.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center h-full gap-3"
+                style={{ color: 'var(--text-lo)' }}
+              >
+                <LayoutGrid size={42} style={{ opacity: 0.3 }} />
+                <p className="text-sm">No areas match your search</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {visibleAreas.map((s) => (
+                  <AreaCard
+                    key={s.area}
+                    marker={s}
+                    onOpenTopology={() => onAreaSelect(s.area)}
+                    onOpenCluster={onOpenCluster ? () => onOpenCluster(s.area) : undefined}
+                    accent={accentForArea(s)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
-
-      {/* Styles */}
-      <style>{`
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-
-        .area-summary-container {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          background: linear-gradient(135deg, #0f172a 0%, #1a1f35 100%);
-          color: #e2e8f0;
-          font-family: 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
-          overflow: hidden;
-        }
-
-        /* Header */
-        .summary-header {
-          background: rgba(15, 23, 42, 0.95);
-          backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-          padding: 24px;
-          flex-shrink: 0;
-        }
-
-        .header-content {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        .header-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 56px;
-          height: 56px;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.1));
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          border-radius: 12px;
-          color: #3b82f6;
-          flex-shrink: 0;
-        }
-
-        .header-text h1 {
-          font-size: 28px;
-          font-weight: 700;
-          margin: 0;
-        }
-
-        .header-text p {
-          font-size: 14px;
-          color: #94a3b8;
-          margin-top: 4px;
-        }
-
-        /* Global Stats */
-        .global-stats {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-          gap: 12px;
-        }
-
-        .global-stat-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          background: rgba(148, 163, 184, 0.03);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 8px;
-          transition: all 0.3s ease;
-        }
-
-        .global-stat-card:hover {
-          background: rgba(148, 163, 184, 0.06);
-          border-color: rgba(148, 163, 184, 0.2);
-        }
-
-        .stat-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.05);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .stat-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .stat-value {
-          font-size: 18px;
-          font-weight: 700;
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: 11px;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        /* Search Section */
-        .search-section {
-          padding: 16px 24px;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-          flex-shrink: 0;
-        }
-
-        .search-container {
-          position: relative;
-          max-width: 400px;
-        }
-
-        .search-container svg {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-          flex-shrink: 0;
-        }
-
-        .search-container input {
-          width: 100%;
-          padding: 10px 12px 10px 38px;
-          background: rgba(148, 163, 184, 0.05);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 8px;
-          color: #e2e8f0;
-          font-size: 14px;
-          transition: all 0.3s ease;
-        }
-
-        .search-container input:focus {
-          outline: none;
-          background: rgba(148, 163, 184, 0.08);
-          border-color: rgba(148, 163, 184, 0.3);
-        }
-
-        .search-container input::placeholder {
-          color: #64748b;
-        }
-
-        /* Content */
-        .summary-content {
-          flex: 1;
-          overflow-y: auto;
-          padding: 24px;
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-        }
-
-        .areas-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 20px;
-          width: 100%;
-          max-width: 1600px;
-        }
-
-        /* Area Card */
-        .area-card {
-          position: relative;
-          background: rgba(30, 41, 59, 0.6);
-          border: 1px solid rgba(148, 163, 184, 0.1);
-          border-radius: 12px;
-          padding: 20px;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          backdrop-filter: blur(10px);
-          overflow: hidden;
-        }
-
-        .area-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.05));
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          pointer-events: none;
-        }
-
-        .area-card:hover {
-          background: rgba(30, 41, 59, 0.8);
-          border-color: rgba(148, 163, 184, 0.3);
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-        }
-
-        .area-card.hovered::before {
-          opacity: 1;
-        }
-
-        .card-bg-gradient {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(
-            circle at top right,
-            rgba(59, 130, 246, 0.1),
-            transparent 60%
-          );
-          pointer-events: none;
-        }
-
-        .card-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        /* Area Header */
-        .area-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .area-header h3 {
-          font-size: 18px;
-          font-weight: 700;
-          margin: 0;
-        }
-
-        /* Stats Row */
-        .stats-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: rgba(148, 163, 184, 0.04);
-          border-radius: 8px;
-          border: 1px solid rgba(148, 163, 184, 0.08);
-        }
-
-        .stat-mini {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .stat-mini .stat-label {
-          font-size: 11px;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .stat-mini .stat-value {
-          font-size: 16px;
-          font-weight: 700;
-          color: #e2e8f0;
-        }
-
-        .divider {
-          width: 1px;
-          height: 32px;
-          background: rgba(148, 163, 184, 0.1);
-        }
-
-        /* Health Section */
-        .health-section {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .health-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .health-label {
-          font-size: 12px;
-          color: #94a3b8;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .health-value {
-          font-size: 16px;
-          font-weight: 700;
-        }
-
-        .health-bar {
-          height: 6px;
-          background: rgba(148, 163, 184, 0.1);
-          border-radius: 99px;
-          overflow: hidden;
-        }
-
-        .health-fill {
-          height: 100%;
-          border-radius: 99px;
-          transition: width 0.3s ease;
-        }
-
-        /* Status Indicators */
-        .status-indicators {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
-        }
-
-        .indicator {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px;
-          background: rgba(148, 163, 184, 0.04);
-          border-radius: 6px;
-          border: 1px solid rgba(148, 163, 184, 0.08);
-        }
-
-        .indicator-info {
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-          min-width: 0;
-        }
-
-        .indicator-value {
-          font-size: 13px;
-          font-weight: 700;
-          color: #e2e8f0;
-          line-height: 1;
-        }
-
-        .indicator-label {
-          font-size: 9px;
-          color: #94a3b8;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        /* View Cluster Button */
-        .view-cluster-btn {
-          width: 100%;
-          padding: 10px 16px;
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.1));
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          border-radius: 8px;
-          color: #3b82f6;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          transition: all 0.3s ease;
-          letter-spacing: 0.5px;
-        }
-
-        .view-cluster-btn:hover {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.2));
-          border-color: rgba(59, 130, 246, 0.5);
-          transform: translateX(2px);
-        }
-
-        /* Empty State */
-        .empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          color: #94a3b8;
-          text-align: center;
-        }
-
-        .empty-state svg {
-          opacity: 0.3;
-        }
-
-        .empty-state h2 {
-          font-size: 18px;
-          color: #cbd5e1;
-          margin: 8px 0 0 0;
-        }
-
-        .empty-state p {
-          font-size: 14px;
-        }
-
-        /* Scrollbar */
-        .summary-content::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .summary-content::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .summary-content::-webkit-scrollbar-thumb {
-          background: rgba(148, 163, 184, 0.2);
-          border-radius: 4px;
-        }
-
-        .summary-content::-webkit-scrollbar-thumb:hover {
-          background: rgba(148, 163, 184, 0.4);
-        }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-          .global-stats {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .areas-grid {
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          }
-        }
-
-        @media (max-width: 640px) {
-          .summary-header {
-            padding: 16px;
-          }
-
-          .header-content {
-            flex-direction: column;
-            text-align: center;
-            margin-bottom: 16px;
-          }
-
-          .header-text h1 {
-            font-size: 22px;
-          }
-
-          .global-stats {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-          }
-
-          .search-section {
-            padding: 12px 16px;
-          }
-
-          .search-container {
-            max-width: 100%;
-          }
-
-          .summary-content {
-            padding: 16px;
-          }
-
-          .areas-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-        }
-      `}</style>
+    </div>
+  );
+};
+
+/* ─── Side detail panel ─────────────────────────────── */
+const AreaDetailPanel: React.FC<{
+  area: AreaMarker;
+  accent: string;
+  onClose: () => void;
+  onOpenTopology: () => void;
+  onOpenCluster?: () => void;
+}> = ({ area, accent, onOpenTopology, onOpenCluster }) => {
+  const hc =
+    area.avgHealth >= 80
+      ? 'var(--status-online)'
+      : area.avgHealth >= 50
+      ? 'var(--status-warning)'
+      : 'var(--status-offline)';
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div
+        className="px-5 pt-5 pb-4"
+        style={{ borderBottom: '1px solid var(--border-soft)' }}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="flex items-center justify-center rounded-lg shrink-0"
+            style={{
+              width: 38, height: 38,
+              background: `color-mix(in oklab, ${accent} 14%, transparent)`,
+              color: accent,
+              border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+            }}
+          >
+            <MapPin size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div
+              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'var(--text-lo)' }}
+            >
+              AREA
+            </div>
+            <div className="text-base font-semibold truncate" style={{ color: 'var(--text-hi)' }}>
+              {area.area}
+            </div>
+          </div>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] shrink-0"
+            style={{
+              background: `color-mix(in oklab, ${accent} 12%, transparent)`,
+              color: accent,
+              border: `1px solid color-mix(in oklab, ${accent} 32%, transparent)`,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+            />
+            {area.offline > 0 ? 'Critical' : area.partial > 0 ? 'Degraded' : area.online > 0 ? 'Healthy' : 'Idle'}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        {/* Health bar */}
+        <section>
+          <div className="flex items-center justify-between mb-1.5">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'var(--text-lo)' }}
+            >
+              Network Health
+            </span>
+            <span className="text-base font-bold tabular-nums" style={{ color: hc }}>
+              {area.avgHealth}%
+            </span>
+          </div>
+          <div
+            className="h-1.5 rounded-full overflow-hidden"
+            style={{ background: 'rgba(148,163,184,0.1)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${area.avgHealth}%`,
+                background: hc,
+                boxShadow: `0 0 10px ${hc}66`,
+              }}
+            />
+          </div>
+        </section>
+
+        {/* Devices triple */}
+        <section
+          className="grid grid-cols-3 gap-2 rounded-lg p-3"
+          style={{
+            background: 'rgba(15,23,42,0.6)',
+            border: '1px solid var(--border-soft)',
+          }}
+        >
+          {[
+            { label: 'Devices', value: area.totalDevices, color: 'var(--text-hi)' },
+            { label: 'Online', value: area.onlineDevices, color: 'var(--status-online)' },
+            { label: 'Offline', value: area.offlineDevices, color: 'var(--status-offline)' },
+          ].map((c) => (
+            <div key={c.label} className="text-center">
+              <div className="text-xl font-bold leading-none tabular-nums" style={{ color: c.color }}>
+                {c.value}
+              </div>
+              <div
+                className="text-[9px] font-semibold uppercase tracking-[0.14em] mt-1"
+                style={{ color: 'var(--text-lo)' }}
+              >
+                {c.label}
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* Location status */}
+        <section>
+          <div
+            className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-2"
+            style={{ color: 'var(--text-lo)' }}
+          >
+            Locations · {area.total}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Online', value: area.online, color: 'var(--status-online)', icon: <Wifi size={12} /> },
+              { label: 'Partial', value: area.partial, color: 'var(--status-warning)', icon: <AlertTriangle size={12} /> },
+              { label: 'Offline', value: area.offline, color: 'var(--status-offline)', icon: <WifiOff size={12} /> },
+            ].map((ind) => (
+              <div
+                key={ind.label}
+                className="flex items-center gap-2 rounded-md px-2.5 py-2"
+                style={{
+                  background: 'rgba(148,163,184,0.04)',
+                  border: '1px solid var(--border-soft)',
+                }}
+              >
+                <span style={{ color: ind.color }}>{ind.icon}</span>
+                <div className="min-w-0">
+                  <div
+                    className="text-sm font-bold tabular-nums leading-none"
+                    style={{ color: 'var(--text-hi)' }}
+                  >
+                    {ind.value}
+                  </div>
+                  <div
+                    className="text-[9px] uppercase tracking-wider"
+                    style={{ color: 'var(--text-lo)' }}
+                  >
+                    {ind.label}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div
+        className="p-4 flex gap-2"
+        style={{ borderTop: '1px solid var(--border-soft)' }}
+      >
+        <button
+          onClick={onOpenTopology}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md py-2.5 px-3"
+          style={{
+            background: 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)',
+            color: '#04121A',
+            fontSize: 12.5,
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            cursor: 'pointer',
+            boxShadow: '0 6px 16px -8px rgba(6,182,212,0.55), inset 0 1px 0 rgba(255,255,255,0.25)',
+          }}
+        >
+          Open Topology
+          <ChevronRight size={14} />
+        </button>
+        {onOpenCluster && (
+          <button
+            onClick={onOpenCluster}
+            className="inline-flex items-center justify-center gap-1.5 rounded-md py-2.5 px-3"
+            style={{
+              background: 'rgba(148,163,184,0.06)',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text-mid)',
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+            title="Open Cluster View"
+          >
+            <LayoutGrid size={13} />
+            Cluster
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Grid card ───────────────────────────────── */
+const AreaCard: React.FC<{
+  marker: AreaMarker;
+  accent: string;
+  onOpenTopology: () => void;
+  onOpenCluster?: () => void;
+}> = ({ marker: s, accent, onOpenTopology, onOpenCluster }) => {
+  const hc =
+    s.avgHealth >= 80
+      ? 'var(--status-online)'
+      : s.avgHealth >= 50
+      ? 'var(--status-warning)'
+      : 'var(--status-offline)';
+
+  return (
+    <div
+      className="group relative rounded-xl overflow-hidden transition-all stagger-item"
+      style={{
+        background: 'linear-gradient(180deg, rgba(30,41,59,0.55) 0%, rgba(15,23,42,0.92) 100%)',
+        border: '1px solid var(--border-soft)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute top-0 left-0 right-0"
+        style={{ height: 2, background: `linear-gradient(90deg, ${accent}, transparent)` }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(420px 90px at 100% 0%, color-mix(in oklab, ${accent} 14%, transparent), transparent 65%)`,
+        }}
+      />
+
+      <div className="relative p-4 flex flex-col gap-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="flex items-center justify-center rounded-md shrink-0"
+              style={{
+                width: 30, height: 30,
+                background: `color-mix(in oklab, ${accent} 14%, transparent)`,
+                color: accent,
+                border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+              }}
+            >
+              <MapPin size={15} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-hi)' }}>
+                {s.area}
+              </h3>
+              <div
+                className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: 'var(--text-lo)' }}
+              >
+                {s.total} location{s.total !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] shrink-0"
+            style={{
+              background: `color-mix(in oklab, ${accent} 12%, transparent)`,
+              color: accent,
+              border: `1px solid color-mix(in oklab, ${accent} 32%, transparent)`,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+            />
+            {s.offline > 0 ? 'Critical' : s.partial > 0 ? 'Degraded' : s.online > 0 ? 'Healthy' : 'Idle'}
+          </span>
+        </div>
+
+        <div
+          className="grid grid-cols-3 gap-2 rounded-lg p-2.5"
+          style={{
+            background: 'rgba(15,23,42,0.6)',
+            border: '1px solid var(--border-soft)',
+          }}
+        >
+          {[
+            { label: 'Devices', value: s.totalDevices, color: 'var(--text-hi)' },
+            { label: 'Online', value: s.onlineDevices, color: 'var(--status-online)' },
+            { label: 'Offline', value: s.offlineDevices, color: 'var(--status-offline)' },
+          ].map((cell) => (
+            <div key={cell.label} className="text-center">
+              <div className="text-lg font-bold leading-none tabular-nums" style={{ color: cell.color }}>
+                {cell.value}
+              </div>
+              <div
+                className="text-[9px] font-semibold uppercase tracking-[0.14em] mt-1"
+                style={{ color: 'var(--text-lo)' }}
+              >
+                {cell.label}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'var(--text-lo)' }}
+            >
+              Network Health
+            </span>
+            <span className="text-xs font-bold tabular-nums" style={{ color: hc }}>
+              {s.avgHealth}%
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.1)' }}>
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${s.avgHealth}%`,
+                background: hc,
+                boxShadow: `0 0 10px ${hc}66`,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onOpenTopology}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md py-2 px-3"
+            style={{
+              background: 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)',
+              color: '#04121A',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              cursor: 'pointer',
+              boxShadow: '0 6px 16px -8px rgba(6,182,212,0.55), inset 0 1px 0 rgba(255,255,255,0.25)',
+            }}
+          >
+            Open Topology
+            <ChevronRight size={13} />
+          </button>
+          {onOpenCluster && (
+            <button
+              onClick={onOpenCluster}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md py-2 px-3"
+              style={{
+                background: 'rgba(148,163,184,0.06)',
+                border: '1px solid var(--border-soft)',
+                color: 'var(--text-mid)',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              title="Cluster"
+            >
+              <LayoutGrid size={12} />
+              Cluster
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

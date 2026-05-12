@@ -125,7 +125,7 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
             const token = import.meta.env.VITE_AUTH_BEARER_TOKEN;
             
             const response = await fetch(apiUrl, {
-                method: 'DELETE',
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',

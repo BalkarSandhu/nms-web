@@ -121,11 +121,11 @@ export function WorkerDetailsSidebar({ workerId, onClose }: { workerId: string |
         setIsLoading(true);
         setStatusMessage(null);
         try {
-            const apiUrl = `${import.meta.env.VITE_NMS_HOST}/workers/${workerId}/delete`;
+            const apiUrl = `${import.meta.env.VITE_NMS_HOST}/workers/${workerId}/deny`;
             const token = import.meta.env.VITE_AUTH_BEARER_TOKEN;
             
             const response = await fetch(apiUrl, {
-                method: 'DELETE',
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',

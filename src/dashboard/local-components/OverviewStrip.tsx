@@ -64,15 +64,15 @@ export function KpiTile({ label, value, sub, icon, accent = "brand", trend, spar
             style={{ cursor: onClick ? "pointer" : "default" }}
         >
             <div className="relative z-10 flex items-start justify-between gap-2">
-                <div className="flex flex-col gap-1 min-w-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--text-lo)" }}>
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap truncate" style={{ color: "var(--text-lo)" }}>
                         {label}
                     </span>
-                    <span className="text-3xl font-bold tabular-nums leading-none" style={{ color: "var(--text-hi)" }}>
+                    <span className="text-3xl font-bold tabular-nums leading-none truncate" style={{ color: "var(--text-hi)" }}>
                         {value}
                     </span>
                     {sub && (
-                        <span className="text-[11px] mt-1" style={{ color: "var(--text-mid)" }}>
+                        <span className="text-[11px] mt-1 truncate" style={{ color: "var(--text-mid)" }}>
                             {sub}
                         </span>
                     )}
@@ -90,14 +90,14 @@ export function KpiTile({ label, value, sub, icon, accent = "brand", trend, spar
                     </span>
                 )}
             </div>
-            <div className="relative z-10 mt-2 flex items-end justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "var(--text-lo)" }}>
+            <div className="relative z-10 mt-2 flex items-end justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium min-w-0" style={{ color: "var(--text-lo)" }}>
                     {trend && (
                         <>
-                            {trend.direction === "up"   && <TrendingUp   className="size-3.5" style={{ color: "var(--status-online)"  }} />}
-                            {trend.direction === "down" && <TrendingDown className="size-3.5" style={{ color: "var(--status-offline)" }} />}
-                            {trend.direction === "flat" && <Minus        className="size-3.5" style={{ color: "var(--text-lo)"       }} />}
-                            <span style={{
+                            {trend.direction === "up"   && <TrendingUp   className="size-3.5 shrink-0" style={{ color: "var(--status-online)"  }} />}
+                            {trend.direction === "down" && <TrendingDown className="size-3.5 shrink-0" style={{ color: "var(--status-offline)" }} />}
+                            {trend.direction === "flat" && <Minus        className="size-3.5 shrink-0" style={{ color: "var(--text-lo)"       }} />}
+                            <span className="truncate" style={{
                                 color:
                                     trend.direction === "up"   ? "var(--status-online)"  :
                                     trend.direction === "down" ? "var(--status-offline)" : "var(--text-lo)",
@@ -108,7 +108,7 @@ export function KpiTile({ label, value, sub, icon, accent = "brand", trend, spar
                     )}
                 </div>
                 {sparkline && sparkline.length > 0 && (
-                    <div className="w-28 shrink-0">
+                    <div className="w-24 shrink-0">
                         <Sparkline data={sparkline} color={color} />
                     </div>
                 )}

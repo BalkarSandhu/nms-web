@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { EllipsisVertical, ChevronRight } from "lucide-react";
 
 import type { Metric1Props } from "./Metric-1"
+import type { LiveTopologyArea } from "./LiveTopologyCard"
 
 import {
     DropdownMenu,
@@ -32,9 +33,25 @@ export type MenuGroupType = {
 
 export type SectionMetricsData = {
     metric1?: Metric1Props;
+    liveTopology?: {
+        areas: LiveTopologyArea[];
+        totalDevices: number;
+        onlineDevices: number;
+    };
+    trend?: {
+        title?: React.ReactNode;
+        total: number;
+        online: number;
+        offline: number;
+        partial?: number;
+    };
+    reliability?: {
+        devices: { id: number; is_reachable?: boolean; consecutive_failures?: number }[];
+    };
+    /** legacy fields kept for backwards-compat (no longer rendered by default) */
     metric2?: any;
     metric3?: any;
-    metric4?: { label: string; value: number }[];
+    metric4?: any;
 };
 
 type SectionProps = {
