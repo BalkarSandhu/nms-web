@@ -1,58 +1,55 @@
-// import React from 'react';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Sheet, Smartphone } from "lucide-react";
 
-
-//-- Lucide Icons
-import { Plus, Sheet } from 'lucide-react';
-
-//-- Local Components
-import AddDeviceForm from './AddDeviceForm';
-import { AddDeviceTypeForm } from './AddDeviceTypeForm';
-// import { DeleteDeviceForm } from './DeleteDeviceForm';
+import AddDeviceForm from "./AddDeviceForm";
+import { AddDeviceTypeForm } from "./AddDeviceTypeForm";
+import { PageHeader, ToolbarButton } from "@/components/page-header";
 
 type HeaderProps = {
     onExport?: () => void;
     exportDisabled?: boolean;
-}
+};
 
 export default function Header({ onExport, exportDisabled }: HeaderProps) {
-
     return (
-        <div className="flex w-full h-9 overflow-auto bg-(--contrast) items-center justify-between">
-           
-            <span className="font-semibold text-[24px] text-(--base)">Devices</span>
+        <PageHeader
+            title="Devices"
+            description="Reachability, types, and assignment across the network"
+            icon={<Smartphone className="size-5" />}
+            actions={
+                <>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold transition-all duration-150"
+                                style={{
+                                    background:
+                                        'linear-gradient(180deg, var(--status-online) 0%, #059669 100%)',
+                                    color: '#fff',
+                                    boxShadow: '0 6px 14px -8px rgba(16,185,129,0.7)',
+                                }}
+                            >
+                                <Plus className="size-4" />
+                                Add
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                            <AddDeviceForm />
+                            <AddDeviceTypeForm />
+                        </PopoverContent>
+                    </Popover>
 
-            <div className="flex gap-2 h-fit w-fit">
-                <Popover>
-                    <PopoverTrigger className="w-fit h-fit gap-2 px-4 py-1 flex bg-(--green) rounded-[10px] items-center">
-                        <Plus className="size-4 text-(--contrast)" />
-                        <span className='text-(--contrast) h-fit'>Add</span>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                        <AddDeviceForm />
-                        <AddDeviceTypeForm/>
-                        {/* <DeleteDeviceForm/> */}
-                    </PopoverContent>
-                </Popover>
-
-                <button
-                    type="button"
-                    onClick={onExport}
-                    disabled={exportDisabled}
-                    className="w-fit h-fit py-1 gap-2 px-4 flex bg-(--azul) rounded-[10px] items-center disabled:opacity-50 disabled:pointer-events-none"
-                >
-                    <Sheet className="size-4 text-(--contrast)" />
-                    <span className='text-(--contrast) h-fit'>Export</span>
-                </button>
-
-            </div>
-
-
-
-        </div>
-    )
+                    <ToolbarButton
+                        variant="primary"
+                        onClick={onExport}
+                        disabled={exportDisabled}
+                        icon={<Sheet className="size-4" />}
+                    >
+                        Export
+                    </ToolbarButton>
+                </>
+            }
+        />
+    );
 }

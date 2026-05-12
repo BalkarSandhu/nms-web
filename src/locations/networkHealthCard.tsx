@@ -17,27 +17,26 @@ interface NetworkHealthCardProps {
 const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
 
-  // Calculate avg latency
   const reachableDevices = devices.filter(d => d.is_reachable);
   const totalLatency = reachableDevices.reduce((sum, d) => sum + (d.latency_ms || 0), 0);
   const avgLatency = reachableDevices.length > 0 ? totalLatency / reachableDevices.length : 0;
 
-  // Health status
   const getHealthStatus = (latency: number) => {
-    if (latency === 0) return { status: '---', color: 'text-gray-600', bgColor: 'bg-gray-50', gradient: 'from-gray-400 to-gray-600' };
-    if (latency === -1) return { status: '---', color: 'text-gray-600', bgColor: 'bg-gray-50', gradient: 'from-gray-400 to-gray-600' };
-    if (latency < 20 && latency > -1 ) return { status: 'Excellent', color: 'text-green-600', bgColor: 'bg-green-50', gradient: 'from-green-400 to-green-700' };
-    if (latency < 50) return { status: 'Fair', color: 'text-blue-600', bgColor: 'bg-blue-50', gradient: 'from-blue-400 to-blue-700' };
-    if (latency < 100) return { status: 'Fair', color: 'text-orange-600', bgColor: 'bg-orange-50', gradient: 'from-orange-400 to-orange-700' };
-    return { status: 'Poor', color: 'text-red-600', bgColor: 'bg-red-50', gradient: 'from-red-400 to-red-700' };
+    if (latency === 0 || latency === -1) {
+      return { status: '---', color: 'text-slate-400', bgWrap: 'bg-slate-800/60 border-slate-700', gradient: 'from-slate-400 to-slate-600' };
+    }
+    if (latency < 20)  return { status: 'Excellent', color: 'text-emerald-300', bgWrap: 'bg-emerald-500/10 border-emerald-600/30', gradient: 'from-emerald-300 to-emerald-500' };
+    if (latency < 50)  return { status: 'Good',      color: 'text-cyan-300',    bgWrap: 'bg-cyan-500/10 border-cyan-600/30',       gradient: 'from-cyan-300 to-cyan-500' };
+    if (latency < 100) return { status: 'Fair',      color: 'text-amber-300',   bgWrap: 'bg-amber-500/10 border-amber-600/30',     gradient: 'from-amber-300 to-amber-500' };
+    return                    { status: 'Poor',      color: 'text-red-300',     bgWrap: 'bg-red-500/10 border-red-600/30',         gradient: 'from-red-300 to-red-500' };
   };
-  
+
   const getLatencyStatus = (latency: number) => {
-    if (latency < 20 && latency > -1) return { color: 'text-green-600', icon: TrendingDown };
-    if (latency < 50) return { color: 'text-blue-600', icon: Minus };
-    if (latency < 100) return { color: 'text-orange-600', icon: TrendingUp };
-    if(latency === -1) return { color: 'text-gray-600', icon: Minus };
-    return { color: 'text-red-600', icon: TrendingUp };
+    if (latency === -1)           return { color: 'text-slate-400',   icon: Minus };
+    if (latency < 20)             return { color: 'text-emerald-300', icon: TrendingDown };
+    if (latency < 50)             return { color: 'text-cyan-300',    icon: Minus };
+    if (latency < 100)            return { color: 'text-amber-300',   icon: TrendingUp };
+    return                              { color: 'text-red-300',     icon: TrendingUp };
   };
 
   const healthStatus = getHealthStatus(avgLatency);
@@ -45,60 +44,53 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
   return (
     <>
       <Card
-        className="border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
+        className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100 cursor-pointer overflow-hidden hover:bg-slate-800/80 transition"
         onClick={() => setShowDetails(true)}
       >
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-purple-600" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+            <Activity className="h-5 w-5 text-violet-300" />
             Network Health
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="p-3">
+        <CardContent>
           {devices.length === 0 ? (
-            <div className="text-center py-4 text-gray-400">
+            <div className="text-center py-4 text-slate-400">
               <Activity className="h-8 w-8 mx-auto opacity-50 mb-2" />
               <p className="text-sm">No devices</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Network Health Summary */}
-              <div className="text-center pb-3 border-b border-gray-200">
+              {/* Summary */}
+              <div className="text-center pb-3 border-b border-slate-700">
                 <div
-                  className={`text-2xl font-extrabold tracking-wide 
-                              bg-gradient-to-b ${healthStatus.gradient} 
-                              text-transparent bg-clip-text mb-1`}
+                  className={`text-2xl font-extrabold tracking-wide bg-gradient-to-b ${healthStatus.gradient} text-transparent bg-clip-text mb-1`}
                 >
                   {healthStatus.status}
                 </div>
-                <p className="text-gray-500 text-sm">
+                <p className="text-slate-400 text-sm">
                   {avgLatency > 0 ? `${avgLatency.toFixed(1)} ms avg` : "Signal Quality"}
                 </p>
               </div>
 
-              {/* Device List - Scrollable */}
+              {/* Device List */}
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {devices.map((device) => {
                   const latencyInfo = getLatencyStatus(device.latency_ms);
                   const IconComponent = latencyInfo.icon;
-
                   return (
                     <div
                       key={device.id}
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-2
-                                 hover:bg-gray-100 transition-all duration-200"
+                      className="bg-slate-900/60 border border-slate-700 rounded-lg p-2 hover:bg-slate-900 transition-all duration-200"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {device.hostname}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-100 truncate">{device.hostname}</p>
                           {device.ip && (
-                            <p className="text-xs text-gray-500 font-mono truncate">{device.ip}</p>
+                            <p className="text-xs text-slate-400 font-mono truncate">{device.ip}</p>
                           )}
                         </div>
-
                         <div className="flex items-center gap-1">
                           {device.is_reachable ? (
                             <p className={`text-sm font-bold ${latencyInfo.color} flex items-center gap-1 whitespace-nowrap`}>
@@ -106,9 +98,7 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
                               {device.latency_ms.toFixed(1)}ms
                             </p>
                           ) : (
-                            <p className="text-sm font-bold text-red-600 whitespace-nowrap">
-                              Offline
-                            </p>
+                            <p className="text-sm font-bold text-red-300 whitespace-nowrap">Offline</p>
                           )}
                         </div>
                       </div>
@@ -118,20 +108,12 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
               </div>
 
               {/* Latency Guide */}
-              <div className="pt-3 border-t border-gray-200">
-                <p className="text-xs font-bold text-gray-900 mb-2">
-                  Latency Guide
-                </p>
+              <div className="pt-3 border-t border-slate-700">
+                <p className="text-xs font-bold text-slate-300 mb-2">Latency Guide</p>
                 <div className="grid grid-cols-3 gap-2">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-lg text-center">
-                    &lt; 20ms
-                  </span>
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg text-center">
-                    &lt; 50ms
-                  </span>
-                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-lg text-center">
-                    &gt; 100ms
-                  </span>
+                  <span className="px-2 py-1 bg-emerald-500/15 text-emerald-300 text-xs font-semibold rounded-lg text-center">&lt; 20ms</span>
+                  <span className="px-2 py-1 bg-cyan-500/15 text-cyan-300 text-xs font-semibold rounded-lg text-center">&lt; 50ms</span>
+                  <span className="px-2 py-1 bg-red-500/15 text-red-300 text-xs font-semibold rounded-lg text-center">&gt; 100ms</span>
                 </div>
               </div>
             </div>
@@ -142,37 +124,32 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
       {/* MODAL */}
       {showDetails && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={() => setShowDetails(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-bold text-gray-900">Network Health Details</h2>
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h2 className="text-lg font-bold text-white">Network Health Details</h2>
               <button
                 onClick={() => setShowDetails(false)}
-                className="p-1 hover:bg-gray-100 rounded transition"
+                className="p-1 hover:bg-slate-700 rounded transition"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-slate-300" />
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className="p-4 overflow-y-auto max-h-[calc(80vh-120px)]">
-
-              {/* Summary Card */}
-              <div className={`${healthStatus.bgColor} border rounded-xl p-4 mb-4`}>
+              <div className={`${healthStatus.bgWrap} border rounded-xl p-4 mb-4`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Overall Network Health</p>
+                    <p className="text-sm text-slate-400">Overall Network Health</p>
                     <p className={`text-2xl font-bold ${healthStatus.color}`}>{healthStatus.status}</p>
                   </div>
-
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">Avg Latency</p>
+                    <p className="text-sm text-slate-400">Avg Latency</p>
                     <p className={`text-2xl font-bold ${healthStatus.color}`}>
                       {avgLatency > 0 ? `${avgLatency.toFixed(1)}ms` : 'N/A'}
                     </p>
@@ -181,37 +158,35 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
 
                 <div className="mt-4 grid grid-cols-3 text-center">
                   <div>
-                    <p className="text-xs text-gray-600">Total</p>
-                    <p className="text-lg font-semibold">{devices.length}</p>
+                    <p className="text-xs text-slate-400">Total</p>
+                    <p className="text-lg font-semibold text-slate-100">{devices.length}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Online</p>
-                    <p className="text-lg font-semibold text-green-600">{reachableDevices.length}</p>
+                    <p className="text-xs text-slate-400">Online</p>
+                    <p className="text-lg font-semibold text-emerald-300">{reachableDevices.length}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Offline</p>
-                    <p className="text-lg font-semibold text-red-600">{devices.length - reachableDevices.length}</p>
+                    <p className="text-xs text-slate-400">Offline</p>
+                    <p className="text-lg font-semibold text-red-300">{devices.length - reachableDevices.length}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Device List */}
               <div className="space-y-2">
                 {devices.map((device) => {
                   const latencyInfo = getLatencyStatus(device.latency_ms);
                   const IconComponent = latencyInfo.icon;
-
                   return (
                     <div
                       key={device.id}
-                      className="bg-gray-50 border rounded-lg p-3 hover:bg-gray-100 transition"
+                      className="bg-slate-900/60 border border-slate-700 rounded-lg p-3 hover:bg-slate-900 transition"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium">{device.hostname}</p>
-                          <p className="text-xs text-gray-500">ID: {device.id}</p>
+                          <p className="text-sm font-medium text-slate-100">{device.hostname}</p>
+                          <p className="text-xs text-slate-400">ID: {device.id}</p>
                           {device.ip && (
-                            <p className="text-xs text-gray-500 font-mono mt-1">{device.ip}</p>
+                            <p className="text-xs text-slate-400 font-mono mt-1">{device.ip}</p>
                           )}
                         </div>
 
@@ -223,23 +198,19 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
                                   <IconComponent className="h-4 w-4" />
                                   {device.latency_ms.toFixed(1)}ms
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                  {device.latency_ms < 20
-                                    ? "Excellent"
-                                    : device.latency_ms < 50
-                                    ? "Fair"
-                                    : device.latency_ms < 100
-                                    ? "Fair"
-                                    : "Poor"}
+                                <p className="text-xs text-slate-400">
+                                  {device.latency_ms < 20 ? "Excellent" :
+                                   device.latency_ms < 50 ? "Good" :
+                                   device.latency_ms < 100 ? "Fair" : "Poor"}
                                 </p>
                               </div>
-                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
                             </>
                           ) : (
                             <>
                               <div className="text-right">
-                                <p className="text-sm font-medium text-red-600">Offline</p>
-                                <p className="text-xs text-gray-500">Not reachable</p>
+                                <p className="text-sm font-medium text-red-300">Offline</p>
+                                <p className="text-xs text-slate-400">Not reachable</p>
                               </div>
                               <div className="w-2 h-2 rounded-full bg-red-500"></div>
                             </>
@@ -250,7 +221,6 @@ const NetworkHealthCard = ({ devices }: NetworkHealthCardProps) => {
                   );
                 })}
               </div>
-
             </div>
           </div>
         </div>

@@ -184,88 +184,85 @@ export default function LocationsReportsPage() {
   };
 
   return (
-    <div className="p-4">
-      <div className="p-4">
-  {/* HEADER ROW */}
-  <div className="flex justify-between items-center mb-4">
-    <label className="text-lg font-semibold">Locations Report</label>
+    <div className="p-6 fade-in" style={{ color: 'var(--text-hi)' }}>
+      <div className="nms-panel-flat p-5 mb-5">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-hi)' }}>Locations Report</h1>
+            <p className="text-xs" style={{ color: 'var(--text-lo)' }}>Uptime & downtime breakdown per location</p>
+          </div>
 
-    <div className="flex gap-3">
-      <button
-        onClick={handlePrint}
-        className="w-fit h-fit py-1 px-3 text-white flex bg-(--azul) rounded-[10px] items-center hover:bg-(--azul)/90"
-      >
-        <Printer size={18} />
-      </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
+              style={{
+                background: 'rgba(15,23,42,0.6)',
+                color: 'var(--text-mid)',
+                border: '1px solid var(--border-soft)',
+              }}
+            >
+              <Printer size={14} />
+              Print
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
+              style={{
+                background: 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)',
+                color: 'var(--bg-app)',
+                boxShadow: '0 6px 14px -8px rgba(6,182,212,0.7)',
+              }}
+            >
+              <Download size={14} />
+              PDF
+            </button>
+          </div>
+        </div>
 
-      <button
-        onClick={handleDownloadPDF}
-        className="w-fit h-fit py-1 px-3 text-white flex bg-(--green)/90 rounded-[10px] items-center hover:bg-(--green)"
-      >
-        <Download size={18} />
-      </button>
-    </div>
-  </div>
-
-  <ReportsFilters onGenerate={handleLocationsGenerate} />
-</div>
-
+        <ReportsFilters onGenerate={handleLocationsGenerate} />
+      </div>
 
       {loading && (
-        <div className="p-4 text-center">
-          <p className="text-gray-600">Loading report data...</p>
+        <div className="p-4 text-center nms-panel-flat">
+          <p className="text-sm" style={{ color: 'var(--text-mid)' }}>Loading report data…</p>
         </div>
       )}
 
       {reportData && (
-        <div className="p-2">
-          
-          
-
-
-          {/* Data Table */}
-          <div className="overflow-x-auto border rounded-lg">
+        <div className="nms-panel-flat overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-900 text-white">
-                  <th className="px-4 py-3 text-left font-semibold">S.No</th>
-                  <th className="px-4 py-3 text-left font-semibold">Area</th>
-                  <th className="px-4 py-3 text-left font-semibold">Location</th>
-                  <th className="px-4 py-3 text-left font-semibold">Device IP</th>
-                  <th className="px-4 py-3 text-left font-semibold">Device Type</th>
-                  <th className="px-4 py-3 text-left font-semibold">Downtime</th>
-                  <th className="px-4 py-3 text-left font-semibold">Uptime</th>
+                <tr style={{ background: 'rgba(15,23,42,0.8)' }}>
+                  {['S.No','Area','Location','Device IP','Device Type','Downtime','Uptime'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-lo)' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {reportData.locations?.map((device: any, index: number) => (
-                  <tr key={device.sno} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.sno}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.area}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">{device.location}</td>
-                    <td className="px-4 py-3 border-b border-gray-200 font-mono text-xs">{device.deviceIp}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                        {device.deviceType}
-                      </span>
+                {reportData.locations?.map((device: any) => (
+                  <tr key={device.sno} className="transition-colors hover:bg-white/[0.03]">
+                    <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-mid)' }}>{device.sno}</td>
+                    <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-hi)' }}>{device.area}</td>
+                    <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-hi)' }}>{device.location}</td>
+                    <td className="px-4 py-3 border-b font-mono text-xs" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-mid)' }}>{device.deviceIp}</td>
+                    <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+                      <span className="badge-info">{device.deviceType}</span>
                     </td>
-                    <td className="px-4 py-3 border-b border-gray-200 text-red-600 font-medium">{device.downtime}</td>
-                    <td className="px-4 py-3 border-b border-gray-200">
-                      <span className={`font-semibold ${
-                        parseFloat(device.uptime) >= 99.5 ? 'text-green-600' :
-                        parseFloat(device.uptime) >= 98 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
-                        {device.uptime}
-                      </span>
+                    <td className="px-4 py-3 border-b font-medium tabular-nums" style={{ borderColor: 'var(--border-soft)', color: 'var(--status-offline)' }}>{device.downtime}</td>
+                    <td className="px-4 py-3 border-b font-semibold tabular-nums" style={{
+                      borderColor: 'var(--border-soft)',
+                      color: parseFloat(device.uptime) >= 99.5 ? 'var(--status-online)' :
+                             parseFloat(device.uptime) >= 98   ? 'var(--status-warning)' : 'var(--status-offline)',
+                    }}>
+                      {device.uptime}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          
         </div>
       )}
     </div>

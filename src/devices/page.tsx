@@ -61,9 +61,9 @@ export default function DevicesPage() {
     if (error) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Devices</h2>
-                    <p className="text-gray-600">{error}</p>
+                <div className="text-center nms-panel p-8">
+                    <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--status-offline)' }}>Error Loading Devices</h2>
+                    <p className="text-sm" style={{ color: 'var(--text-mid)' }}>{error}</p>
                 </div>
             </div>
         );
@@ -73,21 +73,17 @@ export default function DevicesPage() {
         navigate(`/device-info?id=${deviceId}`);
     };
     return (
-        <div className="flex h-full p-2 w-full bg-(--contrast) gap-2 ">
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden p-2 w-8/10 bg-(--contrast)">
+        <div className="flex h-full w-full gap-2 p-4 fade-in" style={{ backgroundColor: 'transparent' }}>
+            <div className="flex-1 flex flex-col overflow-hidden nms-panel">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
-                <DevicesTable 
-                    onRowClick={handleDeviceNavigate}
-                    selectedDeviceId={selectedDeviceId}
-                    onDataChange={setExportRows}
-                />
+                <div className="flex-1 overflow-hidden">
+                    <DevicesTable
+                        onRowClick={handleDeviceNavigate}
+                        selectedDeviceId={selectedDeviceId}
+                        onDataChange={setExportRows}
+                    />
+                </div>
             </div>
-            {/* Sidebar */}
-            {/* <DeviceDetailsSidebar 
-                deviceId={selectedDeviceId}
-                onClose={handleModalClose}
-            /> */}
         </div>
     );
 }

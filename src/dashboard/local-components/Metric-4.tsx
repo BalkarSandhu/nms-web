@@ -3,10 +3,13 @@ import "@/index.css";
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MenuGroupType } from "./Base-Card";
-import {Video,MountainSnow,Computer,HardDrive,DoorClosed,Weight,Route,Construction} from "lucide-react";
+import {
+    Video, MountainSnow, Computer, HardDrive, DoorClosed,
+    Weight, Route, Construction,
+} from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import type { ReactNode } from "react";
 
-// General data type for metric items
 export interface MetricItem {
     label: string;
     value: number;
@@ -14,26 +17,22 @@ export interface MetricItem {
 }
 
 export interface MetricGeneralProps {
-    title?: string;
+    title?: ReactNode;
     className?: string;
     menuGroups?: MenuGroupType[];
     onItemClick?: (item: MetricItem) => void;
     data?: MetricItem[];
     navigatePath?: string;
-    /**
-     * Preferred navigation target when an item is clicked.
-     * - 'auto' will choose between '/devices' and '/locations' based on the item label
-     * - 'devices' always navigates to '/devices'
-     * - 'locations' always navigates to '/locations'
-     */
     navigateTarget?: 'auto' | 'devices' | 'locations';
     iconResolver?: (item: MetricItem) => React.ReactNode;
     emptyText?: string;
     maxItems?: number;
 }
 
-// Color palette for pie chart
-const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1', '#ef4444', '#14b8a6'];
+const COLORS = [
+    'var(--c-1)', 'var(--c-2)', 'var(--c-5)', 'var(--c-3)',
+    'var(--c-6)', 'var(--c-7)', 'var(--c-4)', 'var(--c-8)',
+];
 
 export default function MetricGeneral({
     title = "",
@@ -50,7 +49,6 @@ export default function MetricGeneral({
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
-    // Memoize sorted data by value
     const sortedData = useMemo(() => {
         if (!data.length) return [];
         return [...data].sort((a, b) => b.value - a.value);
@@ -58,46 +56,32 @@ export default function MetricGeneral({
 
     const total = sortedData.reduce((sum, item) => sum + item.value, 0);
 
-    // Prepare data for pie chart
-    const pieData = useMemo(() => {
-        return sortedData.slice(0, maxItems).map(item => ({
-            name: item.label,
-            value: item.value,
-        }));
-    }, [sortedData, maxItems]);
+    const pieData = useMemo(
+        () => sortedData.slice(0, maxItems).map(item => ({ name: item.label, value: item.value })),
+        [sortedData, maxItems],
+    );
 
     const resolvedMenuGroups = menuGroups ?? [
         {
             items: [
-                { type: "item" as const, label: "Refresh", onClick: () => console.log("Refresh") },
-                { type: "item" as const, label: "Export", onClick: () => console.log("Export") },
+                { type: "item" as const, label: "Refresh", onClick: () => {} },
+                { type: "item" as const, label: "Export",  onClick: () => {} },
             ],
         },
     ];
 
     const resolveTargetPath = (item: MetricItem) => {
-        // explicit navigatePath prop takes precedence
         if (navigatePath) return navigatePath;
-
-        // honor explicit navigateTarget on the item (data producer can set '/devices' or '/locations')
         if (item.navigateTarget) {
             const t = item.navigateTarget.toString();
-            if (t === '/devices' || t === 'devices') return '/devices';
+            if (t === '/devices'   || t === 'devices')   return '/devices';
             if (t === '/locations' || t === 'locations') return '/locations';
         }
-
-        const target = (navigateTarget || 'auto');
-        if (target === 'devices') return '/devices';
-        if (target === 'locations') return '/locations';
-
-        // auto detect based on label keywords that are location-level
-        const label = (item.label || '').toString().toLowerCase();
-        const locationKeywords = [
-            'route', 'checkpost', 'check post', 'checkpoint', 'static location', 'area', 'site', 'location', 'depot', 'terminal', 'station', 'weigh'
-        ];
+        if (navigateTarget === 'devices')   return '/devices';
+        if (navigateTarget === 'locations') return '/locations';
+        const label = (item.label || '').toLowerCase();
+        const locationKeywords = ['route','checkpost','check post','checkpoint','static location','area','site','location','depot','terminal','station','weigh'];
         if (locationKeywords.some(k => label.includes(k))) return '/locations';
-
-        // default to devices
         return '/devices';
     };
 
@@ -109,24 +93,17 @@ export default function MetricGeneral({
         navigate(`${path}?${params.toString()}`);
     };
 
-    // Built-in icon resolver based on label keywords
     const defaultIconResolver = (item: MetricItem) => {
         const label = item.label.toLowerCase();
-        if (label.includes("workstation")) return <Computer size={16} color="white" />; // Workstation
-        if (label.includes("ptz") || label.includes("camera")) return <Video size={16} color="white" />; // PTZ or camera
-        if (label.includes("bullet")) return <Video size={16} color="white"/>; // Bullet camera
-        if (label.includes("sensor")) return "📡";
-        if(label.includes("dome")) return <Video size={16} color="white"/>; // Dome camera
-        if (label.includes("gateway") || label.includes("router")) return "🌐";
-        if (label.includes("office") || label.includes("building")) return "🏢";
-        if (label.includes("warehouse")) return "🏭";
-        if (label.includes("coal dump")) return <MountainSnow size={16} color="white"/>;
-        if(label.includes("nvr")) return <HardDrive size={16} color="white"/>;
-        if(label.includes("static location")) return <DoorClosed size={16} color="white"/>;
-        if(label.includes("weighbridge")) return <Weight size={16} color="white"/>;
-        if(label.includes("route")) return <Route size={16} color="white"/>;
-        if(label.includes("checkpost")) return <Construction size={16} color="white"/>;
-        return "📦";
+        if (label.includes("workstation")) return <Computer size={14} />;
+        if (label.includes("ptz") || label.includes("camera") || label.includes("dome") || label.includes("bullet")) return <Video size={14} />;
+        if (label.includes("coal dump")) return <MountainSnow size={14} />;
+        if (label.includes("nvr")) return <HardDrive size={14} />;
+        if (label.includes("static location")) return <DoorClosed size={14} />;
+        if (label.includes("weighbridge")) return <Weight size={14} />;
+        if (label.includes("route")) return <Route size={14} />;
+        if (label.includes("checkpost")) return <Construction size={14} />;
+        return null;
     };
     const getIcon = iconResolver || defaultIconResolver;
 
@@ -134,7 +111,7 @@ export default function MetricGeneral({
         return (
             <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
                 <div className="flex items-center justify-center h-full">
-                    <span className="text-(--contrast)/40 text-xs">{emptyText}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{emptyText}</span>
                 </div>
             </BaseCard>
         );
@@ -142,80 +119,63 @@ export default function MetricGeneral({
 
     return (
         <BaseCard title={title} menuGroups={resolvedMenuGroups} className={className}>
-            <div className="flex items-left h-full py-1">
-                {/* Pie Chart */}
-                <div className="h-full" style={{ width: '140px' }}>
+            <div className="flex items-center h-full py-1 gap-2">
+                <div className="h-full shrink-0" style={{ width: '120px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-            <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={50}
-                paddingAngle={2}
-                dataKey="value"
-                onClick={(data) => {
-                    // Find the original item from sortedData
-                    const item = sortedData.find(i => i.label === data.name);
-                    if (item) {
-                        handleItemClick(item);
-                    }
-                }}
-                style={{ cursor: 'pointer' }}
-            >
-                {pieData.map((_,index) => (
-                    <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]}
-                        style={{ cursor: 'pointer' }}
-                    />
-                ))}
-            </Pie>
-    <Tooltip 
-        contentStyle={{ 
-            background: 'rgba(0, 0, 0, 0.9)', 
-            border: '1px solid rgba(255, 255, 255, 0.1)', 
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: '#ffffff',
-            padding: '8px 12px'
-        }}
-        itemStyle={{
-            color: '#ffffff'
-        }}
-        labelStyle={{
-            color: '#ffffff',
-            fontWeight: '500'
-        }}
-    />
-</PieChart>
+                            <Pie
+                                data={pieData}
+                                cx="50%" cy="50%"
+                                innerRadius={28} outerRadius={48}
+                                paddingAngle={2}
+                                dataKey="value"
+                                stroke="none"
+                                onClick={(d) => {
+                                    const item = sortedData.find(i => i.label === d.name);
+                                    if (item) handleItemClick(item);
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {pieData.map((_, i) => (
+                                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{
+                                    background: 'rgba(15,23,42,0.96)',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                    color: 'var(--text-hi)',
+                                    padding: '8px 12px',
+                                }}
+                                itemStyle={{ color: 'var(--text-hi)' }}
+                                labelStyle={{ color: 'var(--text-mid)', fontWeight: 500 }}
+                            />
+                        </PieChart>
                     </ResponsiveContainer>
                 </div>
 
-                
-
-                {/* List */}
-                <div className="flex flex-col  flex-1 overflow-y-auto" style={{ maxHeight: '120px' }}>
+                <div className="flex flex-col flex-1 min-w-0 overflow-y-auto metric-scroll" style={{ maxHeight: '128px' }}>
                     {sortedData.slice(0, maxItems).map((item, index) => {
                         const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
                         return (
                             <button
                                 key={item.label}
                                 onClick={() => handleItemClick(item)}
-                                className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-(--contrast)/5 transition-colors color-white w-full"
+                                className="flex items-center justify-between px-2 py-1 rounded-md transition-colors w-full hover:bg-white/[0.04]"
                             >
-                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                    <div 
-                                        className="w-2 h-2 rounded-full shrink-0" 
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span
+                                        className="w-2 h-2 rounded-full shrink-0"
                                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                                     />
-                                    <span className="text-sm">{getIcon(item)}</span>
-                                    <span className="text-(--contrast) text-xs font-medium truncate">{item.label}</span>
+                                    <span className="shrink-0" style={{ color: 'var(--text-mid)' }}>{getIcon(item)}</span>
+                                    <span className="text-xs font-medium truncate" style={{ color: 'var(--text-hi)' }}>{item.label}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="text-(--contrast) text-sm font-bold">{item.value}</span>
-                                    <span className="text-(--contrast)/60 text-[9px] font-medium min-w-7 text-right">{percentage}%</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--text-hi)' }}>{item.value}</span>
+                                    <span className="text-[10px] font-medium min-w-8 text-right tabular-nums" style={{ color: 'var(--text-lo)' }}>{percentage}%</span>
                                 </div>
                             </button>
                         );

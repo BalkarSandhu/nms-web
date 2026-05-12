@@ -8,19 +8,19 @@ import { Separator } from '@/components/ui/separator'
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import "@/index.css";
+import { Activity, Bell, Search } from 'lucide-react';
 
 import { LoadingPage } from './components/loading-screen'
 import { getAuthToken, clearAuthToken, subscribeToAuthChanges, extractTokenFromUrl, completeUrlTokenAuth } from '@/lib/auth'
 
 import Dashboard from '@/dashboard/page'
 import RegisterPage from '@/register/page'
-import LoginPage from './login/page'  
+import LoginPage from './login/page'
 import DevicesPage from './devices/page'
 import ReportsPage from './reports/reportsPage'
 import DevicesReportsPage from './reports/devicesReportsPage'
@@ -32,11 +32,125 @@ import DeviceInfoPage from './device-info/page'
 import LocationDetailPage from './locations/locationDetailPage'
 import ExpertSystem from '@/expert-system/ExpertSystem'
 import TopologyPage from './topology/page'
+import HistoryPage from './history/page'
+
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Network Overview',
+  '/devices': 'Devices',
+  '/locations': 'Locations',
+  '/areas': 'Areas',
+  '/field-technicians': 'Field Technicians',
+  '/device-info': 'Device Details',
+  '/topology': 'Topology',
+  '/history': 'History',
+  '/reports': 'Reports',
+  '/reports/devices': 'Device Reports',
+  '/reports/locations': 'Location Reports',
+  '/reports/workers': 'Area Reports',
+  '/register': 'Register',
+  '/login': 'Login',
+}
+
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  return (
+    <span className="font-mono text-xs tabular-nums text-[var(--text-mid)]">
+      {now.toUTCString().slice(17, 25)} UTC
+    </span>
+  )
+}
+
+function HeaderBar({ pageName }: { pageName: string }) {
+  return (
+    <header
+      className="sticky top-0 z-50 h-14 shrink-0 w-full border-b border-[var(--border-soft)]"
+      style={{
+        backgroundColor: 'rgba(11,18,32,0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
+      <div className="flex items-center gap-3 px-4 w-full h-full">
+        <SidebarTrigger className="text-[var(--text-mid)] hover:text-[var(--text-hi)] transition-colors" />
+        <Separator
+          orientation="vertical"
+          className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)]"
+        />
+
+        <Breadcrumb>
+          <BreadcrumbList className="text-[var(--text-mid)]">
+            <BreadcrumbItem className="hidden md:flex items-center gap-1.5">
+              <Activity className="size-3.5 text-[var(--brand)]" />
+              <span className="text-xs uppercase tracking-[0.18em] text-[var(--text-lo)]">DWI NMS</span>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator className="hidden md:block text-[var(--text-dim)]" />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-[var(--text-hi)] text-sm font-medium">{pageName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="flex-1" />
+
+        {/* Search */}
+        <label className="hidden md:flex items-center gap-2 px-3 h-8 rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)]/60 text-xs text-[var(--text-lo)] focus-within:border-[var(--border-brand)] transition-colors">
+          <Search className="size-3.5" />
+          <input
+            type="search"
+            placeholder="Search devices, locations…"
+            className="bg-transparent outline-none w-56 placeholder:text-[var(--text-dim)] text-[var(--text-hi)]"
+          />
+          <kbd className="hidden lg:inline-block text-[10px] font-mono text-[var(--text-dim)] border border-[var(--border-soft)] rounded px-1">⌘K</kbd>
+        </label>
+
+        {/* Live status pill */}
+        <div className="nms-chip nms-chip-live hidden sm:inline-flex">
+          <span>Live</span>
+          <LiveClock />
+        </div>
+
+        {/* Notifications */}
+        <button
+          type="button"
+          className="relative size-8 inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)]/60 text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors"
+          aria-label="Notifications"
+        >
+          <Bell className="size-4" />
+        </button>
+      </div>
+    </header>
+  )
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/devices" element={<DevicesPage />} />
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/reports/devices" element={<DevicesReportsPage />} />
+      <Route path="/reports/locations" element={<LocationsReportsPage />} />
+      <Route path="/reports/workers" element={<WorkersReportsPage />} />
+      <Route path="/locations" element={<LocationsPage />} />
+      <Route path="/locations/:id" element={<LocationDetailPage />} />
+      <Route path="/areas" element={<WorkersPage />} />
+      <Route path="/field-technicians" element={<WorkersPage />} />
+      <Route path="/device-info" element={<DeviceInfoPage />} />
+      <Route path="/topology" element={<TopologyPage />} />
+      <Route path="/history" element={<HistoryPage />} />
+    </Routes>
+  )
+}
 
 function App() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [isButtonClicked, setIsButtonClicked] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState<boolean | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
@@ -61,16 +175,11 @@ function App() {
     (expiresAt?: number | null) => {
       clearExpiryTimer()
       if (!expiresAt) return
-
       const msUntilExpiry = expiresAt - Date.now()
-
       if (msUntilExpiry <= 0) {
-        // Token already expired, logout immediately
         handleTokenInvalid()
         return
       }
-
-      // Schedule logout when token expires (no refresh since backend doesn't support it)
       expiryTimeoutRef.current = window.setTimeout(() => {
         handleTokenInvalid()
       }, msUntilExpiry)
@@ -78,21 +187,15 @@ function App() {
     [clearExpiryTimer, handleTokenInvalid]
   )
 
-  // Cleanup timer on unmount
   useEffect(() => {
-    return () => {
-      clearExpiryTimer()
-    }
+    return () => clearExpiryTimer()
   }, [clearExpiryTimer])
 
-  // Initial auth check on mount - ALWAYS runs but checks isInitialMount inside
   useEffect(() => {
     const checkAuthStatus = async () => {
-      // Only run once on initial mount
       if (!isInitialMount.current) return
       isInitialMount.current = false
 
-      // Auth bypass for development
       if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
         setIsLoading(false)
         setIsInitialized(true)
@@ -100,41 +203,29 @@ function App() {
         return
       }
 
-      // Check for URL token first
       const urlToken = extractTokenFromUrl()
       if (urlToken) {
         try {
-          console.log('URL token detected, authenticating...')
-          const { user, workerId } = await completeUrlTokenAuth(urlToken)
-          console.log('URL token authentication successful', { user, workerId })
-          
-          // Remove token from URL for security
+          await completeUrlTokenAuth(urlToken)
           const url = new URL(window.location.href)
           url.searchParams.delete('token')
           window.history.replaceState({}, '', url.toString())
-          
+
           setIsLoading(false)
           setIsInitialized(true)
           setIsAuthenticated(true)
-          
-          // Get the new token and schedule expiry
+
           const validToken = getAuthToken()
-          if (validToken) {
-            scheduleExpiryTimer(validToken.expiresAt ?? null)
-          }
-          
+          if (validToken) scheduleExpiryTimer(validToken.expiresAt ?? null)
           return
         } catch (error) {
           console.error('URL token authentication failed:', error)
-          // Remove token from URL even on failure
           const url = new URL(window.location.href)
           url.searchParams.delete('token')
           window.history.replaceState({}, '', url.toString())
-          // Fall through to regular auth check
         }
       }
 
-      // Check for valid token (regular login)
       const validToken = getAuthToken()
       if (validToken) {
         setIsLoading(false)
@@ -144,7 +235,6 @@ function App() {
         return
       }
 
-      // No token - check if system is initialized
       try {
         const response = await fetch(`${import.meta.env.VITE_NMS_HOST}/auth/status`)
         if (!response.ok) {
@@ -168,13 +258,11 @@ function App() {
     checkAuthStatus()
   }, [scheduleExpiryTimer])
 
-  // Re-validate token on route change
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
       setIsAuthenticated(true)
       return
     }
-
     const tokenState = getAuthToken()
     if (!tokenState) {
       if (isAuthenticated) {
@@ -183,14 +271,10 @@ function App() {
       }
       return
     }
-
     scheduleExpiryTimer(tokenState.expiresAt ?? null)
-    if (!isAuthenticated) {
-      setIsAuthenticated(true)
-    }
+    if (!isAuthenticated) setIsAuthenticated(true)
   }, [location.pathname, isAuthenticated, clearExpiryTimer, scheduleExpiryTimer])
 
-  // Sync auth updates across tabs/windows
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((event) => {
       if (event.type === 'logout') {
@@ -202,181 +286,87 @@ function App() {
       if (event.type === 'refresh' || event.type === 'login') {
         setIsAuthenticated(true)
         scheduleExpiryTimer(event.expiresAt ?? null)
-        return
       }
     })
-
     return () => {
       unsubscribe?.()
       clearExpiryTimer()
     }
   }, [scheduleExpiryTimer, clearExpiryTimer, navigate])
 
-  // Listen for visibility/focus changes to refresh auth state
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      return
-    }
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') return
 
     const handleVisibility = () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        return
-      }
-
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const tokenState = getAuthToken()
       if (!tokenState) {
         handleTokenInvalid()
         return
       }
-
       scheduleExpiryTimer(tokenState.expiresAt ?? null)
-      if (!isAuthenticated) {
-        setIsAuthenticated(true)
-      }
+      if (!isAuthenticated) setIsAuthenticated(true)
     }
 
     window.addEventListener('focus', handleVisibility)
     document.addEventListener('visibilitychange', handleVisibility)
-
     return () => {
       window.removeEventListener('focus', handleVisibility)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [handleTokenInvalid, scheduleExpiryTimer, isAuthenticated])
 
-  // Handle navigation based on auth state
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_BYPASS === 'true') {
-      return
-    }
-
-    // Show loading during auth state determination
-    if (isLoading) {
-      return
-    }
+    if (import.meta.env.VITE_AUTH_BYPASS === 'true') return
+    if (isLoading) return
 
     const currentPath = location.pathname
 
-    // User is authenticated
     if (isAuthenticated) {
       if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
         navigate('/', { replace: true })
       }
       return
     }
-
-    // User is NOT authenticated
     if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
       navigate(isInitialized ? '/login' : '/register', { replace: true })
       return
     }
-
     if (currentPath === '/') {
       navigate(isInitialized ? '/login' : '/register', { replace: true })
     }
   }, [isAuthenticated, isInitialized, location.pathname, navigate, isLoading])
 
-  // Determine if the current page should use the layout
-  const shouldUseLayout = () => {
-    const path = location.pathname
-    return !path.startsWith('/register') && !path.startsWith("/login")
-  }
+  const path = location.pathname
+  const useLayout = !path.startsWith('/register') && !path.startsWith('/login')
+  const pageName = PAGE_TITLES[path] ?? 'Network Manager'
 
-  // Get the current page name from the route
-  const getPageName = () => {
-    const path = location.pathname
-    const routes: Record<string, string> = {
-      '/': 'Dashboard',
-      '/register': 'Register',
-      '/settings': 'Settings',
-      '/devices': 'Devices',
-      '/reports': 'Reports',
-      '/locations': 'Locations',
-      '/areas': 'Areas',
-      '/field-technicians': 'Field Technicians',
-      '/device-info': 'Device Info',
-      '/topology': 'Topology',
-    }
-    return routes[path] || 'Home'
-  }
+  if (isLoading) return <LoadingPage />
 
-  const useLayout = shouldUseLayout()
-
-  // Show loading screen while checking authentication
-  if (isLoading) {
-    return <LoadingPage />
+  if (!useLayout) {
+    return (
+      <div className="min-h-screen w-full overflow-hidden" style={{ backgroundColor: 'var(--bg-app)' }}>
+        <AppRoutes />
+        <ExpertSystem />
+      </div>
+    )
   }
 
   return (
-    <div className="flex min-h-screen w-full overflow-hidden bg-(--dark)">
-      {useLayout ? (
-        <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
-          <AppSidebar />
-          <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden">
-            <div className="flex h-full w-full flex-col overflow-hidden">
-              <header className="sticky top-0 z-50 h-12 shrink-0 items-center gap-2 border-none \
-                                 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 \
-                                 w-full" style={{ backgroundColor: 'var(--dark)' }}>
-                <div className="flex sticky top-0  items-center gap-2 pl-4 w-full h-full border-b-2 border-(--base)">
-                  <SidebarTrigger className="-ml-1 text-(--contrast)" />
-                  <Separator
-                    orientation="vertical"
-                    className="mr-2 data-[orientation=vertical]:h-4 bg-(--contrast)"
-                  />
-                  <Breadcrumb className='w-full'>
-                    <BreadcrumbList className='text-(--contrast)'>
-                      <BreadcrumbItem className="hidden md:block">
-                        <BreadcrumbLink href="/" />
-                      </BreadcrumbItem>
-                      <BreadcrumbSeparator className="hidden md:block" />
-                      <BreadcrumbItem>
-                        <BreadcrumbPage className="text-(--contrast)">{getPageName()}</BreadcrumbPage>
-                      </BreadcrumbItem>
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </div>
-              </header>
-              <div className="flex-1 min-w-0 overflow-x-auto">
-                <Routes>
-                  <Route path="/" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/devices" element={<DevicesPage />} />
-                  <Route path="/reports" element={<ReportsPage />} />
-                  <Route path="/reports/devices" element={<DevicesReportsPage />} />
-                  <Route path="/reports/locations" element={<LocationsReportsPage />} />
-                  <Route path="/reports/workers" element={<WorkersReportsPage />} />
-                  <Route path="/locations" element={<LocationsPage />} />
-                  <Route path="/locations/:id" element={<LocationDetailPage />} />
-                  <Route path="/areas" element={<WorkersPage />} />
-                  <Route path="/field-technicians" element={<WorkersPage />} />
-                  <Route path="/device-info" element={<DeviceInfoPage />} />
-                  <Route path="/topology" element={<TopologyPage />} />
-                </Routes>
-              </div>
+    <div className="flex min-h-screen w-full overflow-hidden" style={{ backgroundColor: 'var(--bg-app)' }}>
+      <SidebarProvider defaultOpen className="flex-1 overflow-hidden">
+        <AppSidebar />
+        <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden" style={{ backgroundColor: 'transparent' }}>
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <HeaderBar pageName={pageName} />
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <AppRoutes />
             </div>
-          </SidebarInset>
-        </SidebarProvider>
-      ) : (
-        <div className="flex-1 min-w-0 overflow-x-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard isButtonClicked={isButtonClicked} setIsButtonClicked={setIsButtonClicked} />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/devices" element={<DevicesPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/locations" element={<LocationsPage />} />
-            <Route path="/locations/:id" element={<LocationDetailPage />} />
-            <Route path="/areas" element={<WorkersPage />} />
-            <Route path="/field-technicians" element={<WorkersPage />} />
-            <Route path="/device-info" element={<DeviceInfoPage />} />
-            <Route path="/topology" element={<TopologyPage />} />
-          </Routes>
-        </div>
-      )}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
       <ExpertSystem />
     </div>
-    
   )
 }
 

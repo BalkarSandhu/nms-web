@@ -1,117 +1,48 @@
+import { Network } from "lucide-react";
+
 export const LoadingPage = () => (
-  <div className="w-full h-full flex items-center justify-center bg-linear-to-b from-(--base) to-(--dark)">
-    <span className="loader">
-      <span className="ball ball-3"></span>
-      <span className="ball ball-4"></span>
-    </span>
-    
-    <style>{`
-      .loader {
-        animation: rotate 1s infinite;
-        height: 50px;
-        width: 50px;
-        position: relative;
-      }
-      
-      .loader::before,
-      .loader::after {
-        border-radius: 50%;
-        content: "";
-        display: block;
-        height: 20px;
-        width: 20px;
-        position: absolute;
-      }
-      
-      .loader::before {
-        animation: ball1 1s infinite;
-        background-color: #fff;
-        left: 0;
-        top: 0;
-      }
-      
-      .loader::after {
-        animation: ball2 1s infinite;
-        background-color: #ff3d00;
-        right: 0;
-        top: 0;
-      }
-      
-      .ball {
-        border-radius: 50%;
-        display: block;
-        height: 20px;
-        width: 20px;
-        position: absolute;
-      }
-      
-      .ball-3 {
-        animation: ball3 1s infinite;
-        background-color: #4CAF50;
-        left: 0;
-        bottom: 0;
-      }
-      
-      .ball-4 {
-        animation: ball4 1s infinite;
-        background-color: #2196F3;
-        right: 0;
-        bottom: 0;
-      }
-      
-      @keyframes rotate {
-        0% { transform: rotate(0deg) scale(0.8); }
-        50% { transform: rotate(360deg) scale(1.2); }
-        100% { transform: rotate(720deg) scale(0.8); }
-      }
-      
-      @keyframes ball1 {
-        0% { 
-          transform: translate(0, 0); 
-        }
-        50% { 
-          transform: translate(15px, 15px); 
-        }
-        100% { 
-          transform: translate(0, 0); 
-        }
-      }
-      
-      @keyframes ball2 {
-        0% { 
-          transform: translate(0, 0); 
-        }
-        50% { 
-          transform: translate(-15px, 15px); 
-        }
-        100% { 
-          transform: translate(0, 0); 
-        }
-      }
-      
-      @keyframes ball3 {
-        0% { 
-          transform: translate(0, 0); 
-        }
-        50% { 
-          transform: translate(15px, -15px); 
-        }
-        100% { 
-          transform: translate(0, 0); 
-        }
-      }
-      
-      @keyframes ball4 {
-        0% { 
-          transform: translate(0, 0); 
-        }
-        50% { 
-          transform: translate(-15px, -15px); 
-        }
-        100% { 
-          transform: translate(0, 0); 
-        }
-      }
-    `}</style>
+  <div
+    className="w-full h-full min-h-screen flex flex-col items-center justify-center gap-6"
+    style={{
+      background:
+        'radial-gradient(700px 400px at 50% 30%, rgba(34,211,238,0.10), transparent 60%), var(--bg-app)',
+    }}
+  >
+    <div className="relative size-20 flex items-center justify-center">
+      <span
+        className="absolute inset-0 rounded-full"
+        style={{
+          border: '2px solid rgba(34,211,238,0.15)',
+          borderTopColor: 'var(--brand)',
+          animation: 'spin 1.1s linear infinite',
+        }}
+      />
+      <span
+        className="absolute inset-2 rounded-full"
+        style={{
+          border: '2px solid rgba(16,185,129,0.10)',
+          borderRightColor: 'var(--status-online)',
+          animation: 'spin 1.6s linear infinite reverse',
+        }}
+      />
+      <span
+        className="relative size-9 inline-flex items-center justify-center rounded-lg"
+        style={{
+          background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%)',
+          color: 'var(--bg-app)',
+          boxShadow: '0 0 22px rgba(34,211,238,0.55)',
+        }}
+      >
+        <Network className="size-5" />
+      </span>
+    </div>
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-sm font-semibold tracking-wide" style={{ color: 'var(--text-hi)' }}>
+        DWINMS
+      </span>
+      <span className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--text-lo)' }}>
+        Connecting to network
+      </span>
+    </div>
   </div>
 );

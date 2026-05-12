@@ -121,65 +121,80 @@ export default function ReportsFilters({ onGenerate }: Props) {
 
   const today = format(new Date(), "yyyy-MM-dd");
 
+  const inputClass = "w-full px-3 py-2 rounded-md text-sm focus:outline-none transition-colors";
+  const inputStyle: React.CSSProperties = {
+    background: 'rgba(15,23,42,0.6)',
+    border: '1px solid var(--border-soft)',
+    color: 'var(--text-hi)',
+  };
+  const labelClass = "block text-[11px] font-semibold uppercase tracking-[0.14em] mb-1.5";
+  const labelStyle: React.CSSProperties = { color: 'var(--text-lo)' };
+
   return (
-    <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      {/* Filter Header */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Report Filters</h3>
+    <div className="w-full">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-mid)' }}>Report Filters</h3>
       </div>
 
-      {/* Filters Grid - 6 columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mb-6">
-        
-        {/* Start Date */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Start Date</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
+        <div>
+          <label className={labelClass} style={labelStyle}>Start Date</label>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             max={today}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className={inputClass}
+            style={inputStyle}
           />
         </div>
-
-        {/* Start Time */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Start Time</label>
+        <div>
+          <label className={labelClass} style={labelStyle}>Start Time</label>
           <input
             type="time"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className={inputClass}
+            style={inputStyle}
           />
         </div>
-
-        {/* End Date */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">End Date</label>
+        <div>
+          <label className={labelClass} style={labelStyle}>End Date</label>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             min={startDate}
             max={today}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className={inputClass}
+            style={inputStyle}
           />
         </div>
-
-        {/* End Time */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">End Time</label>
+        <div>
+          <label className={labelClass} style={labelStyle}>End Time</label>
           <input
             type="time"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className={inputClass}
+            style={inputStyle}
           />
         </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Location</label>
+        <div>
+          <label className={labelClass} style={labelStyle}>Worker</label>
+          <InputField
+            label=""
+            placeholder="Select Worker"
+            type="combobox"
+            comboboxOptions={workerTypeOptions.map((w) => w.name)}
+            stateValue={workerType}
+            stateAction={setWorkerType}
+            openState={workerTypeOpen}
+            openStateAction={setWorkerTypeOpen}
+          />
+        </div>
+        <div>
+          <label className={labelClass} style={labelStyle}>Location</label>
           <InputField
             label=""
             placeholder={workerId ? "Select Location" : "Select worker first"}
@@ -197,29 +212,16 @@ export default function ReportsFilters({ onGenerate }: Props) {
           />
         </div>
       </div>
-        {/* Worker Selection */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Worker</label>
-          <InputField
-            label=""
-            placeholder="Select Worker"
-            type="combobox"
-            comboboxOptions={workerTypeOptions.map((w) => w.name)}
-            stateValue={workerType}
-            stateAction={setWorkerType}
-            openState={workerTypeOpen}
-            openStateAction={setWorkerTypeOpen}
-          />
-        </div>
 
-        {/* Location Selection */}
-        
-
-      {/* Generate Button */}
       <div className="flex justify-end">
         <Button
           onClick={handleGenerate}
-          className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
+          className="px-6 h-9 font-semibold transition-all duration-150"
+          style={{
+            background: 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)',
+            color: 'var(--bg-app)',
+            boxShadow: '0 8px 20px -8px rgba(6,182,212,0.7)',
+          }}
         >
           Generate Report
         </Button>

@@ -201,114 +201,104 @@ export default function DevicesTable({
     // Handle closing modal - clear URL parameter
     
 
+    const headStyle: React.CSSProperties = { color: 'var(--text-lo)' };
+    const headClass = "font-semibold text-[11px] uppercase tracking-[0.14em]";
+
     return (
-        <div className="gap-4 w-full h-full bg-(--black) py-2">
-            <DevicesFilters 
+        <div className="gap-4 w-full h-full py-2 px-4 flex flex-col overflow-hidden">
+            <DevicesFilters
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
                 initialFilters={filters}
             />
 
-            <div className="overflow-x-auto">
+            <div className="overflow-auto flex-1 rounded-lg border" style={{ borderColor: 'var(--border-soft)' }}>
                 <Table className="table-fixed w-full">
-                    <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                        <TableRow className="border-b-2 border-gray-200">
-                            <TableHead className="w-[5%] font-semibold text-gray-700 text-center">No.</TableHead>
-                            <TableHead className="w-[20%] font-semibold text-gray-700">Device Name</TableHead>
-                            <TableHead className="w-[12%] font-semibold text-gray-700">IP Address</TableHead>
-                            <TableHead className="w-[15%] font-semibold text-gray-700">Area</TableHead>
-                            <TableHead className="w-[15%] font-semibold text-gray-700">Type</TableHead>
-                            <TableHead className="w-[15%] font-semibold text-gray-700 text-center">Status</TableHead>
+                    <TableHeader className="sticky top-0 z-10" style={{ background: 'rgba(15,23,42,0.92)' }}>
+                        <TableRow style={{ borderColor: 'var(--border-soft)' }}>
+                            <TableHead className={`w-[5%] text-center ${headClass}`} style={headStyle}>#</TableHead>
+                            <TableHead className={`w-[20%] ${headClass}`} style={headStyle}>Device Name</TableHead>
+                            <TableHead className={`w-[12%] ${headClass}`} style={headStyle}>Hostname</TableHead>
+                            <TableHead className={`w-[15%] ${headClass}`} style={headStyle}>Area</TableHead>
+                            <TableHead className={`w-[15%] ${headClass}`} style={headStyle}>Type</TableHead>
+                            <TableHead className={`w-[15%] text-center ${headClass}`} style={headStyle}>Status</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredDevices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                                <TableCell colSpan={7} className="text-center py-12" style={{ color: 'var(--text-lo)' }}>
                                     <div className="flex flex-col items-center justify-center gap-2">
-                                        <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-dim)' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        <p className="text-sm font-medium">No devices found</p>
-                                        <p className="text-xs text-gray-400">Try adjusting your filters</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--text-mid)' }}>No devices found</p>
+                                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Try adjusting your filters</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredDevices.map((device, index) => (
-                                <TableRow 
-                                    key={device.id}
-                                    data-device-id={device.id}
-                                    className={`cursor-pointer transition-all duration-150 border-b border-gray-100 ${
-                                        localSelectedId === device.id 
-                                            ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500' 
-                                            : 'hover:bg-gray-50'
-                                    }`}
-                                    onClick={() => handleRowClick(device.id)}
-                                >
-                                    <TableCell className="text-center text-sm font-medium text-gray-600">
-                                        {index + 1}
-                                    </TableCell>
-                                    
-                                    <TableCell className="font-medium">
-                                        <div className="flex flex-col break-words overflow-hidden bg-(--contrast)">
-                                            <span className={`text-sm font-semibold ${
-                                                localSelectedId === device.id ? 'text-blue-900' : 'text-gray-900'
-                                            }`} title={device.display}>
+                            filteredDevices.map((device, index) => {
+                                const selected = localSelectedId === device.id;
+                                return (
+                                    <TableRow
+                                        key={device.id}
+                                        data-device-id={device.id}
+                                        onClick={() => handleRowClick(device.id)}
+                                        className="cursor-pointer transition-colors"
+                                        style={{
+                                            background: selected ? 'rgba(34,211,238,0.10)' : 'transparent',
+                                            borderColor: 'var(--border-soft)',
+                                            borderLeft: selected ? '3px solid var(--brand)' : '3px solid transparent',
+                                        }}
+                                    >
+                                        <TableCell className="text-center text-sm tabular-nums" style={{ color: 'var(--text-lo)' }}>{index + 1}</TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-semibold" style={{ color: 'var(--text-hi)' }} title={device.display}>
                                                 {device.display}
                                             </span>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell className="break-words overflow-hidden">
-                                        <span className={`text-xs font-mono px-2 py-1 rounded inline-block ${
-                                            localSelectedId === device.id 
-                                                ? 'bg-blue-100 text-blue-800' 
-                                                : 'bg-gray-100 text-gray-700'
-                                        }`}>
-                                            {device.hostname}
-                                        </span>
-                                    </TableCell>
-                                    
-                                    <TableCell className="break-words overflow-hidden">
-                                        <div className="flex items-center gap-1.5 overflow-hidden">
-                                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                            </svg>
-                                            <span className={`text-sm ${
-                                                localSelectedId === device.id ? 'text-blue-800' : 'text-gray-700'
-                                            }`} title={device.worker?.name || 'N/A'}>
-                                                {device.worker?.name || 'N/A'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span
+                                                className="text-xs font-mono px-2 py-1 rounded inline-block"
+                                                style={{
+                                                    background: 'rgba(34,211,238,0.10)',
+                                                    color: 'var(--brand)',
+                                                    border: '1px solid var(--border-brand)',
+                                                }}
+                                            >
+                                                {device.hostname}
                                             </span>
-                                        </div>
-                                    </TableCell>
-                                    
-                                    
-                                    
-                                    <TableCell className="wrap-break-word overflow-hidden">
-                                        <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
-                                            localSelectedId === device.id 
-                                                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                                                : 'bg-gray-100 text-gray-700 border border-gray-200'
-                                        }`}>
-                                            {device.device_type?.name}
-                                        </span>
-                                    </TableCell>
-                                    
-                                    <TableCell className="text-center">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                                device.is_reachable ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                                            }`}></span>
-                                            <span className={`text-xs font-semibold ${
-                                                device.is_reachable ? 'text-green-700' : 'text-red-700'
-                                            }`}>
-                                                {device.is_reachable ? 'Online' : 'Offline'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5">
+                                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-dim)' }}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                </svg>
+                                                <span className="text-sm truncate" style={{ color: 'var(--text-mid)' }}>
+                                                    {device.worker?.name || 'N/A'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="badge-info">
+                                                {device.device_type?.name}
                                             </span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                                <span className={`nms-dot ${device.is_reachable ? 'nms-dot-online' : 'nms-dot-offline'}`} />
+                                                <span
+                                                    className="text-xs font-semibold uppercase tracking-wide"
+                                                    style={{ color: device.is_reachable ? 'var(--status-online)' : 'var(--status-offline)' }}
+                                                >
+                                                    {device.is_reachable ? 'Online' : 'Offline'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

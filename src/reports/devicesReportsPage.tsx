@@ -209,93 +209,88 @@ export default function DevicesReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          {/* <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Devices Report</h1> */}
-          <div className="flex gap-3">
+    <div className="min-h-full p-4 md:p-6 fade-in">
+      <div className="nms-panel-flat p-5 mb-5">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-hi)' }}>Devices Report</h1>
+            <p className="text-xs" style={{ color: 'var(--text-lo)' }}>Per-device uptime, downtime, and status breakdown</p>
+          </div>
+          <div className="flex gap-2">
             <button
               onClick={handlePrint}
               disabled={!reportData}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold disabled:opacity-50 disabled:pointer-events-none"
+              style={{
+                background: 'rgba(15,23,42,0.6)',
+                color: 'var(--text-mid)',
+                border: '1px solid var(--border-soft)',
+              }}
             >
-              <Printer size={12} />
-              
+              <Printer size={14} />
+              Print
             </button>
-
             <button
               onClick={handleDownloadPDF}
               disabled={!reportData}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold disabled:opacity-50 disabled:pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)',
+                color: 'var(--bg-app)',
+                boxShadow: '0 6px 14px -8px rgba(6,182,212,0.7)',
+              }}
             >
-              <Download size={12} />
-            
+              <Download size={14} />
+              PDF
             </button>
           </div>
         </div>
+
+        <ReportsFilters onGenerate={handleDevicesGenerate} />
       </div>
 
-      {/* Filters Section */}
-      <ReportsFilters onGenerate={handleDevicesGenerate} />
-
-      {/* Loading State */}
       {loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 text-center">
-          <p className="text-blue-700 font-medium flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Loading report data...
+        <div className="nms-panel-flat p-5 mb-5 text-center">
+          <p className="font-medium inline-flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-hi)' }}>
+            <span className="spinner size-4 rounded-full border-2" style={{ borderColor: 'rgba(34,211,238,0.25)', borderTopColor: 'var(--brand)' }} />
+            Loading report data…
           </p>
         </div>
       )}
 
-      {/* Report Data Table */}
       {reportData && !loading && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="nms-panel-flat overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-900 text-white">
-                  <th className="px-4 py-3 text-left font-semibold">S.No</th>
-                  <th className="px-4 py-3 text-left font-semibold">Area</th>
-                  <th className="px-4 py-3 text-left font-semibold">Location</th>
-                  <th className="px-4 py-3 text-left font-semibold">Device IP</th>
-                  <th className="px-4 py-3 text-left font-semibold">Device Type</th>
-                  <th className="px-4 py-3 text-left font-semibold">Downtime</th>
-                  <th className="px-4 py-3 text-left font-semibold">Uptime</th>
+                <tr style={{ background: 'rgba(15,23,42,0.8)' }}>
+                  {['S.No','Area','Location','Device IP','Device Type','Downtime','Uptime'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-lo)' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {reportData.devices && reportData.devices.length > 0 ? (
-                  reportData.devices.map((device: any, index: number) => (
-                    <tr key={device.sno} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="px-4 py-3 border-b border-gray-200">{device.sno}</td>
-                      <td className="px-4 py-3 border-b border-gray-200">{device.area}</td>
-                      <td className="px-4 py-3 border-b border-gray-200">{device.location}</td>
-                      <td className="px-4 py-3 border-b border-gray-200 font-mono text-xs">{device.deviceIp}</td>
-                      <td className="px-4 py-3 border-b border-gray-200">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
-                          {device.deviceType}
-                        </span>
+                  reportData.devices.map((device: any) => (
+                    <tr key={device.sno} className="transition-colors hover:bg-white/[0.03]">
+                      <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-mid)' }}>{device.sno}</td>
+                      <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-hi)' }}>{device.area}</td>
+                      <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-hi)' }}>{device.location}</td>
+                      <td className="px-4 py-3 border-b font-mono text-xs" style={{ borderColor: 'var(--border-soft)', color: 'var(--text-mid)' }}>{device.deviceIp}</td>
+                      <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+                        <span className="badge-info">{device.deviceType}</span>
                       </td>
-                      <td className="px-4 py-3 border-b border-gray-200 text-red-600 font-medium">{device.downtime}</td>
-                      <td className="px-4 py-3 border-b border-gray-200">
-                        <span className={`font-semibold ${
-                          parseFloat(device.uptime) >= 99.5 ? 'text-green-600' :
-                          parseFloat(device.uptime) >= 98 ? 'text-yellow-600' :
-                          'text-red-600'
-                        }`}>
-                          {device.uptime}
-                        </span>
-                      </td>
+                      <td className="px-4 py-3 border-b font-medium tabular-nums" style={{ borderColor: 'var(--border-soft)', color: 'var(--status-offline)' }}>{device.downtime}</td>
+                      <td className="px-4 py-3 border-b font-semibold tabular-nums" style={{
+                        borderColor: 'var(--border-soft)',
+                        color: parseFloat(device.uptime) >= 99.5 ? 'var(--status-online)' :
+                               parseFloat(device.uptime) >= 98   ? 'var(--status-warning)' : 'var(--status-offline)',
+                      }}>{device.uptime}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-lo)' }}>
                       No devices found for the selected filters
                     </td>
                   </tr>
@@ -304,21 +299,19 @@ export default function DevicesReportsPage() {
             </table>
           </div>
 
-          {/* Summary Footer */}
           {reportData.devices && reportData.devices.length > 0 && (
-            <div className="px-4 py-4 bg-gray-50 border-t border-gray-200">
-              <p className="text-sm text-gray-700">
-                <span className="font-semibold">Total Records:</span> {reportData.devices.length}
+            <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--border-soft)', background: 'rgba(15,23,42,0.6)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-mid)' }}>
+                <span className="font-semibold" style={{ color: 'var(--text-hi)' }}>Total Records:</span> {reportData.devices.length}
               </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Empty State */}
       {!reportData && !loading && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-dashed p-12 text-center">
-          <p className="text-gray-500 text-lg">
+        <div className="nms-panel-flat p-10 text-center" style={{ borderStyle: 'dashed' }}>
+          <p className="text-sm" style={{ color: 'var(--text-lo)' }}>
             Select filters and click "Generate Report" to view device data
           </p>
         </div>

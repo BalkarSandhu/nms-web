@@ -1,8 +1,5 @@
-import { Separator } from "@/components/ui/separator";
-import { Map } from "lucide-react";
-import { ChartPie } from "lucide-react";
-import "@/index.css"
-
+import { Map, ChartPie } from "lucide-react";
+import "@/index.css";
 
 export type MetricMapSwitcherProps = {
     state?: boolean;
@@ -11,22 +8,36 @@ export type MetricMapSwitcherProps = {
 
 export default function MetricMapSwitcher({ state, state_changer }: MetricMapSwitcherProps) {
     return (
-        <div className="w-8 h-10 md:h-17 flex flex-col bg-dark gap-0 \
-                          justify-center items-center bg-(--dark) rounded-[4px]">
+        <div
+            className="w-9 h-[68px] flex flex-col rounded-lg overflow-hidden shrink-0"
+            style={{
+                background: 'rgba(15,23,42,0.7)',
+                border: '1px solid var(--border-soft)',
+            }}
+        >
             <button
+                aria-label="Show metrics"
                 onClick={() => state_changer?.(false)}
-                className={`${!state ? 'bg-(--contrast)' : 'bg-none '}  w-full h-full rounded-t-[4px] \
-                flex items-center justify-center transition-all transition-normal`}>
-                <ChartPie className={`${!state ? 'text-(--base)' : 'text-(--contrast)'} \
-                    size-4 transition-colors`} />
+                className="w-full flex-1 flex items-center justify-center transition-colors"
+                style={{
+                    background: !state ? 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)' : 'transparent',
+                    color: !state ? 'var(--bg-app)' : 'var(--text-mid)',
+                }}
+            >
+                <ChartPie className="size-4" />
             </button>
-            <Separator className="mx-1 max-w-[5%]" />
-            <button 
-                onClick={() => state_changer?.(true)} 
-                className={`${state ? 'bg-(--contrast)' : 'bg-none '} w-full h-full rounded-b-[4px] \
-                flex items-center justify-center transition-all transition-normal`}>
-                <Map className={`${state ? 'text-(--base)' : 'text-(--contrast)'} size-4`} />
+            <div className="h-px" style={{ background: 'var(--border-soft)' }} />
+            <button
+                aria-label="Show map"
+                onClick={() => state_changer?.(true)}
+                className="w-full flex-1 flex items-center justify-center transition-colors"
+                style={{
+                    background: state ? 'linear-gradient(180deg, var(--brand) 0%, var(--brand-strong) 100%)' : 'transparent',
+                    color: state ? 'var(--bg-app)' : 'var(--text-mid)',
+                }}
+            >
+                <Map className="size-4" />
             </button>
         </div>
-    )
+    );
 }

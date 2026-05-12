@@ -50,28 +50,28 @@ export default function WorkersPage() {
     if (error) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-red-600 mb-2">Error Loading Workers</h2>
-                    <p className="text-gray-600">{error}</p>
+                <div className="text-center nms-panel p-8">
+                    <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--status-offline)' }}>Error Loading Workers</h2>
+                    <p className="text-sm" style={{ color: 'var(--text-mid)' }}>{error}</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-4 flex gap-4 bg-(--contrast) min-h-[90vh] max-h-full w-full">
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="p-4 flex gap-4 min-h-[90vh] max-h-full w-full fade-in">
+            <div className="flex-1 flex flex-col overflow-hidden nms-panel">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
-                <WorkersTable 
-                    onRowClick={(workerId: string) => setSelectedWorkerId(workerId)}
-                    selectedWorkerId={selectedWorkerId}
-                    onDataChange={setExportRows}
-                />
+                <div className="flex-1 overflow-hidden">
+                    <WorkersTable
+                        onRowClick={(workerId: string) => setSelectedWorkerId(workerId)}
+                        selectedWorkerId={selectedWorkerId}
+                        onDataChange={setExportRows}
+                    />
+                </div>
             </div>
 
-            {/* Dialog Modal */}
-            <WorkerDetailsSidebar 
+            <WorkerDetailsSidebar
                 workerId={selectedWorkerId}
                 onClose={() => setSelectedWorkerId(null)}
             />

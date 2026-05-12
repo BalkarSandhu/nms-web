@@ -33,16 +33,18 @@ export default function LocationsPage() {
     };
 
     return (
-        <div className="p-4 flex gap-4 bg-gray-50 min-h-[90vh] max-h-full w-full">
-            <div className="h-full w-full">
+        <div className="p-4 flex gap-4 min-h-[90vh] max-h-full w-full fade-in">
+            <div className="h-full w-full nms-panel flex flex-col overflow-hidden">
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
                 {error ? (
-                    <div className="p-4 text-center text-red-500">{error}</div>
+                    <div className="p-6 text-center text-sm" style={{ color: 'var(--status-offline)' }}>{error}</div>
                 ) : (
-                    <LocationsTable
-                        onRowClick={handleRowClick}
-                        onDataChange={setExportRows}
-                    />
+                    <div className="flex-1 overflow-hidden">
+                        <LocationsTable
+                            onRowClick={handleRowClick}
+                            onDataChange={setExportRows}
+                        />
+                    </div>
                 )}
             </div>
         </div>

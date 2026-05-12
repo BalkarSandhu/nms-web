@@ -90,37 +90,37 @@ export default function DeviceStatistics({ devices = [], deviceId }: DeviceStati
     return (
       <div className={`border rounded-lg p-3 transition-all hover:shadow-xl border-slate-700 bg-slate-900 text-slate-100`}>
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Device Statistics</h3>
-          
+          <h3 className="text-sm font-semibold text-white mb-3">Device Statistics</h3>
+
           {/* Range Buttons */}
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setUptimeRange('24h')}
-              className={`text-xs ${uptimeRange === '24h' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-300 text-black hover:bg-slate-200'}`}
+              className={`text-xs ${uptimeRange === '24h' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'}`}
             >24 hours</Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setUptimeRange('7d')}
-              className={`text-xs ${uptimeRange === '7d' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-300 text-black hover:bg-slate-200'}`}
+              className={`text-xs ${uptimeRange === '7d' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'}`}
             >1 week</Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setUptimeRange('30d')}
-              className={`text-xs ${uptimeRange === '30d' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-300 text-black hover:bg-slate-200'}`}
+              className={`text-xs ${uptimeRange === '30d' ? 'bg-cyan-500 text-white hover:bg-cyan-400' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'}`}
             >1 month</Button>
           </div>
         </div>
 
         {uptimeLoading ? (
           <div className="flex items-center justify-center py-6">
-            <p className="text-gray-500 text-sm">Loading statistics...</p>
+            <p className="text-slate-400 text-sm">Loading statistics...</p>
           </div>
         ) : uptimeError ? (
-          <div className="flex items-center gap-2 py-4 px-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+          <div className="flex items-center gap-2 py-4 px-3 bg-red-500/10 border border-red-600/30 rounded text-red-300 text-sm">
             <AlertCircle className="h-4 w-4" />
             {uptimeError}
           </div>
@@ -201,15 +201,15 @@ export default function DeviceStatistics({ devices = [], deviceId }: DeviceStati
 
   // Multiple devices mode (original implementation)
   const getUptimeColor = (uptime: number): string => {
-    if (uptime >= 95) return 'text-green-600';
-    if (uptime >= 80) return 'text-yellow-600';
-    return 'text-red-600';
+    if (uptime >= 95) return 'text-emerald-300';
+    if (uptime >= 80) return 'text-amber-300';
+    return 'text-red-300';
   };
 
   const getUptimeBackgroundColor = (uptime: number): string => {
-    if (uptime >= 95) return 'bg-green-50 border-green-200';
-    if (uptime >= 80) return 'bg-yellow-50 border-yellow-200';
-    return 'bg-red-50 border-red-200';
+    if (uptime >= 95) return 'bg-emerald-500/10 border-emerald-600/30';
+    if (uptime >= 80) return 'bg-amber-500/10 border-amber-600/30';
+    return 'bg-red-500/10 border-red-600/30';
   };
 
   const calculateDaysSinceCreation = (createdAt?: string): number => {
@@ -246,23 +246,23 @@ export default function DeviceStatistics({ devices = [], deviceId }: DeviceStati
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {isCurrentlyOnline ? (
-                  <Signal className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <Signal className="h-4 w-4 text-emerald-300 flex-shrink-0" />
                 ) : (
-                  <WifiOff className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  <WifiOff className="h-4 w-4 text-red-300 flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate">
+                  <h4 className="text-sm font-semibold text-slate-100 truncate">
                     {device.hostname}
                   </h4>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-400">
                     Monitored for {daysSinceCreation} day{daysSinceCreation !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
               <div className={`px-2 py-1 rounded text-xs font-semibold ${
-                isCurrentlyOnline 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-red-100 text-red-700'
+                isCurrentlyOnline
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : 'bg-red-500/15 text-red-300'
               }`}>
                 {isCurrentlyOnline ? 'ONLINE' : 'OFFLINE'}
               </div>

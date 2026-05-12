@@ -114,94 +114,85 @@ export default function WorkersTable({ onRowClick, selectedWorkerId, onDataChang
     }, [enrichedWorkers, filters]);
 
     const getApprovalBadge = (status: string) => {
-        const badges: Record<string, { bg: string; text: string; }> = {
-            'approved': { bg: 'bg-green-100', text: 'text-green-700' },
-            'pending': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-            'denied': { bg: 'bg-red-100', text: 'text-red-700' }
-        };
-        const badge = badges[status.toLowerCase()] || badges['pending'];
-        return (
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
+        const key = (status || '').toLowerCase();
+        const cls =
+            key === 'approved' ? 'badge-success' :
+            key === 'denied'   ? 'badge-critical' :
+                                 'badge-warning';
+        return <span className={cls}>{status ? status.charAt(0).toUpperCase() + status.slice(1) : '—'}</span>;
     };
 
     const getStatusBadge = (status: string) => {
-        const isActive = status.toLowerCase() === 'active' || status.toLowerCase() === 'online';
+        const isActive = status?.toLowerCase() === 'active' || status?.toLowerCase() === 'online';
         return (
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                <span className={`w-2 h-2 rounded-full mr-1.5 ${isActive ? 'bg-green-600' : 'bg-gray-600'}`}></span>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" style={{ color: isActive ? 'var(--status-online)' : 'var(--text-lo)' }}>
+                <span className={`nms-dot ${isActive ? 'nms-dot-online' : 'nms-dot-offline'}`} />
+                {status ? status.charAt(0).toUpperCase() + status.slice(1) : '—'}
             </span>
         );
     };
-
-    
 
     useEffect(() => {
         onDataChange?.(filteredWorkers)
     }, [filteredWorkers, onDataChange])
 
+    const headStyle: React.CSSProperties = { color: 'var(--text-lo)' };
+    const headClass = "font-semibold text-[11px] uppercase tracking-[0.14em]";
+
     return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-white">
-            {/* Filters */}
-            <div className="border-b border-gray-200 py-3">
-                <WorkersFilters 
+        <div className="flex-1 flex flex-col overflow-hidden px-4 py-2 gap-3">
+            <div>
+                <WorkersFilters
                     filterConfigs={filterConfigs}
                     onFiltersChange={setFilters}
                     initialFilters={filters}
                 />
             </div>
 
-            {/* Table */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto rounded-lg border" style={{ borderColor: 'var(--border-soft)' }}>
                 <Table>
-                    <TableHeader className="sticky top-0 bg-gray-50 z-10">
-                        <TableRow>
-                            <TableHead className="font-semibold">Hostname</TableHead>
-                            <TableHead className="font-semibold">IP Address</TableHead>
-                            
-                            
-                            <TableHead className="font-semibold">Current Devices</TableHead>
-                            
-                            <TableHead className="font-semibold">Last Seen</TableHead>
-                            <TableHead className="font-semibold">Status</TableHead>
-                            <TableHead className="font-semibold">Approval</TableHead>
-
+                    <TableHeader className="sticky top-0 z-10" style={{ background: 'rgba(15,23,42,0.92)' }}>
+                        <TableRow style={{ borderColor: 'var(--border-soft)' }}>
+                            <TableHead className={headClass} style={headStyle}>Hostname</TableHead>
+                            <TableHead className={headClass} style={headStyle}>IP Address</TableHead>
+                            <TableHead className={headClass} style={headStyle}>Current Devices</TableHead>
+                            <TableHead className={headClass} style={headStyle}>Last Seen</TableHead>
+                            <TableHead className={headClass} style={headStyle}>Status</TableHead>
+                            <TableHead className={headClass} style={headStyle}>Approval</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredWorkers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                                <TableCell colSpan={9} className="text-center py-10" style={{ color: 'var(--text-lo)' }}>
                                     No workers found
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredWorkers.map((worker) => (
-                                <TableRow
-                                    key={worker.id}
-                                    onClick={() => onRowClick?.(worker.id)}
-                                    className={`cursor-pointer hover:bg-gray-50 transition-colors ${
-                                        selectedWorkerId === worker.id ? 'bg-blue-50' : ''
-                                    }`}
-                                >
-                                    <TableCell className="font-medium">{worker.name}</TableCell>
-                                    <TableCell className="text-gray-600">{worker.ip_address || 'N/A'}</TableCell>
-                                    
-                                   
-                                    <TableCell className="text-gray-600">{worker.deviceCount}</TableCell>
-                                    
-                                    
-                                    
-                                    <TableCell className="text-gray-600 text-sm">
-                                        {worker.last_seen ? new Date(worker.last_seen).toLocaleString() : 'Never'}
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(worker.status)}</TableCell>
-                                    <TableCell>{getApprovalBadge(worker.approval_status)}</TableCell>
-                                </TableRow>
-                            ))
+                            filteredWorkers.map((worker) => {
+                                const selected = selectedWorkerId === worker.id;
+                                return (
+                                    <TableRow
+                                        key={worker.id}
+                                        onClick={() => onRowClick?.(worker.id)}
+                                        className="cursor-pointer transition-colors"
+                                        style={{
+                                            background: selected ? 'rgba(34,211,238,0.10)' : 'transparent',
+                                            borderColor: 'var(--border-soft)',
+                                            borderLeft: selected ? '3px solid var(--brand)' : '3px solid transparent',
+                                        }}
+                                    >
+                                        <TableCell className="font-medium" style={{ color: 'var(--text-hi)' }}>{worker.name}</TableCell>
+                                        <TableCell className="font-mono text-xs" style={{ color: 'var(--text-mid)' }}>{worker.ip_address || 'N/A'}</TableCell>
+                                        <TableCell className="tabular-nums" style={{ color: 'var(--text-mid)' }}>{worker.deviceCount}</TableCell>
+                                        <TableCell className="text-sm" style={{ color: 'var(--text-lo)' }}>
+                                            {worker.last_seen ? new Date(worker.last_seen).toLocaleString() : 'Never'}
+                                        </TableCell>
+                                        <TableCell>{getStatusBadge(worker.status)}</TableCell>
+                                        <TableCell>{getApprovalBadge(worker.approval_status)}</TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

@@ -30,6 +30,11 @@ ChartJS.register(
   Legend
 );
 
+// Apply dark-friendly defaults so charts read clearly on the NOC background.
+ChartJS.defaults.color = '#CBD5E1';
+ChartJS.defaults.borderColor = 'rgba(148,163,184,0.15)';
+ChartJS.defaults.font.family = "'Inter', system-ui, sans-serif";
+
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
@@ -329,56 +334,57 @@ const workerUtilizationOptions: ChartOptions<'bar'> = {
 
 
   return (
-    <div className="w-full h-full p-6 bg-gray-50">
-      <h1 className="text-xl font-bold mb-6 text-gray-800">Reports Dashboard</h1>
+    <div className="w-full h-full p-6 fade-in">
+      <div className="mb-6">
+        <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-hi)' }}>
+          Reports Dashboard
+        </h1>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-lo)' }}>
+          Aggregated network analytics across devices, workers and types
+        </p>
+      </div>
 
       {loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-blue-700 font-medium">Loading data...</p>
+        <div
+          className="rounded-lg p-4 mb-6 nms-panel-flat flex items-center gap-3"
+          style={{ borderColor: 'var(--border-brand)' }}
+        >
+          <span className="spinner size-4 rounded-full border-2" style={{ borderColor: 'rgba(34,211,238,0.25)', borderTopColor: 'var(--brand)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-hi)' }}>Loading report data…</p>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-700 font-medium">{error}</p>
+        <div
+          className="rounded-lg p-4 mb-6"
+          style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.35)',
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: '#FCA5A5' }}>{error}</p>
         </div>
       )}
 
       {!loading && devices.length === 0 && workers.length === 0 && (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-8 text-center">
-          <p className="text-gray-600 text-lg">No data found</p>
+        <div className="nms-panel-flat p-8 text-center">
+          <p className="text-base" style={{ color: 'var(--text-mid)' }}>No data found</p>
         </div>
       )}
 
       {(devices.length > 0 || workers.length > 0) && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500 mb-1">Total Devices</div>
-              <div className="text-3xl font-bold text-gray-900">{metrics.totalDevices}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500 mb-1">Active Devices</div>
-              <div className="text-3xl font-bold text-green-600">{metrics.activeDevices}</div>
-              <div className="text-xs text-gray-500 mt-1">{metrics.healthPercentage}% healthy</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500 mb-1">Workers</div>
-              <div className="text-3xl font-bold text-blue-600">{metrics.uniqueWorkers}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-500 mb-1">Devices with Issues</div>
-              <div className="text-3xl font-bold text-red-600">{metrics.devicesWithIssues}</div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <StatTile label="Total Devices" value={metrics.totalDevices} accent="brand" />
+            <StatTile label="Active Devices" value={metrics.activeDevices} sub={`${metrics.healthPercentage}% healthy`} accent="online" />
+            <StatTile label="Workers" value={metrics.uniqueWorkers} accent="info" />
+            <StatTile label="Devices with Issues" value={metrics.devicesWithIssues} accent="offline" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                Active Devices per Worker
-              </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <ReportCard title="Active Devices per Worker">
               {activeDevicesPerWorker.length === 0 ? (
-                <div className="flex items-center justify-center h-[350px] text-gray-500">
+                <div className="flex items-center justify-center h-[350px] text-sm" style={{ color: 'var(--text-lo)' }}>
                   No active devices assigned to workers
                 </div>
               ) : (
@@ -386,14 +392,11 @@ const workerUtilizationOptions: ChartOptions<'bar'> = {
                   <Bar data={workerChartData} options={workerChartOptions} />
                 </div>
               )}
-            </div>
+            </ReportCard>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                Devices by Type
-              </h2>
+            <ReportCard title="Devices by Type">
               {devicesPerType.length === 0 ? (
-                <div className="flex items-center justify-center h-[350px] text-gray-500">
+                <div className="flex items-center justify-center h-[350px] text-sm" style={{ color: 'var(--text-lo)' }}>
                   No device types found
                 </div>
               ) : (
@@ -401,15 +404,12 @@ const workerUtilizationOptions: ChartOptions<'bar'> = {
                   <Pie data={typeChartData} options={typeChartOptions} />
                 </div>
               )}
-            </div>
+            </ReportCard>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              Worker Utilization
-            </h2>
+          <ReportCard title="Worker Utilization">
             {enrichedWorkers.length === 0 ? (
-              <div className="flex items-center justify-center h-[400px] text-gray-500">
+              <div className="flex items-center justify-center h-[400px] text-sm" style={{ color: 'var(--text-lo)' }}>
                 No workers found
               </div>
             ) : (
@@ -417,9 +417,32 @@ const workerUtilizationOptions: ChartOptions<'bar'> = {
                 <Bar data={workerUtilizationData} options={workerUtilizationOptions} />
               </div>
             )}
-          </div>
+          </ReportCard>
         </>
       )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, sub, accent = 'brand' }: { label: string; value: number; sub?: string; accent?: 'brand' | 'online' | 'offline' | 'info' }) {
+  const color =
+    accent === 'online'  ? 'var(--status-online)'  :
+    accent === 'offline' ? 'var(--status-offline)' :
+    accent === 'info'    ? 'var(--status-info)'    : 'var(--brand)';
+  return (
+    <div className="nms-panel-flat px-4 py-4">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--text-lo)' }}>{label}</div>
+      <div className="text-2xl font-bold tabular-nums mt-1" style={{ color }}>{value}</div>
+      {sub && <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-lo)' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function ReportCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="nms-panel-flat p-5">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: 'var(--text-mid)' }}>{title}</h2>
+      {children}
     </div>
   );
 }

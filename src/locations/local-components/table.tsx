@@ -229,8 +229,11 @@ export default function LocationsTable({
     const handleRowClick = (id: number) => { setLocalSelectedId(id); onRowClick?.(id); };
 
     // ─── Render ───────────────────────────────────────────────────────────────
+    const headStyle: React.CSSProperties = { color: 'var(--text-lo)' };
+    const headClass = "font-semibold text-[11px] uppercase tracking-[0.14em]";
+
     return (
-        <div className="gap-4 w-full h-full bg-(--contrast) py-2">
+        <div className="gap-4 w-full h-full py-2 px-4 flex flex-col overflow-hidden">
             <LocationsFilters
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
@@ -238,135 +241,127 @@ export default function LocationsTable({
             />
 
             {loading && (
-                <div className="px-4 py-2 text-sm text-blue-600 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
-                    <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Loading page {currentPage}...
+                <div className="px-3 py-2 text-xs flex items-center gap-2 rounded-md" style={{ background: 'rgba(34,211,238,0.08)', color: 'var(--brand)', border: '1px solid var(--border-brand)' }}>
+                    <span className="spinner size-3 rounded-full border-2" style={{ borderColor: 'rgba(34,211,238,0.25)', borderTopColor: 'var(--brand)' }} />
+                    Loading page {currentPage}…
                 </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="overflow-auto flex-1 rounded-lg border" style={{ borderColor: 'var(--border-soft)' }}>
                 <Table className="table-fixed w-full">
-                    <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                        <TableRow className="border-b-2 border-gray-200">
-                            <TableHead className="w-[4%]  font-semibold text-gray-700 text-center py-3">No.</TableHead>
-                            <TableHead className="w-[25%] font-semibold text-gray-700 py-3">Location Name</TableHead>
-                            <TableHead className="w-[12%] font-semibold text-gray-700 py-3">Type</TableHead>
-                            <TableHead className="w-[15%] font-semibold text-gray-700 py-3">Area</TableHead>
-                            <TableHead className="w-[14%] font-semibold text-gray-700 text-center py-3">Location Status</TableHead>
-                            <TableHead className="w-[20%] font-semibold text-gray-700 py-3">Devices</TableHead>
-                            <TableHead className="w-[10%] font-semibold text-gray-700 text-center py-3">Actions</TableHead>
+                    <TableHeader className="sticky top-0 z-10" style={{ background: 'rgba(15,23,42,0.92)' }}>
+                        <TableRow style={{ borderColor: 'var(--border-soft)' }}>
+                            <TableHead className={`w-[4%] text-center py-3 ${headClass}`} style={headStyle}>#</TableHead>
+                            <TableHead className={`w-[25%] py-3 ${headClass}`} style={headStyle}>Location Name</TableHead>
+                            <TableHead className={`w-[12%] py-3 ${headClass}`} style={headStyle}>Type</TableHead>
+                            <TableHead className={`w-[15%] py-3 ${headClass}`} style={headStyle}>Area</TableHead>
+                            <TableHead className={`w-[14%] text-center py-3 ${headClass}`} style={headStyle}>Status</TableHead>
+                            <TableHead className={`w-[20%] py-3 ${headClass}`} style={headStyle}>Devices</TableHead>
+                            <TableHead className={`w-[10%] text-center py-3 ${headClass}`} style={headStyle}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredLocations.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                                <TableCell colSpan={7} className="text-center py-12" style={{ color: 'var(--text-lo)' }}>
                                     <div className="flex flex-col items-center justify-center gap-2">
-                                        <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-dim)' }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        <p className="text-sm font-medium">No locations found</p>
-                                        <p className="text-xs text-gray-400">Try adjusting your filters</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--text-mid)' }}>No locations found</p>
+                                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Try adjusting your filters</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredLocations.map((location, index) => (
-                                <TableRow
-                                    key={location.id}
-                                    data-location-id={location.id}
-                                    className={`cursor-pointer transition-all duration-150 border-b border-gray-100 ${
-                                        localSelectedId === location.id
-                                            ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500'
-                                            : 'hover:bg-gray-50'
-                                    }`}
-                                    onClick={() => handleRowClick(location.id)}
-                                >
-                                    <TableCell className="text-center text-sm font-medium text-gray-600 py-2">
-                                        {(currentPage - 1) * perPage + index + 1}
-                                    </TableCell>
-
-                                    <TableCell className="font-medium py-2">
-                                        <span className={`text-sm font-semibold ${localSelectedId === location.id ? 'text-blue-900' : 'text-gray-900'}`} title={location.name}>
-                                            {location.name}
-                                        </span>
-                                    </TableCell>
-
-                                    <TableCell className="py-2">
-                                        <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${
-                                            localSelectedId === location.id
-                                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                                : 'bg-gray-100 text-gray-700 border border-gray-200'
-                                        }`}>
-                                            {location.type_name}
-                                        </span>
-                                    </TableCell>
-
-                                    <TableCell className="py-2">
-                                        <div className="flex items-center gap-1.5">
-                                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                            </svg>
-                                            <span className={`text-sm ${localSelectedId === location.id ? 'text-blue-800' : 'text-gray-700'}`} title={location.area}>
-                                                {location.area}
+                            filteredLocations.map((location, index) => {
+                                const selected = localSelectedId === location.id;
+                                return (
+                                    <TableRow
+                                        key={location.id}
+                                        data-location-id={location.id}
+                                        onClick={() => handleRowClick(location.id)}
+                                        className="cursor-pointer transition-colors"
+                                        style={{
+                                            background: selected ? 'rgba(34,211,238,0.10)' : 'transparent',
+                                            borderColor: 'var(--border-soft)',
+                                            borderLeft: selected ? '3px solid var(--brand)' : '3px solid transparent',
+                                        }}
+                                    >
+                                        <TableCell className="text-center text-sm tabular-nums py-2" style={{ color: 'var(--text-lo)' }}>
+                                            {(currentPage - 1) * perPage + index + 1}
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <span className="text-sm font-semibold" style={{ color: 'var(--text-hi)' }} title={location.name}>
+                                                {location.name}
                                             </span>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell className="text-center py-2">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${location.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                            <span className={`text-xs font-semibold ${location.status === 'online' ? 'text-green-700' : 'text-red-700'}`}>
-                                                {location.status === 'online' ? 'Online' : 'Offline'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell className="py-2">
-                                        <div className="flex items-center gap-3 text-xs">
-                                            <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                                                <span className="text-green-600 font-medium">{location.devices_online} online</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                                                <span className="text-red-600 font-medium">{location.devices_offline} offline</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                                                <span className="text-gray-600">{location.devices_total} total</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell className="text-center py-2">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setEditDialogOpen(true); }}
-                                                className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition duration-150"
-                                                title="Edit location"
-                                            >
-                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <span className="badge-info">{location.type_name}</span>
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-dim)' }}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                                 </svg>
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setDeleteDialogOpen(true); }}
-                                                className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition duration-150"
-                                                title="Delete location"
-                                            >
-                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                                <span className="text-sm truncate" style={{ color: 'var(--text-mid)' }} title={location.area}>
+                                                    {location.area}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center py-2">
+                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                                <span className={`nms-dot ${location.status === 'online' ? 'nms-dot-online' : 'nms-dot-offline'}`} />
+                                                <span className="text-xs font-semibold uppercase tracking-wide" style={{
+                                                    color: location.status === 'online' ? 'var(--status-online)' : 'var(--status-offline)'
+                                                }}>
+                                                    {location.status === 'online' ? 'Online' : 'Offline'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-2">
+                                            <div className="flex items-center gap-3 text-xs">
+                                                <span className="inline-flex items-center gap-1 tabular-nums" style={{ color: 'var(--status-online)' }}>
+                                                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--status-online)' }} />
+                                                    {location.devices_online}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 tabular-nums" style={{ color: 'var(--status-offline)' }}>
+                                                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--status-offline)' }} />
+                                                    {location.devices_offline}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 tabular-nums" style={{ color: 'var(--text-lo)' }}>
+                                                    / {location.devices_total}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center py-2">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setEditDialogOpen(true); }}
+                                                    className="p-1.5 rounded transition-colors hover:bg-white/[0.06]"
+                                                    title="Edit location"
+                                                    style={{ color: 'var(--brand)' }}
+                                                >
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedLocationForAction(location.id); setDeleteDialogOpen(true); }}
+                                                    className="p-1.5 rounded transition-colors hover:bg-white/[0.06]"
+                                                    title="Delete location"
+                                                    style={{ color: 'var(--status-offline)' }}
+                                                >
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -380,10 +375,13 @@ export default function LocationsTable({
             )}
 
             {/* ── Pagination ── */}
-            <div className="flex items-center justify-between mt-6 px-4 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+            <div
+                className="flex items-center justify-between px-4 py-3 rounded-lg border"
+                style={{ borderColor: 'var(--border-soft)', background: 'rgba(15,23,42,0.6)' }}
+            >
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <label htmlFor="perPage" className="text-sm font-medium text-gray-700">Items per page:</label>
+                        <label htmlFor="perPage" className="text-xs font-medium" style={{ color: 'var(--text-lo)' }}>Items per page:</label>
                         <select
                             id="perPage"
                             value={perPage}
@@ -392,7 +390,8 @@ export default function LocationsTable({
                                 lastFetchRef.current = null;
                                 setCurrentPage(1);
                             }}
-                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-2.5 py-1 rounded-md text-sm focus:outline-none"
+                            style={{ background: 'rgba(15,23,42,0.8)', color: 'var(--text-hi)', border: '1px solid var(--border-soft)' }}
                         >
                             <option value={10}>10</option>
                             <option value={25}>25</option>
@@ -401,10 +400,10 @@ export default function LocationsTable({
                         </select>
                     </div>
 
-                    <div className="text-sm text-gray-600">
-                        Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{totalPages}</span>
+                    <div className="text-xs" style={{ color: 'var(--text-lo)' }}>
+                        Page <span className="font-semibold tabular-nums" style={{ color: 'var(--text-hi)' }}>{currentPage}</span> / <span className="font-semibold tabular-nums" style={{ color: 'var(--text-hi)' }}>{totalPages}</span>
                         {pagination?.total > 0 && (
-                            <span> • Total: <span className="font-semibold">{pagination.total}</span> items</span>
+                            <span> • <span className="font-semibold tabular-nums" style={{ color: 'var(--text-hi)' }}>{pagination.total}</span> total</span>
                         )}
                     </div>
                 </div>
@@ -416,12 +415,17 @@ export default function LocationsTable({
                         variant="outline"
                         size="sm"
                         className="gap-1"
+                        style={{
+                            background: 'rgba(15,23,42,0.6)',
+                            color: 'var(--text-mid)',
+                            borderColor: 'var(--border-soft)',
+                        }}
                     >
                         <ChevronLeft className="w-4 h-4" />
                         Previous
                     </Button>
 
-                    <div className="flex items-center gap-1 border border-gray-300 rounded-md px-3 py-2">
+                    <div className="flex items-center gap-1 rounded-md px-2 py-1" style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid var(--border-soft)' }}>
                         <input
                             type="number"
                             min={1}
@@ -441,7 +445,8 @@ export default function LocationsTable({
                                     (e.target as HTMLInputElement).blur();
                                 }
                             }}
-                            className="w-14 text-center text-sm outline-none"
+                            className="w-12 text-center text-sm outline-none bg-transparent"
+                            style={{ color: 'var(--text-hi)' }}
                         />
                     </div>
 
@@ -451,6 +456,11 @@ export default function LocationsTable({
                         variant="outline"
                         size="sm"
                         className="gap-1"
+                        style={{
+                            background: 'rgba(15,23,42,0.6)',
+                            color: 'var(--text-mid)',
+                            borderColor: 'var(--border-soft)',
+                        }}
                     >
                         Next
                         <ChevronRight className="w-4 h-4" />

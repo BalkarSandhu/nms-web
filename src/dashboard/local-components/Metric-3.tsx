@@ -1,27 +1,13 @@
-
+import type { ReactNode } from "react";
 import BaseCard from "./Base-Card";
 import "@/index.css";
 
-export interface GaugeData {
-    low: number;
-    medium: number;
-    high: number;
-}
-
-export interface GaugeLabels {
-    low?: string;
-    medium?: string;
-    high?: string;
-}
-
-export interface GaugeLinks {
-    low?: string;
-    medium?: string;
-    high?: string;
-}
+export interface GaugeData { low: number; medium: number; high: number; }
+export interface GaugeLabels { low?: string; medium?: string; high?: string; }
+export interface GaugeLinks  { low?: string; medium?: string; high?: string; }
 
 export interface Metric3Props {
-    title?: string;
+    title?: ReactNode;
     data?: GaugeData;
     labels?: GaugeLabels;
     links?: GaugeLinks;
@@ -30,99 +16,56 @@ export interface Metric3Props {
 }
 
 export default function Metric3({
-    title = "Metric 3",
+    title = "Distribution",
     data = { low: 25, medium: 35, high: 40 },
     labels = { low: "Category 1", medium: "Category 2", high: "Category 3" },
     links = { low: "#", medium: "#", high: "#" },
     className = "",
-    menuGroups
+    menuGroups,
 }: Metric3Props) {
-    // Calculate total and percentages
     const total = data.low + data.medium + data.high;
-    const lowPercent = (data.low / total) * 100;
-    const mediumPercent = (data.medium / total) * 100;
-    const highPercent = (data.high / total) * 100;
+    const lowPct = total ? (data.low / total) * 100 : 0;
+    const medPct = total ? (data.medium / total) * 100 : 0;
+    const highPct = total ? (data.high / total) * 100 : 0;
 
-    const handleSegmentClick = (url?: string) => {
-        if (url) {
-            window.location.href = url;
-        }
-    };
+    const go = (url?: string) => { if (url) window.location.href = url; };
 
     return (
         <BaseCard title={title} menuGroups={menuGroups} className={className}>
             <div className="flex flex-col w-full h-full justify-center gap-3">
-                {/* Total Display */}
-                <div className="flex flex-row items-center justify-center gap-1">
-                    <span className="text-(--contrast) text-2xl font-bold">{total}</span>
-                    <span className="text-(--contrast)/60 text-[10px]">Total</span>
+                <div className="flex items-baseline gap-2 justify-center">
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--text-hi)' }}>{total}</span>
+                    <span className="text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-lo)' }}>Total</span>
                 </div>
 
-                {/* Linear Gauge Bar */}
-                <div className="w-full h-8 flex rounded-[5px] overflow-hidden">
-                    {/* Low segment */}
+                <div className="w-full h-7 flex rounded-md overflow-hidden" style={{ background: 'rgba(148,163,184,0.10)' }}>
                     <button
-                        onClick={() => handleSegmentClick(links.low)}
-                        className="bg-(--green) flex items-center justify-center transition-all duration-300 
-                                    hover:scale-120 hover:shadow-lg cursor-pointer"
-                        style={{ width: `${lowPercent}%` }}
+                        onClick={() => go(links.low)}
+                        className="flex items-center justify-center transition-all"
+                        style={{ width: `${lowPct}%`, background: 'linear-gradient(180deg, var(--status-online), #059669)' }}
                     >
-                        {lowPercent > 10 && (
-                            <span className="text-white text-[10px] font-medium">
-                                {Math.round(lowPercent)}%
-                            </span>
-                        )}
+                        {lowPct > 10 && <span className="text-[10px] font-semibold text-white">{Math.round(lowPct)}%</span>}
                     </button>
-
-                    {/* Medium segment */}
                     <button
-                        onClick={() => handleSegmentClick(links.medium)}
-                        className="bg-(--azul) flex items-center justify-center transition-all duration-300
-                                    hover:scale-120 hover:shadow-lg cursor-pointer"
-                        style={{ width: `${mediumPercent}%` }}
+                        onClick={() => go(links.medium)}
+                        className="flex items-center justify-center transition-all"
+                        style={{ width: `${medPct}%`, background: 'linear-gradient(180deg, var(--brand), var(--brand-strong))' }}
                     >
-                        {mediumPercent > 10 && (
-                            <span className="text-white text-[10px] font-medium">
-                                {Math.round(mediumPercent)}%
-                            </span>
-                        )}
+                        {medPct > 10 && <span className="text-[10px] font-semibold text-white">{Math.round(medPct)}%</span>}
                     </button>
-
-                    {/* High segment */}
                     <button
-                        onClick={() => handleSegmentClick(links.high)}
-                        className="bg-(--red) flex items-center justify-center transition-all duration-300
-                                    hover:scale-120 hover:shadow-lg cursor-pointer"
-                        style={{ width: `${highPercent}%` }}
+                        onClick={() => go(links.high)}
+                        className="flex items-center justify-center transition-all"
+                        style={{ width: `${highPct}%`, background: 'linear-gradient(180deg, var(--status-offline), #DC2626)' }}
                     >
-                        {highPercent > 10 && (
-                            <span className="text-white text-[10px] font-medium">
-                                {Math.round(highPercent)}%
-                            </span>
-                        )}
+                        {highPct > 10 && <span className="text-[10px] font-semibold text-white">{Math.round(highPct)}%</span>}
                     </button>
                 </div>
 
-                {/* Labels Section */}
-                <div className="w-full flex justify-center gap-4 ">
-                    <div className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded-full bg-(--green)"></span>
-                        <span className="text-(--contrast) text-[10px]">
-                            {labels.low || "Low"}: {data.low}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded-full bg-(--azul)"></span>
-                        <span className="text-(--contrast) text-[10px]">
-                            {labels.medium || "Medium"}: {data.medium}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded-full bg-(--red)"></span>
-                        <span className="text-(--contrast) text-[10px]">
-                            {labels.high || "High"}: {data.high}
-                        </span>
-                    </div>
+                <div className="w-full flex justify-center gap-4">
+                    <div className="flex items-center gap-1.5"><span className="nms-dot nms-dot-online" /><span className="text-[11px]" style={{ color: 'var(--text-mid)' }}>{labels.low}: {data.low}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="nms-dot" style={{ background: 'var(--brand)', boxShadow: '0 0 10px var(--brand)' }} /><span className="text-[11px]" style={{ color: 'var(--text-mid)' }}>{labels.medium}: {data.medium}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="nms-dot nms-dot-offline" /><span className="text-[11px]" style={{ color: 'var(--text-mid)' }}>{labels.high}: {data.high}</span></div>
                 </div>
             </div>
         </BaseCard>
