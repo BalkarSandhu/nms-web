@@ -5,10 +5,7 @@ import { useLocation } from 'react-router-dom'
 import {
   Network,
   LayoutDashboard,
-  Smartphone,
-  MapPin,
-  Users,
-  NewspaperIcon,
+  BarChart3,
   History as HistoryIcon,
 } from "lucide-react"
 
@@ -25,9 +22,8 @@ import {
 
 const baseNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, isActive: false },
-  { title: "Devices",   url: "/devices",   icon: Smartphone, isActive: false },
-  { title: "Locations", url: "/locations", icon: MapPin,     isActive: false },
-  { title: "Areas",     url: "/areas",     icon: Users,      isActive: false },
+  { title: "Analytics",   url: "/metrics",   icon: BarChart3,  isActive: false },
+  // { title: "Areas",     url: "/areas",     icon: Users,      isActive: false },
   // {
   //   title: "Reports",
   //   url: "/reports",
@@ -39,8 +35,8 @@ const baseNavItems = [
   //     { title: "Area Reports",     url: "/reports/workers" },
   //   ],
   // },
-  { title: "Topology", url: "/topology", icon: Network, isActive: false },
   { title: "History",  url: "/history",  icon: HistoryIcon, isActive: false },
+  {title: "Services", url:"/services", icon: Network, isActive: false},
 ]
 
 const teams = [
@@ -78,23 +74,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarFooter style={{ backgroundColor: 'transparent', color: 'var(--text-hi)' }}>
         {/* Status line — only visible when the sidebar is expanded */}
-        <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+        
+        <NavUser />
+
+        {/* Branding footer — the top border separates it from the nav above */}
+        <div
+          className="mt-1 pt-2 pb-1 border-t group-data-[collapsible=icon]:hidden"
+          style={{ borderColor: 'var(--border-soft)' }}
+        >
           <div
-            className="flex items-center justify-between rounded-md border px-2 py-1.5 text-[10px] uppercase tracking-[0.14em]"
-            style={{
-              borderColor: 'var(--border-soft)',
-              background: 'rgba(15,23,42,0.6)',
-              color: 'var(--text-lo)',
-            }}
+            className="text-center text-xs font-bold uppercase tracking-[0.2em]"
+            style={{ color: 'var(--text-lo)' }}
           >
-            <span className="inline-flex items-center gap-1.5">
-              <span className="nms-dot nms-dot-online" />
-              System Online
-            </span>
-            <span style={{ color: 'var(--text-dim)' }}>v6.0</span>
+            DADHWAL
+            <sup className="ml-0.5 text-[8px] font-semibold tracking-normal align-super">
+              TM
+            </sup>
           </div>
         </div>
-        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

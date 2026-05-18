@@ -1,4 +1,3 @@
-import { LogOut } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAppDispatch } from "@/store/hooks"
 import { logout } from "@/store/authSlice"
@@ -7,13 +6,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavUser() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const { state } = useSidebar()
 
   const handleLogout = () => {
     dispatch(logout())
@@ -30,7 +27,7 @@ export function NavUser() {
           className="transition-all duration-200 cursor-pointer group"
           style={{ color: 'var(--text-mid)' }}
         >
-          <span
+          {/* <span
             className="flex aspect-square size-8 items-center justify-center rounded-md transition-colors"
             style={{
               background: 'rgba(239,68,68,0.10)',
@@ -39,13 +36,13 @@ export function NavUser() {
             }}
           >
             <LogOut className="size-4" />
-          </span>
-          {state === 'expanded' && (
+          </span> */}
+          {/* {state === 'expanded' && (
             <div className="grid flex-1 text-left leading-tight">
               <span className="text-sm font-medium" style={{ color: 'var(--text-hi)' }}>Sign out</span>
               <span className="text-[11px]" style={{ color: 'var(--text-lo)' }}>End this session</span>
             </div>
-          )}
+          )} */}
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

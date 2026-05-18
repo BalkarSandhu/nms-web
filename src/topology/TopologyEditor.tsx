@@ -8,8 +8,14 @@ import {
   Grid3x3, ArrowLeft, LayoutGrid,
 } from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchAllDevices } from '@/store/deviceSlice';
+import { useAreaView } from '@/contexts/AreaViewContext';
+import type { readDeviceType } from '@/contexts/read-Types';
 import AreaSummary from './AreaSummary';
 import ClusterView from './ClusterView';
+
+export type TopologyNodeKind = 'locations' | 'devices';
 
 /* ─── Types ──────────────────────────────────────────────── */
 interface Location {
@@ -17,7 +23,7 @@ interface Location {
   name: string;
   parent_id: number | null;
   status: 'online' | 'offline' | 'unknown' | 'partial';
-  project: string;
+  project?: string;
   area: string;
   description?: string;
   device_count?: number;
@@ -54,7 +60,6 @@ const STATUS = {
   unknown: { hex: '#64748B', glow: 'rgba(100,116,139,0.35)', border: 'rgba(100,116,139,0.3)', bg: 'rgba(100,116,139,0.08)', text: '#94A3B8', label: 'UNKNOWN' },
 };
 const BRAND = '#22D3EE';
-const BRAND_STRONG = '#06B6D4';
 const getS = (s: string) => STATUS[s as keyof typeof STATUS] ?? STATUS.unknown;
 
 /* ─── Node card dimensions ───────────────────────────────── */
@@ -85,6 +90,34 @@ function flattenTree(
     }
   }
   return { nodes, links };
+}
+
+/* ─── Attach devices as leaf nodes under their location ───────
+   Devices are linked to locations by location_id, so the locations
+   tree already carries everything needed to render a device topology. */
+const DEVICE_ID_OFFSET = 1_000_000_000;
+
+function augmentWithDevices(tree: Location[], devices: readDeviceType[]): Location[] {
+  const byLoc = new Map<number, readDeviceType[]>();
+  for (const d of devices) {
+    const arr = byLoc.get(d.location_id);
+    if (arr) arr.push(d);
+    else byLoc.set(d.location_id, [d]);
+  }
+  const walk = (n: Location): Location => {
+    const kids = (n.children ?? []).map(walk);
+    const devs: Location[] = (byLoc.get(n.id) ?? []).map(d => ({
+      id: DEVICE_ID_OFFSET + d.id,
+      name: d.display || d.hostname,
+      parent_id: n.id,
+      status: d.is_reachable ? 'online' : 'offline',
+      area: n.area,
+      description: d.hostname,
+      children: [],
+    }));
+    return { ...n, children: [...kids, ...devs] };
+  };
+  return tree.map(walk);
 }
 
 /* ─── Hierarchical pre-layout ────────────────────────────── */
@@ -162,7 +195,6 @@ const TopoCanvas: React.FC<CanvasProps> = ({ nodes, links, selectedId, onSelect 
     if (!svgRef.current || readyRef.current) return;
     const svg = d3.select(svgRef.current);
     const W = svgRef.current.clientWidth  || 1200;
-    const H = svgRef.current.clientHeight || 700;
 
     const defs = svg.append('defs');
 
@@ -584,7 +616,18 @@ const DetailPanel: React.FC<{ data: Location; onClose: () => void }> = ({ data, 
 /* ═══════════════════════════════════════════════════════════
    Main TopologyGraph Component
    ═══════════════════════════════════════════════════════════ */
-const TopologyGraph: React.FC = () => {
+const TopologyGraph: React.FC<{ nodeKind?: TopologyNodeKind }> = ({
+  nodeKind = 'locations',
+}) => {
+  const dispatch = useAppDispatch();
+  const reduxDevices = useAppSelector(state => state.devices.devices);
+  const devices = Array.isArray(reduxDevices) ? reduxDevices : [];
+  const devicesRef = useRef<readDeviceType[]>(devices);
+  const nodeKindRef = useRef<TopologyNodeKind>(nodeKind);
+  useEffect(() => { devicesRef.current = devices; }, [devices]);
+  useEffect(() => { nodeKindRef.current = nodeKind; }, [nodeKind]);
+  useEffect(() => { dispatch(fetchAllDevices()); }, [dispatch]);
+
   const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
   const [graphLinks, setGraphLinks] = useState<GraphLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -594,10 +637,24 @@ const TopologyGraph: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedData, setSelectedData] = useState<Location | null>(null);
-  const [selectedArea, setSelectedArea] = useState('all');
-  const [availableAreas, setAvailableAreas] = useState<string[]>([]);
+  // Deep-link support: /topology?area=KUSUNDA opens straight into that
+  // area's topology graph (Cluster button is available once area-scoped).
+  const initialArea = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get('area') || 'all';
+    } catch {
+      return 'all';
+    }
+  })();
+  const [selectedArea, setSelectedArea] = useState(initialArea);
+  // When entered via deep-link (from an area card → table → Map icon),
+  // "back" returns to that area's Table view.
+  const { setView: setAreaView } = useAreaView();
+  const deepLinkedRef = useRef(initialArea !== 'all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [currentView, setCurrentView] = useState<'area-summary' | 'topology' | 'cluster'>('area-summary');
+  const [currentView, setCurrentView] = useState<'area-summary' | 'topology' | 'cluster'>(
+    initialArea !== 'all' ? 'topology' : 'area-summary'
+  );
   const [clusterArea, setClusterArea] = useState<string>('');
   const [allLocations, setAllLocations] = useState<Location[]>([]);
 
@@ -637,12 +694,10 @@ const TopologyGraph: React.FC = () => {
 
       setAllLocations(flattenAll(raw));
 
-      const areaSet = new Set<string>();
-      const walkArea = (n: Location) => { if (n.area) areaSet.add(n.area); (n.children ?? []).forEach(walkArea); };
-      raw.forEach(walkArea);
-      setAvailableAreas(Array.from(areaSet).sort());
-
-      const filtered = filterByArea(raw, selectedAreaRef.current);
+      let filtered = filterByArea(raw, selectedAreaRef.current);
+      if (nodeKindRef.current === 'devices') {
+        filtered = augmentWithDevices(filtered, devicesRef.current);
+      }
       const { nodes: gn, links: gl } = flattenTree(filtered);
       applyHierarchicalLayout(gn, gl);
       setGraphNodes(gn);
@@ -660,6 +715,12 @@ const TopologyGraph: React.FC = () => {
 
   useEffect(() => { fetchTopology(); }, [fetchTrigger, fetchTopology]);
   useEffect(() => { triggerFetch(); }, [selectedArea]);
+  // Rebuild when switching Locations ↔ Devices, or once devices arrive
+  // while the Devices topology is active.
+  useEffect(() => { triggerFetch(); }, [nodeKind, triggerFetch]);
+  useEffect(() => {
+    if (nodeKind === 'devices') triggerFetch();
+  }, [devices, nodeKind, triggerFetch]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -736,6 +797,10 @@ const TopologyGraph: React.FC = () => {
   };
 
   const backToAreas = () => {
+    if (deepLinkedRef.current) {
+      setAreaView('table');
+      return;
+    }
     setSelectedArea('all');
     setCurrentView('area-summary');
   };
@@ -767,7 +832,7 @@ const TopologyGraph: React.FC = () => {
       <ClusterView
         allLocations={allLocations.length ? allLocations : graphNodes.map(n => n.data)}
         selectedArea={clusterArea}
-        onBack={() => setCurrentView('area-summary')}
+        onBack={() => setCurrentView(deepLinkedRef.current ? 'topology' : 'area-summary')}
         onNodeSelect={handleClusterNodeSelect}
       />
     );
@@ -779,7 +844,8 @@ const TopologyGraph: React.FC = () => {
   return (
     <div
       style={{
-        height: '100vh',
+        height: '100%',
+        minHeight: 0,
         background: 'var(--bg-app)',
         color: 'var(--text-hi)',
         display: 'flex', flexDirection: 'column',
@@ -801,20 +867,12 @@ const TopologyGraph: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <button
               onClick={backToAreas}
-              title="Back to Areas"
-              style={{
-                padding: '7px 12px',
-                borderRadius: 8,
-                background: 'var(--bg-panel)',
-                border: '1px solid var(--border-soft)',
-                color: 'var(--text-mid)', cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                fontSize: 12, fontWeight: 600,
-                fontFamily: 'inherit',
-              }}
+              title="Back"
+              aria-label="Back"
+              className="inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)] text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors"
+              style={{ width: 34, height: 34, cursor: 'pointer', flexShrink: 0 }}
             >
-              <ArrowLeft size={14} />
-              Areas
+              <ArrowLeft size={16} />
             </button>
             <div
               style={{
@@ -946,25 +1004,6 @@ const TopologyGraph: React.FC = () => {
             />
           </div>
 
-          <select
-            value={selectedArea}
-            onChange={e => setSelectedArea(e.target.value)}
-            style={{
-              background: 'var(--bg-panel)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: 8,
-              padding: '7px 12px',
-              fontSize: 12.5,
-              color: 'var(--text-hi)',
-              cursor: 'pointer',
-              outline: 'none',
-              fontFamily: 'inherit',
-              minWidth: 140,
-            }}
-          >
-            <option value="all">All Areas</option>
-            {availableAreas.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
 
           {(['all','online','partial','offline'] as const).map(st => {
             const active = filterStatus === st;

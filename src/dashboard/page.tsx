@@ -1,308 +1,334 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import Section from "./local-components/Section";
-import Filters from "./local-components/Filters";
-import OverviewStrip from "./local-components/OverviewStrip";
+import { ChevronRight, MapPin, Server, Wifi, WifiOff } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchAllDevices, fetchDeviceTypes, fetchDeviceStatistics } from "@/store/deviceSlice";
-import { fetchLocationsforMap, fetchLocationTypes } from "@/store/locationsSlice";
-import { fetchWorkers, fetchWorkerStats } from "@/store/workerSlice";
+import { fetchLocationsforMap, fetchLocationTypes, type Location } from "@/store/locationsSlice";
+import { fetchAllDevices } from "@/store/deviceSlice";
+import type { readDeviceType } from "@/contexts/read-Types";
+import { useOverviewMode, type OverviewMode } from "@/contexts/OverviewModeContext";
 
-type DashboardProps = {
-	isButtonClicked?: boolean;
-	setIsButtonClicked?: (value: boolean) => void;
+/* One aggregated row per area. Device counts are derived by joining the
+   devices list (location_id + is_reachable) onto each location's area —
+   the location records themselves return device_count = 0. */
+interface AreaSummaryRow {
+	area: string;
+	totalLocations: number;
+	onlineLocations: number;
+	offlineLocations: number;
+	totalDevices: number;
+	onlineDevices: number;
 }
 
-export default function Dashboard({ isButtonClicked }: DashboardProps) {
-	const dispatch = useAppDispatch();
-	const navigate = useNavigate();
-
-	const { devices: reduxDevices = [], deviceTypes = [], loading, deviceStatistics: reduxDevicesStatistics } =
-		useAppSelector(state => state.devices);
-	const { locations: reduxLocations = [], locationTypes = [] } = useAppSelector(state => state.locations);
-	const { workers: reduxWorkers = [] } = useAppSelector(state => state.workers);
-
-	useEffect(() => {
-		dispatch(fetchAllDevices());
-		dispatch(fetchDeviceTypes());
-		dispatch(fetchDeviceStatistics());
-		dispatch(fetchLocationsforMap());
-		dispatch(fetchLocationTypes());
-		dispatch(fetchWorkers({}));
-		dispatch(fetchWorkerStats());
-	}, [dispatch]);
-
-	const activeDevices   = Array.isArray(reduxDevices)   ? reduxDevices   : [];
-	const activeLocations = Array.isArray(reduxLocations) ? reduxLocations : [];
-	const activeWorkers   = Array.isArray(reduxWorkers)   ? reduxWorkers   : [];
-	const deviceStats = reduxDevicesStatistics || {
-		online_devices: 0, offline_devices: 0, active_devices: 0,
-		protocol_stats: {}, total_devices: 0, device_type_stats: {},
+function aggregateByArea(
+	locations: Location[],
+	devices: readDeviceType[]
+): AreaSummaryRow[] {
+	const areaByLocId = new Map<number, string>();
+	const acc = new Map<
+		string,
+		{ totalLoc: number; onlineLoc: number; offlineLoc: number; totalDev: number; onlineDev: number }
+	>();
+	const get = (area: string) => {
+		let v = acc.get(area);
+		if (!v) {
+			v = { totalLoc: 0, onlineLoc: 0, offlineLoc: 0, totalDev: 0, onlineDev: 0 };
+			acc.set(area, v);
+		}
+		return v;
 	};
 
-	// ── LIVE TOPOLOGY — areas aggregated from locations ─────────────────────
-	// NOTE: must run BEFORE any early returns to preserve hook order.
-	const liveTopologyAreas = useMemo(() => {
-		const byArea = new Map<string, { online: number; offline: number; partial: number; total: number }>();
-		for (const l of activeLocations) {
-			const key = (l.area || 'Unassigned').toString();
-			const cur = byArea.get(key) || { online: 0, offline: 0, partial: 0, total: 0 };
-			cur.total += 1;
-			if (l.status === 'online') cur.online += 1;
-			else if (l.status === 'offline') cur.offline += 1;
-			else if (l.status === 'partial') cur.partial += 1;
-			byArea.set(key, cur);
-		}
-		return Array.from(byArea.entries()).map(([area, s]) => ({ area, ...s }));
-	}, [activeLocations]);
+	for (const l of locations) {
+		const area = l.area || 'Unassigned';
+		areaByLocId.set(l.id, area);
+		const v = get(area);
+		v.totalLoc += 1;
+		if (l.status === 'online') v.onlineLoc += 1;
+		else if (l.status === 'offline') v.offlineLoc += 1;
+	}
 
-	if (loading) {
+	for (const d of devices) {
+		const area = areaByLocId.get(d.location_id);
+		if (!area) continue;
+		const v = get(area);
+		v.totalDev += 1;
+		if (d.is_reachable) v.onlineDev += 1;
+	}
+
+	return Array.from(acc.entries())
+		.map(([area, v]) => ({
+			area,
+			totalLocations: v.totalLoc,
+			onlineLocations: v.onlineLoc,
+			offlineLocations: v.offlineLoc,
+			totalDevices: v.totalDev,
+			onlineDevices: v.onlineDev,
+		}))
+		.sort((a, b) => a.area.localeCompare(b.area));
+}
+
+/* Pick the metric set the cards display, based on the header toggle. */
+interface AreaMetrics {
+	pct: number; // % online (devices or locations)
+	total: number;
+	online: number;
+	offline: number;
+	caption: string;
+	totalLabel: string;
+}
+function metricsFor(a: AreaSummaryRow, mode: OverviewMode): AreaMetrics {
+	if (mode === 'links') {
+		const total = a.totalLocations;
+		const online = a.onlineLocations;
+		return {
+			total,
+			online,
+			offline: a.offlineLocations,
+			pct: total > 0 ? Math.round((online / total) * 100) : 0,
+			caption: 'Locations Online',
+			totalLabel: 'Total',
+		};
+	}
+	const total = a.totalDevices;
+	const online = a.onlineDevices;
+	return {
+		total,
+		online,
+		offline: total - online,
+		pct: total > 0 ? Math.round((online / total) * 100) : 0,
+		caption: 'Devices Online',
+		totalLabel: 'Total ',
+	};
+}
+
+/* ─── Role helpers ──────────────────────────────────────────────────────
+   role === 'admin'  → can see every area (one card per area)
+   any other role    → that value IS the user's single area; show only it
+──────────────────────────────────────────────────────────────────────── */
+function isAdminRole(role?: string | null): boolean {
+	if (!role) return true; // no user (e.g. auth-bypass dev) → treat as admin
+	return role.trim().toLowerCase().includes('admin');
+}
+
+/* Card colour is driven purely by the active % online. */
+function accentFor(total: number, pct: number): string {
+	if (total === 0) return 'var(--text-dim)';
+	if (pct >= 80) return 'var(--status-online)';
+	if (pct >= 50) return 'var(--status-warning)';
+	return 'var(--status-offline)';
+}
+
+export default function Dashboard() {
+	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
+	const { mode } = useOverviewMode();
+
+	const { locations: reduxLocations = [], loading } = useAppSelector(state => state.locations);
+	const { devices: reduxDevices = [] } = useAppSelector(state => state.devices);
+	const user = useAppSelector(state => state.auth.user);
+
+	useEffect(() => {
+		dispatch(fetchLocationsforMap());
+		dispatch(fetchLocationTypes());
+		dispatch(fetchAllDevices());
+	}, [dispatch]);
+
+	const activeLocations = Array.isArray(reduxLocations) ? reduxLocations : [];
+	const activeDevices = Array.isArray(reduxDevices) ? reduxDevices : [];
+
+	// One row per area, with device + location counts.
+	const allAreas: AreaSummaryRow[] = useMemo(
+		() => aggregateByArea(activeLocations, activeDevices),
+		[activeLocations, activeDevices]
+	);
+
+	// Admin → all areas. Single-area user → only the card whose area
+	// matches their role (case-insensitive).
+	const admin = isAdminRole(user?.role);
+	const visibleAreas = useMemo(() => {
+		if (admin) return allAreas;
+		const myArea = (user?.role ?? '').trim().toLowerCase();
+		return allAreas.filter(a => a.area.trim().toLowerCase() === myArea);
+	}, [allAreas, admin, user?.role]);
+
+	const openArea = (area: string) =>
+		navigate(`/topology?area=${encodeURIComponent(area)}`);
+
+	if (loading && allAreas.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full w-full gap-3 fade-in">
 				<div
 					className="h-9 w-9 rounded-full border-2 spinner"
 					style={{ borderColor: 'rgba(34,211,238,0.25)', borderTopColor: 'var(--brand)' }}
 				/>
-				<span className="text-sm" style={{ color: 'var(--text-mid)' }}>Synchronising network state…</span>
+				<span className="text-sm" style={{ color: 'var(--text-mid)' }}>
+					Synchronising network state…
+				</span>
 			</div>
 		);
 	}
 
-	// ── DEVICES ─────────────────────────────────────────────────────────────
-	const onlineDevicesCount  = deviceStats.online_devices  || 0;
-	const offlineDevicesCount = deviceStats.offline_devices || 0;
-	const totalDevicesCount   = deviceStats.total_devices   || (onlineDevicesCount + offlineDevicesCount);
-
-	const deviceMetrics = { low: onlineDevicesCount, medium: 0, high: offlineDevicesCount };
-
-	// ── LOCATIONS ────────────────────────────────────────────────────────────
-	const onlineLocations   = activeLocations.filter(l => l.status === 'online');
-	const partialLocations  = activeLocations.filter(l => l.status === 'partial');
-	const offlineLocations  = activeLocations.filter(l => l.status === 'offline');
-
-	const locationMetrics = {
-		low:    onlineLocations.length,
-		medium: partialLocations.length,
-		high:   offlineLocations.length,
-	};
-
-	// ── AREAS / WORKERS ──────────────────────────────────────────────────────
-	const activeWorkersOnline = activeWorkers.filter(w => w.status === 'ONLINE' || w.status === 'active');
-	const offlineWorkersList  = activeWorkers.filter(w => !(w.status === 'ONLINE' || w.status === 'active'));
-
-	const workerMetrics = {
-		low:    activeWorkersOnline.length,
-		medium: 0,
-		high:   offlineWorkersList.length,
-	};
-
-	// ── Navigation helpers ───────────────────────────────────────────────────
-	const handleDeviceStatusClick = (status: 'unknown' | 'online' | 'offline') => {
-		if (status === 'online')       navigate('/devices?is_reachable=true');
-		else if (status === 'offline') navigate('/devices?is_reachable=false');
-		else                           navigate('/devices');
-	};
-	const handleLocationStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/locations?status=${encodeURIComponent(status)}`);
-	};
-	const handleWorkerStatusClick = (status: 'online' | 'offline' | 'unknown') => {
-		navigate(`/areas?status=${status === 'online' ? 'ONLINE' : 'offline'}`);
-	};
-
-	// ── Map data ─────────────────────────────────────────────────────────────
-	const devicesMapData = activeDevices
-		.map(d => {
-			const location = activeLocations.find(l => l.id === d.location_id);
-			if (!location) return null;
-			const isOnline = d.is_reachable;
-			return {
-				id: `device-${d.id}`,
-				name: d.display || d.hostname,
-				coordinates: [location.longitude, location.latitude] as [number, number],
-				value: isOnline ? 100 : 50,
-				category: isOnline ? ('green' as const) : ('red' as const),
-				popupData: {
-					indicatorColour: isOnline ? ('green' as const) : ('red' as const),
-					headerLeft:  { field: 'Device', value: d.display || d.hostname },
-					headerRight: { field: 'IP',     value: d.ip },
-					sideLabel:   { field: 'Status', value: isOnline ? 'Online' : 'Offline' },
-					data: [
-						{ field: 'Location',     value: location.name, colour: 'white' as const },
-						{ field: 'Last Updated', value: new Date(d.updated_at).toLocaleString(), colour: 'blue' as const },
-						{ field: 'Failures',     value: d.consecutive_failures.toString(), colour: d.consecutive_failures > 0 ? ('red' as const) : ('green' as const) },
-					],
-				},
-			};
-		})
-		.filter(item => item !== null);
-
-	const locationsMapData = activeLocations.map(l => {
-		const isOnline  = l.status === 'online';
-		const isUnknown = l.status === 'unknown';
-		let indicatorColour: 'green' | 'red';
-		let category: 'green' | 'red' | 'azul';
-		let value: number;
-		if (isOnline)       { indicatorColour = 'green'; category = 'green'; value = 100; }
-		else if (isUnknown) { indicatorColour = 'green'; category = 'azul';  value = 75;  }
-		else                { indicatorColour = 'red';   category = 'red';   value = 50;  }
-		return {
-			id: `location-${l.id}`,
-			name: l.name,
-			coordinates: [l.longitude, l.latitude] as [number, number],
-			value,
-			category,
-			popupData: {
-				indicatorColour,
-				headerLeft:  { field: 'Location', value: l.name },
-				headerRight: { field: 'Project',  value: l.project || 'N/A' },
-				sideLabel:   { field: 'Area',     value: l.area },
-				data: [
-					{ field: 'Status', value: l.status.charAt(0).toUpperCase() + l.status.slice(1), colour: indicatorColour },
-					{ field: 'Type',   value: l.location_type_id.toString(), colour: 'blue' as const },
-				],
-			},
-		};
-	});
-
-	const workersMapData = activeWorkers
-		.map(w => {
-			const workerLocation = activeLocations[0];
-			if (!workerLocation) return null;
-			const isOnline = w.status === 'ONLINE' || w.status === 'active';
-			return {
-				id: `worker-${w.id}`,
-				name: w.name,
-				coordinates: [workerLocation.longitude, workerLocation.latitude] as [number, number],
-				value: isOnline ? 100 : 50,
-				category: isOnline ? ('green' as const) : ('red' as const),
-				popupData: {
-					indicatorColour: isOnline ? ('green' as const) : ('red' as const),
-					headerLeft:  { field: 'Worker', value: w.name },
-					headerRight: { field: 'IP',     value: w.ip_address },
-					sideLabel:   { field: 'Status', value: w.status },
-					data: [
-						{ field: 'Last Seen',   value: new Date(w.last_seen).toLocaleString(), colour: 'white' as const },
-						{ field: 'Max Devices', value: w.max_devices.toString(), colour: 'blue' as const },
-						{ field: 'Approval',    value: w.approval_status, colour: w.approval_status === 'approved' ? ('green' as const) : ('red' as const) },
-					],
-				},
-			};
-		})
-		.filter(item => item !== null);
-
-	// ── Health score (network) ───────────────────────────────────────────────
-	const healthScore = totalDevicesCount
-		? Math.round((onlineDevicesCount / totalDevicesCount) * 100)
-		: 100;
-
 	return (
-		<div className="flex flex-col gap-4 p-4 w-full min-h-full fade-in">
-			{/* Filters drawer (legacy — surfaced when the parent toggles it) */}
-			<div
-				className={`transition-all duration-500 ease-in-out overflow-hidden ${
-					isButtonClicked ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-				}`}
-			>
-				<Filters
-					fromDate={"2024-01-01"}
-					toDate={"2024-12-31"}
-					onFromDateChange={() => {}}
-					onToDateChange={() => {}}
-					selectedLocationType="1"
-					onLocationTypeChange={() => {}}
-					selectedDeviceType="1"
-					onDeviceTypeChange={() => {}}
-					selectedWorker="1"
-					onWorkerChange={() => {}}
-					selectedLocation="1"
-					onLocationChange={() => {}}
-					deviceTypes={[{ value: "1", label: "Device Type A" }, { value: "2", label: "Device Type B" }]}
-					locationTypes={[{ value: "1", label: "Location Type A" }, { value: "2", label: "Location Type B" }]}
-					locations={[{ value: "1", label: "Location A" }, { value: "2", label: "Location B" }]}
-					workers={[{ value: "1", label: "Worker John" }, { value: "2", label: "Worker Jane" }]}
-				/>
+		<div
+			className="flex flex-col w-full min-h-full fade-in"
+			style={{ background: 'var(--bg-app)', color: 'var(--text-hi)' }}
+		>
+			{/* ── Area card grid ─────────────────────────────────────── */}
+			<div className="flex-1 px-6 py-6">
+				{visibleAreas.length === 0 ? (
+					<div
+						className="flex flex-col items-center justify-center gap-3 py-24"
+						style={{ color: 'var(--text-lo)' }}
+					>
+						<MapPin size={42} style={{ opacity: 0.35 }} />
+						<p className="text-sm">
+							{admin
+								? 'No areas available yet.'
+								: `No area assigned for "${user?.role}".`}
+						</p>
+					</div>
+				) : (
+					<div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+						{visibleAreas.map(a => {
+							const m = metricsFor(a, mode);
+							const accent = accentFor(m.total, m.pct);
+							return (
+								<div
+									key={a.area}
+									role="button"
+									tabIndex={0}
+									onClick={() => openArea(a.area)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											openArea(a.area);
+										}
+									}}
+									className="group relative rounded-xl overflow-hidden text-left transition-all hover:-translate-y-0.5 stagger-item"
+									style={{
+										background:
+											'linear-gradient(180deg, rgba(30,41,59,0.55) 0%, rgba(15,23,42,0.92) 100%)',
+										border: `1px solid color-mix(in oklab, ${accent} 35%, var(--border-soft))`,
+										boxShadow: `0 0 0 1px color-mix(in oklab, ${accent} 8%, transparent), var(--shadow-card)`,
+										minHeight: 110,
+										cursor: 'pointer',
+									}}
+								>
+									<span
+										aria-hidden
+										className="absolute top-0 left-0 right-0"
+										style={{
+											height: 3,
+											background: `linear-gradient(90deg, ${accent}, transparent)`,
+										}}
+									/>
+									<span
+										aria-hidden
+										className="pointer-events-none absolute inset-0"
+										style={{
+											background: `radial-gradient(460px 130px at 100% 0%, color-mix(in oklab, ${accent} 14%, transparent), transparent 65%)`,
+										}}
+									/>
+
+									<div className="relative h-full flex flex-col p-3">
+										{/* Top row: status pill (left) · AREA NAME (right) */}
+										<div className="flex items-center">
+											<span
+												className="flex-1 min-w-0 text-base font-bold tracking-tight truncate text-left"
+												style={{ color: 'var(--text-hi)' }}
+												title={a.area}
+											>
+												{a.area}
+											</span>
+										</div>
+
+										{/* Center: % online — the focal point */}
+										<div className="flex-1 flex flex-col items-center justify-center py-1">
+											<span
+												className="text-3xl font-bold tabular-nums leading-none"
+												style={{ color: accent }}
+											>
+												{m.pct}
+												<span className="text-base align-top">%</span>
+											</span>
+											<span
+												className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
+												style={{ color: 'var(--text-lo)' }}
+											>
+												{m.caption}
+											</span>
+										</div>
+
+										{/* Footer stats */}
+										<div
+											className="grid grid-cols-3 gap-2 pt-2"
+											style={{ borderTop: '1px solid var(--border-soft)' }}
+										>
+											{[
+												{
+													icon:
+														mode === 'links' ? (
+															<MapPin size={13} />
+														) : (
+															<Server size={13} />
+														),
+													label: m.totalLabel,
+													value: m.total,
+													color: 'var(--text-hi)',
+												},
+												{
+													icon: <Wifi size={13} />,
+													label: 'Online',
+													value: m.online,
+													color: 'var(--status-online)',
+												},
+												{
+													icon: <WifiOff size={13} />,
+													label: 'Offline',
+													value: m.offline,
+													color: 'var(--status-offline)',
+												},
+											].map(stat => (
+												<div
+													key={stat.label}
+													className="flex flex-col items-center gap-0.5"
+												>
+													<span style={{ color: 'var(--text-lo)' }}>{stat.icon}</span>
+													<span
+														className="text-sm font-bold leading-none tabular-nums"
+														style={{ color: stat.color }}
+													>
+														{stat.value}
+													</span>
+													<span
+														className="text-[9px] font-semibold uppercase tracking-[0.1em]"
+														style={{ color: 'var(--text-lo)' }}
+													>
+														{stat.label}
+													</span>
+												</div>
+											))}
+										</div>
+
+										{/* Hover CTA */}
+										<div
+											className="absolute inset-x-0 bottom-0 px-5 py-2 flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] opacity-0 group-hover:opacity-100 transition-opacity"
+											style={{
+												background:
+													'linear-gradient(180deg, transparent, rgba(6,182,212,0.16))',
+												color: 'var(--brand)',
+											}}
+										>
+											Open Topology
+											<ChevronRight size={13} />
+										</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				)}
 			</div>
-
-			{/* Top KPI strip */}
-			<OverviewStrip
-				devicesTotal={totalDevicesCount}
-				devicesOnline={onlineDevicesCount}
-				locationsTotal={activeLocations.length}
-				locationsOffline={offlineLocations.length}
-				areasOnline={activeWorkersOnline.length}
-				areasTotal={activeWorkers.length}
-				healthScore={healthScore}
-				onDevicesClick={() => navigate('/devices')}
-				onLocationsClick={() => navigate('/locations')}
-				onAreasClick={() => navigate('/areas')}
-			/>
-
-			{/* Sections */}
-			<Section
-				title="Devices"
-				mapData={devicesMapData}
-				metricsData={{
-					metric1: {
-						title: "Device Status",
-						data: deviceMetrics,
-						labels: { low: "Online", medium: "", high: "Offline" },
-						onStatusClick: handleDeviceStatusClick,
-					},
-					reliability: {
-						devices: activeDevices.map(d => ({
-							id: d.id,
-							is_reachable: d.is_reachable,
-							consecutive_failures: d.consecutive_failures,
-						})),
-					},
-					liveTopology: {
-						areas: liveTopologyAreas,
-						totalDevices: totalDevicesCount,
-						onlineDevices: onlineDevicesCount,
-					},
-				}}
-			/>
-
-			<Section
-				title="Locations"
-				mapData={locationsMapData}
-				metricsData={{
-					metric1: {
-						title: "Location Status",
-						data: locationMetrics,
-						labels: { low: "Online", medium: "Partial", high: "Offline" },
-						onStatusClick: handleLocationStatusClick,
-					},
-					trend: {
-						title: "Location Pulse",
-						total: activeLocations.length,
-						online: onlineLocations.length,
-						offline: offlineLocations.length,
-						partial: partialLocations.length,
-					},
-				}}
-			/>
-
-			<Section
-				title="Areas"
-				mapData={workersMapData}
-				metricsData={{
-					metric1: {
-						title: "Area Status",
-						data: workerMetrics,
-						labels: { low: "ONLINE", medium: "", high: "OFFLINE" },
-						onStatusClick: handleWorkerStatusClick,
-					},
-					trend: {
-						title: "Area Pulse",
-						total: activeWorkers.length,
-						online: activeWorkersOnline.length,
-						offline: offlineWorkersList.length,
-					},
-				}}
-			/>
 		</div>
 	);
 }

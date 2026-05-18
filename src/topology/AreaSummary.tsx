@@ -15,7 +15,7 @@ interface Location {
   name: string;
   parent_id: number | null;
   status: 'online' | 'offline' | 'unknown' | 'partial';
-  project: string;
+  project?: string;
   area: string;
   description?: string;
   device_count?: number;
@@ -32,6 +32,18 @@ interface AreaSummaryProps {
   onRefresh?: () => void;
   loading?: boolean;
   lastUpdated?: Date | null;
+}
+
+/* Online-% → card colour.
+   100 green · ≥80 dark green · ≥60 amber (orange→green) ·
+   ≥50 orange · ≥40 orange→red · <40 red. */
+function onlinePctColor(pct: number): string {
+  if (pct >= 100) return '#22C55E'; // green
+  if (pct >= 80)  return '#15803D'; // dark green
+  if (pct >= 60)  return '#EAB308'; // amber (orange→green)
+  if (pct >= 50)  return '#F59E0B'; // orange
+  if (pct >= 40)  return '#F97316'; // orange→red
+  return '#EF4444';                 // red
 }
 
 const AreaSummary: React.FC<AreaSummaryProps> = ({
@@ -353,7 +365,6 @@ const AreaSummary: React.FC<AreaSummaryProps> = ({
                   onClose={() => setSelectedArea(null)}
                   onOpenTopology={() => onAreaSelect(selected.area)}
                   onOpenCluster={onOpenCluster ? () => onOpenCluster(selected.area) : undefined}
-                  accent={accentForArea(selected)}
                 />
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center" style={{ color: 'var(--text-lo)' }}>
@@ -432,7 +443,6 @@ const AreaSummary: React.FC<AreaSummaryProps> = ({
                     marker={s}
                     onOpenTopology={() => onAreaSelect(s.area)}
                     onOpenCluster={onOpenCluster ? () => onOpenCluster(s.area) : undefined}
-                    accent={accentForArea(s)}
                   />
                 ))}
               </div>
@@ -447,17 +457,14 @@ const AreaSummary: React.FC<AreaSummaryProps> = ({
 /* ─── Side detail panel ─────────────────────────────── */
 const AreaDetailPanel: React.FC<{
   area: AreaMarker;
-  accent: string;
   onClose: () => void;
   onOpenTopology: () => void;
   onOpenCluster?: () => void;
-}> = ({ area, accent, onOpenTopology, onOpenCluster }) => {
-  const hc =
-    area.avgHealth >= 80
-      ? 'var(--status-online)'
-      : area.avgHealth >= 50
-      ? 'var(--status-warning)'
-      : 'var(--status-offline)';
+}> = ({ area, onOpenTopology, onOpenCluster }) => {
+  const onlinePct = area.totalDevices > 0
+    ? Math.round((area.onlineDevices / area.totalDevices) * 100)
+    : 0;
+  const box = onlinePctColor(onlinePct);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -470,9 +477,9 @@ const AreaDetailPanel: React.FC<{
             className="flex items-center justify-center rounded-lg shrink-0"
             style={{
               width: 38, height: 38,
-              background: `color-mix(in oklab, ${accent} 14%, transparent)`,
-              color: accent,
-              border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+              background: `color-mix(in oklab, ${box} 16%, transparent)`,
+              color: box,
+              border: `1px solid color-mix(in oklab, ${box} 32%, transparent)`,
             }}
           >
             <MapPin size={18} />
@@ -491,32 +498,32 @@ const AreaDetailPanel: React.FC<{
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] shrink-0"
             style={{
-              background: `color-mix(in oklab, ${accent} 12%, transparent)`,
-              color: accent,
-              border: `1px solid color-mix(in oklab, ${accent} 32%, transparent)`,
+              background: `color-mix(in oklab, ${box} 14%, transparent)`,
+              color: box,
+              border: `1px solid color-mix(in oklab, ${box} 34%, transparent)`,
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+              style={{ background: box, boxShadow: `0 0 6px ${box}` }}
             />
-            {area.offline > 0 ? 'Critical' : area.partial > 0 ? 'Degraded' : area.online > 0 ? 'Healthy' : 'Idle'}
+            {onlinePct}% online
           </span>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-        {/* Health bar */}
+        {/* Devices online bar */}
         <section>
           <div className="flex items-center justify-between mb-1.5">
             <span
               className="text-[10px] font-semibold uppercase tracking-[0.14em]"
               style={{ color: 'var(--text-lo)' }}
             >
-              Network Health
+              Devices Online
             </span>
-            <span className="text-base font-bold tabular-nums" style={{ color: hc }}>
-              {area.avgHealth}%
+            <span className="text-base font-bold tabular-nums" style={{ color: box }}>
+              {onlinePct}%
             </span>
           </div>
           <div
@@ -526,23 +533,24 @@ const AreaDetailPanel: React.FC<{
             <div
               className="h-full rounded-full transition-all"
               style={{
-                width: `${area.avgHealth}%`,
-                background: hc,
-                boxShadow: `0 0 10px ${hc}66`,
+                width: `${onlinePct}%`,
+                background: box,
+                boxShadow: `0 0 10px ${box}66`,
               }}
             />
           </div>
         </section>
 
-        {/* Devices triple */}
+        {/* Devices quad — totals */}
         <section
-          className="grid grid-cols-3 gap-2 rounded-lg p-3"
+          className="grid grid-cols-4 gap-2 rounded-lg p-3"
           style={{
             background: 'rgba(15,23,42,0.6)',
             border: '1px solid var(--border-soft)',
           }}
         >
           {[
+            { label: 'Locations', value: area.total, color: 'var(--text-hi)' },
             { label: 'Devices', value: area.totalDevices, color: 'var(--text-hi)' },
             { label: 'Online', value: area.onlineDevices, color: 'var(--status-online)' },
             { label: 'Offline', value: area.offlineDevices, color: 'var(--status-offline)' },
@@ -552,7 +560,7 @@ const AreaDetailPanel: React.FC<{
                 {c.value}
               </div>
               <div
-                className="text-[9px] font-semibold uppercase tracking-[0.14em] mt-1"
+                className="text-[9px] font-semibold uppercase tracking-[0.12em] mt-1"
                 style={{ color: 'var(--text-lo)' }}
               >
                 {c.label}
@@ -650,36 +658,33 @@ const AreaDetailPanel: React.FC<{
 /* ─── Grid card ───────────────────────────────── */
 const AreaCard: React.FC<{
   marker: AreaMarker;
-  accent: string;
   onOpenTopology: () => void;
   onOpenCluster?: () => void;
-}> = ({ marker: s, accent, onOpenTopology, onOpenCluster }) => {
-  const hc =
-    s.avgHealth >= 80
-      ? 'var(--status-online)'
-      : s.avgHealth >= 50
-      ? 'var(--status-warning)'
-      : 'var(--status-offline)';
+}> = ({ marker: s, onOpenTopology, onOpenCluster }) => {
+  const onlinePct = s.totalDevices > 0
+    ? Math.round((s.onlineDevices / s.totalDevices) * 100)
+    : 0;
+  const box = onlinePctColor(onlinePct);
 
   return (
     <div
       className="group relative rounded-xl overflow-hidden transition-all stagger-item"
       style={{
-        background: 'linear-gradient(180deg, rgba(30,41,59,0.55) 0%, rgba(15,23,42,0.92) 100%)',
-        border: '1px solid var(--border-soft)',
+        background: `linear-gradient(180deg, color-mix(in oklab, ${box} 22%, rgba(15,23,42,0.92)) 0%, rgba(15,23,42,0.96) 100%)`,
+        border: `1px solid color-mix(in oklab, ${box} 45%, var(--border-soft))`,
         boxShadow: 'var(--shadow-card)',
       }}
     >
       <span
         aria-hidden
         className="absolute top-0 left-0 right-0"
-        style={{ height: 2, background: `linear-gradient(90deg, ${accent}, transparent)` }}
+        style={{ height: 3, background: box }}
       />
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(420px 90px at 100% 0%, color-mix(in oklab, ${accent} 14%, transparent), transparent 65%)`,
+          background: `radial-gradient(420px 90px at 100% 0%, color-mix(in oklab, ${box} 20%, transparent), transparent 65%)`,
         }}
       />
 
@@ -690,9 +695,9 @@ const AreaCard: React.FC<{
               className="flex items-center justify-center rounded-md shrink-0"
               style={{
                 width: 30, height: 30,
-                background: `color-mix(in oklab, ${accent} 14%, transparent)`,
-                color: accent,
-                border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+                background: `color-mix(in oklab, ${box} 16%, transparent)`,
+                color: box,
+                border: `1px solid color-mix(in oklab, ${box} 32%, transparent)`,
               }}
             >
               <MapPin size={15} />
@@ -712,27 +717,28 @@ const AreaCard: React.FC<{
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] shrink-0"
             style={{
-              background: `color-mix(in oklab, ${accent} 12%, transparent)`,
-              color: accent,
-              border: `1px solid color-mix(in oklab, ${accent} 32%, transparent)`,
+              background: `color-mix(in oklab, ${box} 14%, transparent)`,
+              color: box,
+              border: `1px solid color-mix(in oklab, ${box} 34%, transparent)`,
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: accent, boxShadow: `0 0 6px ${accent}` }}
+              style={{ background: box, boxShadow: `0 0 6px ${box}` }}
             />
-            {s.offline > 0 ? 'Critical' : s.partial > 0 ? 'Degraded' : s.online > 0 ? 'Healthy' : 'Idle'}
+            {onlinePct}% online
           </span>
         </div>
 
         <div
-          className="grid grid-cols-3 gap-2 rounded-lg p-2.5"
+          className="grid grid-cols-4 gap-2 rounded-lg p-2.5"
           style={{
             background: 'rgba(15,23,42,0.6)',
             border: '1px solid var(--border-soft)',
           }}
         >
           {[
+            { label: 'Locations', value: s.total, color: 'var(--text-hi)' },
             { label: 'Devices', value: s.totalDevices, color: 'var(--text-hi)' },
             { label: 'Online', value: s.onlineDevices, color: 'var(--status-online)' },
             { label: 'Offline', value: s.offlineDevices, color: 'var(--status-offline)' },
@@ -742,7 +748,7 @@ const AreaCard: React.FC<{
                 {cell.value}
               </div>
               <div
-                className="text-[9px] font-semibold uppercase tracking-[0.14em] mt-1"
+                className="text-[9px] font-semibold uppercase tracking-[0.12em] mt-1"
                 style={{ color: 'var(--text-lo)' }}
               >
                 {cell.label}
@@ -757,19 +763,19 @@ const AreaCard: React.FC<{
               className="text-[10px] font-semibold uppercase tracking-[0.14em]"
               style={{ color: 'var(--text-lo)' }}
             >
-              Network Health
+              Devices Online
             </span>
-            <span className="text-xs font-bold tabular-nums" style={{ color: hc }}>
-              {s.avgHealth}%
+            <span className="text-xs font-bold tabular-nums" style={{ color: box }}>
+              {onlinePct}%
             </span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(148,163,184,0.1)' }}>
             <div
               className="h-full rounded-full transition-all"
               style={{
-                width: `${s.avgHealth}%`,
-                background: hc,
-                boxShadow: `0 0 10px ${hc}66`,
+                width: `${onlinePct}%`,
+                background: box,
+                boxShadow: `0 0 10px ${box}66`,
               }}
             />
           </div>

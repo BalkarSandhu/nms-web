@@ -3,6 +3,7 @@ import authReducer from './authSlice';
 import deviceReducer from './deviceSlice';
 import locationReducer from './locationsSlice';
 import workerReducer from './workerSlice';
+import servicesReducer from './servicesSlice';
 
 // Middleware to persist auth state to localStorage
 const localStorageMiddleware = (store: any) => (next: any) => (action: any) => {
@@ -42,6 +43,7 @@ export const store = configureStore({
     devices: deviceReducer,
     locations: locationReducer,
     workers: workerReducer,
+    services: servicesReducer,
   },
   preloadedState: {
     auth: loadPersistedAuthState(),

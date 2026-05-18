@@ -1,16 +1,9 @@
 import React from "react"
 
+import { ChevronsUpDown, Check, X, FilterX, Search } from "lucide-react"
 
-//-- icons
-import { ChevronsUpDown, Check, X, FilterX } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-
-// If you have a utility for classNames, import it. Otherwise, use 'classnames' package.
-import { cn } from "@/lib/utils" // Adjust path if needed
-
-
-//-- import ShadCN components
-import { Button } from "@/components/ui/button"
 import {
     Command,
     CommandEmpty,
@@ -25,7 +18,6 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 
-
 // Filter configuration type
 export type FilterConfig = {
     label: string,
@@ -33,80 +25,79 @@ export type FilterConfig = {
     options: { label: string, value: string }[]
 };
 
-// Props type for LocationsFilters
 export type LocationsFiltersProps = {
     filterConfigs?: FilterConfig[],
     onFiltersChange?: (filters: Record<string, string>) => void,
-    initialFilters?: Record<string, string>
+    initialFilters?: Record<string, string>,
+    searchPlaceholder?: string,
+    trailing?: React.ReactNode,
 };
 
-// Sample data for demonstration
-const sampleFilterConfigs: FilterConfig[] = [
-    {
-        label: "Status",
-        key: "status",
-        options: [
-            { label: "Active", value: "active" },
-            { label: "Inactive", value: "inactive" },
-            { label: "Pending", value: "pending" },
-            { label: "Maintenance", value: "maintenance" },
-        ],
-    },
-    {
-        label: "Type",
-        key: "type",
-        options: [
-            { label: "Router", value: "router" },
-            { label: "Switch", value: "switch" },
-            { label: "Firewall", value: "firewall" },
-            { label: "Access Point", value: "access_point" },
-        ],
-    },
-    {
-        label: "Region",
-        key: "region",
-        options: [
-            { label: "North America", value: "na" },
-            { label: "Europe", value: "eu" },
-            { label: "Asia Pacific", value: "apac" },
-            { label: "South America", value: "sa" },
-        ],
-    },
-];
+// Reserved key for the free-text search box.
+const SEARCH_KEY = "search";
 
-export default function LocationsFilters({ 
-    filterConfigs = sampleFilterConfigs, 
+export default function TableFilters({
+    filterConfigs = [],
     onFiltersChange,
-    initialFilters = {}
+    initialFilters = {},
+    searchPlaceholder = "Search…",
+    trailing,
 }: LocationsFiltersProps) {
-    // State to manage all filter values
     const [filters, setFilters] = React.useState<Record<string, string>>(initialFilters);
 
-    // Update parent component when filters change
     React.useEffect(() => {
-        if (onFiltersChange) {
-            onFiltersChange(filters);
-        }
+        onFiltersChange?.(filters);
     }, [filters, onFiltersChange]);
 
-    // Update a specific filter
     const updateFilter = (key: string, value: string) => {
-        setFilters(prev => ({
-            ...prev,
-            [key]: value
-        }));
+        setFilters(prev => ({ ...prev, [key]: value }));
     };
 
-    // Clear all filters
+    // Clear only the user-facing dropdown filters and the search box.
+    // Structural keys (e.g. the area scope coming from the URL) are kept,
+    // so clearing never re-surfaces an "area" filter.
     const clearAllFilters = () => {
-        setFilters({});
+        setFilters(prev => {
+            const next = { ...prev };
+            filterConfigs.forEach(c => { delete next[c.key]; });
+            delete next[SEARCH_KEY];
+            return next;
+        });
     };
 
-    // Check if any filters are active
-    const hasActiveFilters = Object.values(filters).some(value => value !== "");
+    const activeCount = filterConfigs.filter(c => filters[c.key]).length;
+    const searchValue = filters[SEARCH_KEY] || "";
+    const showClear = activeCount > 0 || searchValue !== "";
 
     return (
         <div className="flex items-center gap-2 px-2 flex-wrap">
+            {/* Free-text search */}
+            <div
+                className="flex items-center gap-2 h-8 px-3 rounded-md"
+                style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-soft)' }}
+            >
+                <Search className="size-3.5" style={{ color: 'var(--text-dim)' }} />
+                <input
+                    type="text"
+                    value={searchValue}
+                    onChange={e => updateFilter(SEARCH_KEY, e.target.value)}
+                    placeholder={searchPlaceholder}
+                    className="bg-transparent outline-none text-sm w-44 md:w-56 placeholder:text-[var(--text-dim)]"
+                    style={{ color: 'var(--text-hi)' }}
+                />
+                {searchValue && (
+                    <button
+                        type="button"
+                        onClick={() => updateFilter(SEARCH_KEY, "")}
+                        aria-label="Clear search"
+                        className="flex items-center justify-center rounded-full p-0.5 transition-colors"
+                        style={{ color: 'var(--text-lo)' }}
+                    >
+                        <X className="size-3.5" />
+                    </button>
+                )}
+            </div>
+
             {filterConfigs.map((config) => (
                 <FilterComboBox
                     key={config.key}
@@ -116,31 +107,36 @@ export default function LocationsFilters({
                     filterOptions={config.options}
                 />
             ))}
-            
-            {/* Clear all filters button */}
-            {hasActiveFilters && (
-                <Button
-                    variant="ghost"
-                    size="sm"
+
+            {showClear && (
+                <button
+                    type="button"
                     onClick={clearAllFilters}
-                    className="h-8 px-2 text-sm text-gray-600 hover:text-gray-900"
+                    className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md text-sm transition-colors"
+                    style={{
+                        background: 'var(--bg-panel)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text-mid)',
+                    }}
                 >
-                    <FilterX className="size-4 mr-1" />
-                    Clear All
-                </Button>
+                    <FilterX className="size-4" />
+                    Clear
+                </button>
             )}
-            
-            {/* Active filters count */}
-            {hasActiveFilters && (
-                <span className="text-sm text-gray-500 ml-2">
-                    {Object.values(filters).filter(v => v).length} filter{Object.values(filters).filter(v => v).length !== 1 ? 's' : ''} active
+
+            {activeCount > 0 && (
+                <span className="text-xs" style={{ color: 'var(--text-lo)' }}>
+                    {activeCount} filter{activeCount !== 1 ? 's' : ''} active
                 </span>
+            )}
+
+            {trailing && (
+                <div className="ml-auto flex items-center gap-2">{trailing}</div>
             )}
         </div>
     );
 }
 
-// FilterComboBox as a React component
 type FilterComboBoxProps = {
     label: string,
     filterValue: string,
@@ -151,37 +147,36 @@ type FilterComboBoxProps = {
 function FilterComboBox({ label, filterValue, setFilterValue, filterOptions }: FilterComboBoxProps) {
     const [open, setOpen] = React.useState(false);
     const [search, setSearch] = React.useState("");
-    
+    const active = !!filterValue;
+
     const filteredOptions = filterOptions.filter(option =>
-        option.label && option.label.toLowerCase().includes(search.toLowerCase())
+        option.label?.toLowerCase().includes(search.toLowerCase())
     );
-    
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button
-                    className={cn(
-                        "flex items-center px-3 gap-2 border-2 rounded-[20px] min-w-[120px] h-8 transition-all duration-200",
-                        filterValue
-                            ? "bg-blue-50 border-blue-400 text-blue-700"
-                            : "bg-white border-gray-300 text-gray-700 hover:border-gray-400",
-                        open && "ring-2 ring-blue-200 border-blue-500"
-                    )}
                     type="button"
                     aria-label={`Filter by ${label}`}
-                    tabIndex={0}
+                    className="flex items-center px-3 gap-2 rounded-md min-w-[120px] h-8 text-sm font-medium transition-colors"
+                    style={{
+                        background: active ? 'var(--brand-soft)' : 'var(--bg-panel)',
+                        border: `1px solid ${active ? 'var(--border-brand)' : 'var(--border-soft)'}`,
+                        color: active ? 'var(--brand)' : 'var(--text-mid)',
+                    }}
                 >
-                    <span className="truncate text-[14px] font-medium flex-1 text-left">
-                        {filterValue
+                    <span className="truncate flex-1 text-left">
+                        {active
                             ? filterOptions.find(o => o.value === filterValue)?.label
                             : label}
                     </span>
-                    {filterValue ? (
+                    {active ? (
                         <span
                             role="button"
                             tabIndex={0}
                             aria-label={`Clear ${label} filter`}
-                            className="flex items-center justify-center rounded-full hover:bg-blue-200 focus:bg-blue-300 transition-colors p-0.5"
+                            className="flex items-center justify-center rounded-full p-0.5"
                             onClick={e => {
                                 e.stopPropagation();
                                 setFilterValue("");
@@ -197,14 +192,22 @@ function FilterComboBox({ label, filterValue, setFilterValue, filterOptions }: F
                             <X className="size-3.5 cursor-pointer" />
                         </span>
                     ) : (
-                        <ChevronsUpDown className="size-4 text-gray-500" />
+                        <ChevronsUpDown className="size-4" style={{ color: 'var(--text-dim)' }} />
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-[220px] p-0" align="start">
-                <Command>
+            <PopoverContent
+                className="w-[220px] p-0"
+                align="start"
+                style={{
+                    background: 'var(--bg-panel)',
+                    border: '1px solid var(--border-soft)',
+                    color: 'var(--text-hi)',
+                }}
+            >
+                <Command style={{ background: 'transparent', color: 'var(--text-hi)' }}>
                     <CommandInput
-                        placeholder={`Search ${label.toLowerCase()}...`}
+                        placeholder={`Search ${label.toLowerCase()}…`}
                         className="h-9"
                         value={search}
                         onValueChange={setSearch}
@@ -221,17 +224,15 @@ function FilterComboBox({ label, filterValue, setFilterValue, filterOptions }: F
                                         setOpen(false);
                                         setSearch("");
                                     }}
-                                    className={cn(
-                                        "flex items-center cursor-pointer",
-                                        filterValue === option.value && "bg-blue-50 text-blue-700"
-                                    )}
+                                    className="flex items-center cursor-pointer"
                                 >
                                     <span className="truncate flex-1">{option.label}</span>
                                     <Check
                                         className={cn(
                                             "ml-2 size-4",
-                                            filterValue === option.value ? "opacity-100 text-blue-600" : "opacity-0"
+                                            filterValue === option.value ? "opacity-100" : "opacity-0"
                                         )}
+                                        style={{ color: 'var(--brand)' }}
                                     />
                                 </CommandItem>
                             ))}

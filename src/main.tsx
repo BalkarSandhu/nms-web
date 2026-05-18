@@ -5,12 +5,18 @@ import { Provider } from 'react-redux'
 import { store } from './store/store'
 import './index.css'
 import App from './App.tsx'
+import { OverviewModeProvider } from './contexts/OverviewModeContext'
+import { AreaViewProvider } from './contexts/AreaViewContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <OverviewModeProvider>
+          <AreaViewProvider>
+            <App />
+          </AreaViewProvider>
+        </OverviewModeProvider>
       </BrowserRouter>
     </Provider>
   </StrictMode>,

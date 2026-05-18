@@ -5,20 +5,19 @@ import './App.css'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/app-sidebar'
 import { Separator } from '@/components/ui/separator'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
 import "@/index.css";
-import { Activity, Bell, Search } from 'lucide-react';
+import { Server, Link2, LogOut } from 'lucide-react';
+import { useOverviewMode, type OverviewMode } from '@/contexts/OverviewModeContext'
+import { useAreaView } from '@/contexts/AreaViewContext'
+import { useAppDispatch } from '@/store/hooks'
+import { logout } from '@/store/authSlice'
 
 import { LoadingPage } from './components/loading-screen'
 import { getAuthToken, clearAuthToken, subscribeToAuthChanges, extractTokenFromUrl, completeUrlTokenAuth } from '@/lib/auth'
 
 import Dashboard from '@/dashboard/page'
+import MetricsDashboard from '@/dashboard/MetricsDashboard'
+import AreaDetailPage from '@/areas/AreaDetailPage'
 import RegisterPage from '@/register/page'
 import LoginPage from './login/page'
 import DevicesPage from './devices/page'
@@ -30,12 +29,15 @@ import LocationsPage from './locations/page'
 import WorkersPage from './workers/page'
 import DeviceInfoPage from './device-info/page'
 import LocationDetailPage from './locations/locationDetailPage'
-import ExpertSystem from '@/expert-system/ExpertSystem'
+import WorkerDetailPage from './workers/WorkersDetailPage'
 import TopologyPage from './topology/page'
+import ServicesPage from './services/page'
 import HistoryPage from './history/page'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/': 'Network Overview',
+  '/': 'Dashboard',
+  '/area-detail': 'Area Details',
+  '/metrics': 'Network Metrics',
   '/devices': 'Devices',
   '/locations': 'Locations',
   '/areas': 'Areas',
@@ -44,6 +46,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/topology': 'Topology',
   '/history': 'History',
   '/reports': 'Reports',
+  '/services':'Services',
   '/reports/devices': 'Device Reports',
   '/reports/locations': 'Location Reports',
   '/reports/workers': 'Area Reports',
@@ -51,20 +54,102 @@ const PAGE_TITLES: Record<string, string> = {
   '/login': 'Login',
 }
 
-function LiveClock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(id)
-  }, [])
+function ModeToggle() {
+  const { mode, setMode } = useOverviewMode()
+  const opts: { key: OverviewMode; label: string; icon: React.ReactNode }[] = [
+    { key: 'devices', label: 'Devices', icon: <Server className="size-3.5" /> },
+    { key: 'links', label: 'Links', icon: <Link2 className="size-3.5" /> },
+  ]
   return (
-    <span className="font-mono text-xs tabular-nums text-[var(--text-mid)]">
-      {now.toUTCString().slice(17, 25)} UTC
-    </span>
+    <div role="radiogroup" aria-label="Overview mode" className="flex items-center gap-4">
+      {opts.map(o => {
+        const active = mode === o.key
+        return (
+          <label
+            key={o.key}
+            className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold select-none"
+            style={{
+              color: active ? 'var(--brand)' : 'var(--text-mid)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            <input
+              type="radio"
+              name="overview-mode"
+              value={o.key}
+              checked={active}
+              onChange={() => setMode(o.key)}
+              className="size-3.5 cursor-pointer"
+              style={{ accentColor: 'var(--brand)' }}
+            />
+            {o.icon}
+            {o.label}
+          </label>
+        )
+      })}
+    </div>
   )
 }
 
+/* Radios shown when drilled into a specific area: Locations vs Devices.
+   This choice applies to BOTH the table (default view) and the topology
+   graph (opened via the Map icon in the table header). */
+function AreaViewToggle() {
+  const { tableKind, setTableKind } = useAreaView()
+
+  const radio = (
+    name: string,
+    checked: boolean,
+    onChange: () => void,
+    label: string,
+    disabled = false,
+  ) => (
+    <label
+      key={label}
+      className="inline-flex items-center gap-1.5 text-xs font-semibold select-none"
+      style={{
+        color: disabled ? 'var(--text-dim)' : checked ? 'var(--brand)' : 'var(--text-mid)',
+        letterSpacing: '0.04em',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        disabled={disabled}
+        onChange={onChange}
+        className="size-3.5"
+        style={{ accentColor: 'var(--brand)', cursor: disabled ? 'not-allowed' : 'pointer' }}
+      />
+      {label}
+    </label>
+  )
+
+  return (
+    <div role="radiogroup" aria-label="Data kind" className="flex items-center gap-4">
+      {radio('area-data-kind', tableKind === 'locations', () => setTableKind('locations'), 'Locations')}
+      {radio('area-data-kind', tableKind === 'devices', () => setTableKind('devices'), 'Devices')}
+    </div>
+  )
+}
+
+/* ── First top bar: page name (left) · mode radios + Logout (right) ── */
 function HeaderBar({ pageName }: { pageName: string }) {
+  const { pathname, search } = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const isOverview = pathname === '/'
+  const isAreaScreen =
+    pathname.startsWith('/topology') &&
+    !!new URLSearchParams(search).get('area')
+
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate('/login')
+  }
+
   return (
     <header
       className="sticky top-0 z-50 h-14 shrink-0 w-full border-b border-[var(--border-soft)]"
@@ -81,48 +166,84 @@ function HeaderBar({ pageName }: { pageName: string }) {
           className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)]"
         />
 
-        <Breadcrumb>
-          <BreadcrumbList className="text-[var(--text-mid)]">
-            <BreadcrumbItem className="hidden md:flex items-center gap-1.5">
-              <Activity className="size-3.5 text-[var(--brand)]" />
-              <span className="text-xs uppercase tracking-[0.18em] text-[var(--text-lo)]">DWI NMS</span>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block text-[var(--text-dim)]" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-[var(--text-hi)] text-sm font-medium">{pageName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        {/* Page name — left corner */}
+        <span className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-hi)]">
+          {pageName}
+        </span>
 
         <div className="flex-1" />
 
-        {/* Search */}
-        <label className="hidden md:flex items-center gap-2 px-3 h-8 rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)]/60 text-xs text-[var(--text-lo)] focus-within:border-[var(--border-brand)] transition-colors">
-          <Search className="size-3.5" />
-          <input
-            type="search"
-            placeholder="Search devices, locations…"
-            className="bg-transparent outline-none w-56 placeholder:text-[var(--text-dim)] text-[var(--text-hi)]"
-          />
-          <kbd className="hidden lg:inline-block text-[10px] font-mono text-[var(--text-dim)] border border-[var(--border-soft)] rounded px-1">⌘K</kbd>
-        </label>
+        {/* Devices / Links radios — overview page only, just before Logout */}
+        {isOverview && (
+          <>
+            <ModeToggle />
+            <Separator
+              orientation="vertical"
+              className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)] hidden sm:block"
+            />
+          </>
+        )}
 
-        {/* Live status pill */}
-        <div className="nms-chip nms-chip-live hidden sm:inline-flex">
-          <span>Live</span>
-          <LiveClock />
-        </div>
+        {/* Topology / Table radios — when drilled into a specific area */}
+        {isAreaScreen && (
+          <>
+            <AreaViewToggle />
+            <Separator
+              orientation="vertical"
+              className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)] hidden sm:block"
+            />
+          </>
+        )}
 
-        {/* Notifications */}
+        {/* Logout — right corner */}
         <button
           type="button"
-          className="relative size-8 inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)]/60 text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors"
-          aria-label="Notifications"
+          onClick={handleLogout}
+          title="Log out"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-[0.1em] transition-colors"
+          style={{
+            background: 'color-mix(in oklab, var(--status-offline) 12%, transparent)',
+            color: 'var(--status-offline)',
+            border: '1px solid color-mix(in oklab, var(--status-offline) 32%, transparent)',
+            cursor: 'pointer',
+          }}
         >
-          <Bell className="size-4" />
+          <LogOut className="size-3.5" />
+          Logout
         </button>
       </div>
     </header>
+  )
+}
+
+/* ── Second top bar: company name (left) · Live status tag ── */
+function SubHeaderBar() {
+  return (
+    <div
+      className="shrink-0 w-full border-b border-[var(--border-soft)] flex items-center gap-6 px-4 h-11"
+      style={{ backgroundColor: 'rgba(11,18,32,0.6)' }}
+    >
+      <span className="text-sm md:text-base font-bold tracking-tight text-[var(--text-hi)] truncate">
+        Bharat Coking Coal Limited
+      </span>
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em]"
+        style={{
+          background: 'color-mix(in oklab, var(--status-online) 12%, transparent)',
+          color: 'var(--status-online)',
+          border: '1px solid color-mix(in oklab, var(--status-online) 32%, transparent)',
+        }}
+      >
+        <span
+          className="w-1.5 h-1.5 rounded-full animate-pulse"
+          style={{
+            background: 'var(--status-online)',
+            boxShadow: '0 0 6px var(--status-online)',
+          }}
+        />
+        Live status
+      </span>
+    </div>
   )
 }
 
@@ -130,6 +251,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
+      <Route path="/metrics" element={<MetricsDashboard />} />
+      <Route path="/area-detail" element={<AreaDetailPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/devices" element={<DevicesPage />} />
@@ -140,9 +263,12 @@ function AppRoutes() {
       <Route path="/locations" element={<LocationsPage />} />
       <Route path="/locations/:id" element={<LocationDetailPage />} />
       <Route path="/areas" element={<WorkersPage />} />
+      <Route path="/areas/:id" element={<WorkerDetailPage />} />
       <Route path="/field-technicians" element={<WorkersPage />} />
+      <Route path="/field-technicians/:id" element={<WorkerDetailPage />} />
       <Route path="/device-info" element={<DeviceInfoPage />} />
       <Route path="/topology" element={<TopologyPage />} />
+      <Route path="/services" element={<ServicesPage />} />
       <Route path="/history" element={<HistoryPage />} />
     </Routes>
   )
@@ -347,7 +473,7 @@ function App() {
     return (
       <div className="min-h-screen w-full overflow-hidden" style={{ backgroundColor: 'var(--bg-app)' }}>
         <AppRoutes />
-        <ExpertSystem />
+        {/* <ExpertSystem /> */}
       </div>
     )
   }
@@ -359,13 +485,14 @@ function App() {
         <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden" style={{ backgroundColor: 'transparent' }}>
           <div className="flex h-full w-full flex-col overflow-hidden">
             <HeaderBar pageName={pageName} />
+            <SubHeaderBar />
             <div className="flex-1 min-w-0 overflow-x-auto">
               <AppRoutes />
             </div>
           </div>
         </SidebarInset>
       </SidebarProvider>
-      <ExpertSystem />
+      {/* <ExpertSystem /> */}
     </div>
   )
 }

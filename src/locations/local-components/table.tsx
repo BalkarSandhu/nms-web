@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { fetchLocationsPaginated, fetchLocationTypes } from '@/store/locationsSlice';
+import { fetchLocationsPaginated, fetchLocationsforMap, fetchLocationTypes } from '@/store/locationsSlice';
 import LocationsFilters, { type FilterConfig } from './filters';
 import { EditLocationForm } from './EditLocationForm';
 import { DeleteLocationForm } from './DeleteLocationForm';
@@ -41,12 +41,16 @@ export default function LocationsTable({
     onRowClick,
     selectedLocationId,
     onDataChange,
+    onSummaryChange,
+    filterActions,
     initialFilters,
     onFiltersChange
 }: {
     onRowClick?: (locationId: number) => void;
     selectedLocationId?: number | null;
     onDataChange?: (rows: EnrichedLocation[]) => void;
+    onSummaryChange?: (s: { total: number; online: number; offline: number }) => void;
+    filterActions?: React.ReactNode;
     initialFilters?: Record<string, string>;
     onFiltersChange?: (filters: Record<string, string>) => void;
 }) {
@@ -56,6 +60,7 @@ export default function LocationsTable({
     // ─── Redux state ──────────────────────────────────────────────────────────
     // Use ONLY pagedLocations (a local slice of data) — never allLocations
     const { locationTypes = [], pagination, paginationLoading: loading } = useAppSelector(state => state.locations);
+    const fullLoading = useAppSelector(state => state.locations.loading);
     const pagedLocations = useAppSelector(state => state.locations.locations); // current page only
     const { workers = [] } = useAppSelector(state => state.workers);
     const { devices = [] } = useAppSelector(state => state.devices);
@@ -83,6 +88,12 @@ export default function LocationsTable({
         } catch { return {}; }
     });
 
+    // Area-scoped mode: reached by drilling in from an area card
+    // (/topology?area=… or /locations?area=…). Pagination only ever holds
+    // one page, so an area filter applied to that single page misses most
+    // rows — in this mode we load ALL locations and filter the full set.
+    const areaScoped = !!(filters.area && filters.area.trim());
+
     // ─── Fetch location types if missing ─────────────────────────────────────
     useEffect(() => {
         if (locationTypes.length === 0) {
@@ -95,6 +106,13 @@ export default function LocationsTable({
     const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
+        // Area-scoped: fetch every location once (server `?fetch_all=true`),
+        // then the client-side area filter narrows to the whole area.
+        if (areaScoped) {
+            dispatch(fetchLocationsforMap() as any);
+            return;
+        }
+
         if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
 
         const alreadyFetched =
@@ -109,7 +127,7 @@ export default function LocationsTable({
     }, 100);
 
         return () => { if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current); };
-    }, [currentPage, perPage, dispatch]);
+    }, [currentPage, perPage, dispatch, areaScoped]);
 
     // ─── Pagination helpers ───────────────────────────────────────────────────
     const totalPages = Math.max(1, pagination?.totalPages || 0);
@@ -167,9 +185,30 @@ export default function LocationsTable({
             if (filters.status  && loc.status !== filters.status) return false;
             if (filters.project && loc.project?.trim() !== filters.project.trim()) return false;
             if (filters.area    && loc.area?.trim() !== filters.area.trim()) return false;
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                const hit =
+                    (loc.name || '').toLowerCase().includes(q) ||
+                    (loc.area || '').toLowerCase().includes(q);
+                if (!hit) return false;
+            }
             return true;
         });
     }, [enrichedLocations, filters]);
+
+    // Area summary (Total / Online / Offline) — scoped to the area when
+    // opened from an area card, otherwise across all loaded locations.
+    const summary = useMemo(() => {
+        const areaScope = filters.area?.trim();
+        const base = areaScope
+            ? enrichedLocations.filter(l => l.area?.trim() === areaScope)
+            : enrichedLocations;
+        const online = base.filter(l => l.status === 'online').length;
+        const offline = base.filter(l => l.status === 'offline').length;
+        return { total: base.length, online, offline };
+    }, [enrichedLocations, filters]);
+
+    useEffect(() => { onSummaryChange?.(summary); }, [summary, onSummaryChange]);
 
     // ─── Filter options (built from current page) ─────────────────────────────
     const filterOptions = useMemo(() => {
@@ -182,11 +221,11 @@ export default function LocationsTable({
         };
     }, [enrichedLocations]);
 
+    // Only Status (online/offline) and Location Type — search handled by the
+    // filter bar's search box. Area scope comes from the URL, not a filter.
     const filterConfigs: FilterConfig[] = [
-        { label: "Type",    key: "type",    options: filterOptions.types    },
-        { label: "Status",  key: "status",  options: filterOptions.statuses },
-        { label: "Project", key: "project", options: filterOptions.projects },
-        { label: "Area",    key: "area",    options: filterOptions.areas    },
+        { label: "Status",        key: "status", options: filterOptions.statuses },
+        { label: "Location Type", key: "type",   options: filterOptions.types    },
     ];
 
     // ─── Sync filters from URL ────────────────────────────────────────────────
@@ -238,25 +277,27 @@ export default function LocationsTable({
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
                 initialFilters={filters}
+                searchPlaceholder="Search locations…"
+                trailing={filterActions}
             />
 
-            {loading && (
+            {(areaScoped ? fullLoading : loading) && (
                 <div className="px-3 py-2 text-xs flex items-center gap-2 rounded-md" style={{ background: 'rgba(34,211,238,0.08)', color: 'var(--brand)', border: '1px solid var(--border-brand)' }}>
                     <span className="spinner size-3 rounded-full border-2" style={{ borderColor: 'rgba(34,211,238,0.25)', borderTopColor: 'var(--brand)' }} />
-                    Loading page {currentPage}…
+                    {areaScoped ? 'Loading locations…' : `Loading page ${currentPage}…`}
                 </div>
             )}
 
             <div className="overflow-auto flex-1 rounded-lg border" style={{ borderColor: 'var(--border-soft)' }}>
-                <Table className="table-fixed w-full">
+                <Table className="table-fixed w-full [&_td]:align-top [&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3 [&_th]:py-3">
                     <TableHeader className="sticky top-0 z-10" style={{ background: 'rgba(15,23,42,0.92)' }}>
                         <TableRow style={{ borderColor: 'var(--border-soft)' }}>
                             <TableHead className={`w-[4%] text-center py-3 ${headClass}`} style={headStyle}>#</TableHead>
-                            <TableHead className={`w-[25%] py-3 ${headClass}`} style={headStyle}>Location Name</TableHead>
-                            <TableHead className={`w-[12%] py-3 ${headClass}`} style={headStyle}>Type</TableHead>
-                            <TableHead className={`w-[15%] py-3 ${headClass}`} style={headStyle}>Area</TableHead>
-                            <TableHead className={`w-[14%] text-center py-3 ${headClass}`} style={headStyle}>Status</TableHead>
-                            <TableHead className={`w-[20%] py-3 ${headClass}`} style={headStyle}>Devices</TableHead>
+                            <TableHead className={`w-[30%] py-3 ${headClass}`} style={headStyle}>Location Name</TableHead>
+                            <TableHead className={`w-[16%] py-3 ${headClass}`} style={headStyle}>Type</TableHead>
+                            <TableHead className={`w-[13%] py-3 ${headClass}`} style={headStyle}>Area</TableHead>
+                            <TableHead className={`w-[12%] text-center py-3 ${headClass}`} style={headStyle}>Status</TableHead>
+                            <TableHead className={`w-[15%] py-3 ${headClass}`} style={headStyle}>Devices</TableHead>
                             <TableHead className={`w-[10%] text-center py-3 ${headClass}`} style={headStyle}>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -292,12 +333,12 @@ export default function LocationsTable({
                                         <TableCell className="text-center text-sm tabular-nums py-2" style={{ color: 'var(--text-lo)' }}>
                                             {(currentPage - 1) * perPage + index + 1}
                                         </TableCell>
-                                        <TableCell className="py-2">
+                                        <TableCell className="py-2 whitespace-normal break-words">
                                             <span className="text-sm font-semibold" style={{ color: 'var(--text-hi)' }} title={location.name}>
                                                 {location.name}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="py-2">
+                                        <TableCell className="py-2 whitespace-normal break-words">
                                             <span className="badge-info">{location.type_name}</span>
                                         </TableCell>
                                         <TableCell className="py-2">
@@ -374,7 +415,8 @@ export default function LocationsTable({
                 <DeleteLocationForm locationId={selectedLocationForAction} open={deleteDialogOpen} setOpen={setDeleteDialogOpen} />
             )}
 
-            {/* ── Pagination ── */}
+            {/* ── Pagination — hidden when scoped to a single area ── */}
+            {!areaScoped && (
             <div
                 className="flex items-center justify-between px-4 py-3 rounded-lg border"
                 style={{ borderColor: 'var(--border-soft)', background: 'rgba(15,23,42,0.6)' }}
@@ -467,6 +509,7 @@ export default function LocationsTable({
                     </Button>
                 </div>
             </div>
+            )}
         </div>
     );
 }

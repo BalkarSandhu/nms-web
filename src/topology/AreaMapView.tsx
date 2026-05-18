@@ -39,17 +39,22 @@ interface AreaMapViewProps {
 
 const BRAND = '#22D3EE';
 
-function healthColor(h: number) {
-  if (h >= 80) return '#10B981';
-  if (h >= 50) return '#F59E0B';
-  return '#EF4444';
+function onlinePctOf(a: AreaMarker): number {
+  return a.totalDevices > 0
+    ? Math.round((a.onlineDevices / a.totalDevices) * 100)
+    : 0;
 }
 
-function accentForArea(a: AreaMarker) {
-  if (a.offline > 0) return '#EF4444';
-  if (a.partial > 0) return '#F59E0B';
-  if (a.online > 0) return '#10B981';
-  return '#64748B';
+/* Online-% → colour.
+   100 green · ≥80 dark green · ≥60 amber (orange→green) ·
+   ≥50 orange · ≥40 orange→red · <40 red. */
+function onlinePctColor(pct: number): string {
+  if (pct >= 100) return '#22C55E'; // green
+  if (pct >= 80)  return '#15803D'; // dark green
+  if (pct >= 60)  return '#EAB308'; // amber (orange→green)
+  if (pct >= 50)  return '#F59E0B'; // orange
+  if (pct >= 40)  return '#F97316'; // orange→red
+  return '#EF4444';                 // red
 }
 
 const pmtilesUrl =
@@ -152,7 +157,6 @@ const AreaMapView: React.FC<AreaMapViewProps> = ({
   areas,
   selectedArea,
   onAreaSelect,
-  onAreaOpenTopology,
   className = '',
 }) => {
   const mapRef = useRef<MapRef>(null);
@@ -219,8 +223,9 @@ const AreaMapView: React.FC<AreaMapViewProps> = ({
         {areas.map((a) => {
           const isSelected = selectedArea === a.area;
           const isHovered = hovered === a.area;
-          const accent = accentForArea(a);
-          const hc = healthColor(a.avgHealth);
+          const onlinePct = onlinePctOf(a);
+          const accent = onlinePctColor(onlinePct);
+          const hc = accent;
           const active = isSelected || isHovered;
           const size = Math.min(64, 38 + Math.log10(Math.max(1, a.totalDevices)) * 10);
 
@@ -286,7 +291,7 @@ const AreaMapView: React.FC<AreaMapViewProps> = ({
                   }}
                 >
                   <span style={{ fontSize: 11, fontWeight: 700, color: hc, lineHeight: 1, letterSpacing: '0.02em' }}>
-                    {a.avgHealth}%
+                    {onlinePct}%
                   </span>
                 </span>
 
@@ -352,7 +357,7 @@ const AreaMapView: React.FC<AreaMapViewProps> = ({
                           letterSpacing: '0.08em',
                         }}
                       >
-                        {a.offline > 0 ? 'CRITICAL' : a.partial > 0 ? 'DEGRADED' : a.online > 0 ? 'HEALTHY' : 'IDLE'}
+                        {onlinePct}% ONLINE
                       </span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, fontSize: 10.5 }}>
@@ -406,10 +411,12 @@ const AreaMapView: React.FC<AreaMapViewProps> = ({
         }}
       >
         {[
-          { label: 'Healthy', color: '#10B981' },
-          { label: 'Degraded', color: '#F59E0B' },
-          { label: 'Critical', color: '#EF4444' },
-          { label: 'Idle', color: '#64748B' },
+          { label: '100%', color: '#22C55E' },
+          { label: '≥80%', color: '#15803D' },
+          { label: '≥60%', color: '#EAB308' },
+          { label: '≥50%', color: '#F59E0B' },
+          { label: '≥40%', color: '#F97316' },
+          { label: '<40%', color: '#EF4444' },
         ].map((it) => (
           <span key={it.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <span

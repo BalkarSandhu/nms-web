@@ -23,6 +23,8 @@ interface DeviceMin {
 
 interface LocationTelemetryProps {
   devices: DeviceMin[];
+  title?: string;
+  entityLabel?: string;
 }
 
 interface Bucket {
@@ -69,7 +71,11 @@ function StatTile({
   );
 }
 
-export default function LocationTelemetry({ devices }: LocationTelemetryProps) {
+export default function LocationTelemetry({
+  devices,
+  title = "Location Analytics",
+  entityLabel = "location",
+}: LocationTelemetryProps) {
   const [timeRange, setTimeRange] = useState<TimeRangeKey>("24h");
   const [granularity, setGranularity] = useState<Granularity>("hourly");
   const [customStart, setCustomStart] = useState("");
@@ -259,7 +265,7 @@ export default function LocationTelemetry({ devices }: LocationTelemetryProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base text-white">
             <Activity className="h-5 w-5 text-cyan-400" />
-            Location Analytics
+            {title}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -362,7 +368,7 @@ export default function LocationTelemetry({ devices }: LocationTelemetryProps) {
         <div className="text-xs text-amber-300">{error}</div>
       )}
       {noDevices && !loading && (
-        <div className="text-xs text-slate-400">No devices linked to this location yet.</div>
+        <div className="text-xs text-slate-400">No devices linked to this {entityLabel} yet.</div>
       )}
 
       {/* Devices online over time — counts device states, not probes */}
@@ -372,7 +378,7 @@ export default function LocationTelemetry({ devices }: LocationTelemetryProps) {
             <Signal className="h-5 w-5 text-emerald-300" />
             Devices Status 
             <span className="ml-auto text-[11px] font-normal text-slate-400">
-              of {devices.length} device{devices.length !== 1 ? "s" : ""} at this location
+              of {devices.length} device{devices.length !== 1 ? "s" : ""} at this {entityLabel}
             </span>
           </CardTitle>
         </CardHeader>

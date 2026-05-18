@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchWorkers } from '@/store/workerSlice';
 import { fetchWorkerStats } from '@/store/workerSlice';
 import { isDataStale } from '@/lib/auth';
 import Header from './local-components/header';
 import WorkersTable, { type EnrichedWorker } from './local-components/table';
-import { WorkerDetailsSidebar } from './local-components/WorkerDetailsSidebar';
 import { LoadingPage } from '@/components/loading-screen';
 import { exportToCsv, type CsvColumn } from '@/lib/utils';
 
 export default function WorkersPage() {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const routerLocation = useLocation();
     const { loading, error, workers, lastFetched } = useAppSelector(state => state.workers);
-    const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
     const [exportRows, setExportRows] = useState<EnrichedWorker[]>([]);
+
+    const basePath = routerLocation.pathname.startsWith('/field-technicians')
+        ? '/field-technicians'
+        : '/areas';
 
     const exportColumns = useMemo<CsvColumn<EnrichedWorker>[]>(() => [
         { header: 'Hostname', accessor: (row) => row.name },
@@ -64,17 +69,11 @@ export default function WorkersPage() {
                 <Header onExport={handleExport} exportDisabled={!exportRows.length} />
                 <div className="flex-1 overflow-hidden">
                     <WorkersTable
-                        onRowClick={(workerId: string) => setSelectedWorkerId(workerId)}
-                        selectedWorkerId={selectedWorkerId}
+                        onRowClick={(workerId: string) => navigate(`${basePath}/${workerId}`)}
                         onDataChange={setExportRows}
                     />
                 </div>
             </div>
-
-            <WorkerDetailsSidebar
-                workerId={selectedWorkerId}
-                onClose={() => setSelectedWorkerId(null)}
-            />
         </div>
     );
 }
