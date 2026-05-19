@@ -22,7 +22,6 @@ import {
 
 const baseNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, isActive: false },
-  { title: "Reports",  url: "/history",  icon: HistoryIcon, isActive: false },
   { title: "Analytics",   url: "/metrics",   icon: BarChart3,  isActive: false },
   // { title: "Areas",     url: "/areas",     icon: Users,      isActive: false },
   // {
@@ -36,7 +35,7 @@ const baseNavItems = [
   //     { title: "Area Reports",     url: "/reports/workers" },
   //   ],
   // },
-  
+  { title: "Reports",  url: "/history",  icon: HistoryIcon, isActive: false },
   {title: "Services", url:"/services", icon: Network, isActive: false},
 ]
 

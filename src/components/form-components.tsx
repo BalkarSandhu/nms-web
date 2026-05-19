@@ -52,9 +52,7 @@ export type InputFieldType = {
   openStateAction?: (value: boolean) => void;
 }
 
-export function InputField({ label, placeholder, type, comboboxOptions, stateValue, stateAction, openState, openStateAction }: InputFieldType) {
-  // Destructure selectBoxOptions from props
-  const { selectBoxOptions } = arguments[0] as { selectBoxOptions?: {label: string; value: string}[] };
+export function InputField({ label, placeholder, type, comboboxOptions, selectBoxOptions, stateValue, stateAction, openState, openStateAction }: InputFieldType) {
 
   return (
     <div className="flex flex-col w-full h-fit h-max-[60px] gap-2 p-0 bg-none">
@@ -63,7 +61,7 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
         <input
           type="text"
           placeholder={placeholder}
-          value={stateValue}
+          value={stateValue ?? ""}
           onChange={(e) => stateAction ? stateAction(e.target.value) : null}
           className=" px-4 py-1 text-(--base)/90 rounded-[4px] w-full h-min-[20px] bg-(--contrast)/80 hover:bg-(--contrast)"
         />
@@ -72,7 +70,7 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
         <input
           type="password"
           placeholder={placeholder}
-          value={stateValue}
+          value={stateValue ?? ""}
           onChange={(e) => stateAction ? stateAction(e.target.value) : null}
           className="bg-(--contrast)/80 px-4 py-1 text-(--base)/90 rounded-[4px] w-full h-min-[20px]"
         />
@@ -168,6 +166,7 @@ export function InputField({ label, placeholder, type, comboboxOptions, stateVal
                     <CommandItem
                       key={option.value}
                       value={option.value}
+                      keywords={[option.label]}
                       onSelect={(currentValue) => {
                         stateAction ? stateAction(
                           currentValue === stateValue ? "" : currentValue

@@ -7,6 +7,9 @@ import './index.css'
 import App from './App.tsx'
 import { OverviewModeProvider } from './contexts/OverviewModeContext'
 import { AreaViewProvider } from './contexts/AreaViewContext'
+import { HistoryRangeProvider } from './contexts/HistoryRangeContext'
+import { HistoryNavProvider } from './contexts/HistoryNavContext'
+import { HistoryViewProvider } from './contexts/HistoryViewContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,7 +17,13 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <OverviewModeProvider>
           <AreaViewProvider>
-            <App />
+            <HistoryRangeProvider>
+              <HistoryNavProvider>
+                <HistoryViewProvider>
+                  <App />
+                </HistoryViewProvider>
+              </HistoryNavProvider>
+            </HistoryRangeProvider>
           </AreaViewProvider>
         </OverviewModeProvider>
       </BrowserRouter>

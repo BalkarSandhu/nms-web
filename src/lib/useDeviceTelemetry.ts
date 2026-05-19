@@ -68,6 +68,41 @@ export function computeRange({ timeRange, granularity, customStart, customEnd }:
   return { start, end, granularity: effectiveGranularity };
 }
 
+/**
+ * Run `fn` over `items` with a bounded number of concurrent promises.
+ * Returns results in input order, with allSettled-style outcomes — firing
+ * every device request at once trips ERR_HTTP2_PROTOCOL_ERROR / is slow.
+ *
+ * `onProgress(done, total)` fires after each item settles, so callers can
+ * drive a "fetched N of M" progress indicator.
+ */
+export async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let cursor = 0;
+  let done = 0;
+  const worker = async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) return;
+      try {
+        results[idx] = { status: "fulfilled", value: await fn(items[idx], idx) };
+      } catch (reason) {
+        results[idx] = { status: "rejected", reason };
+      }
+      done++;
+      onProgress?.(done, items.length);
+    }
+  };
+  const pool = Math.max(1, Math.min(limit, items.length));
+  await Promise.all(Array.from({ length: pool }, () => worker()));
+  return results;
+}
+
 /** Fetches a single device's history (range-bound) — same endpoint device-info uses. */
 export async function fetchDeviceHistory(
   deviceId: number,

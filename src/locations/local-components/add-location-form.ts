@@ -8,11 +8,11 @@ export async function addLocation({
   statusI,
   statusReason,
   workerId,
-  parentLocation,
+  parentId,
 }: {
   name: string;
   locationTypeId: number;
-  parentLocation?: string;
+  parentId?: number | null;
   area: string;
   lat: number;
   lng: number;
@@ -22,7 +22,7 @@ export async function addLocation({
   workerId: string;
 }) {
   const url = `${import.meta.env.VITE_NMS_HOST}/locations`;
-  const payload = {
+  const payload: Record<string, unknown> = {
     name,
     location_type_id: locationTypeId,
     area,
@@ -32,8 +32,12 @@ export async function addLocation({
     status: statusI,
     status_reason: statusReason,
     worker_id: workerId,
-    parent_location: parentLocation,
   };
+  // Only send parent_id when a parent was actually picked; the data model
+  // keys parents by numeric id (same as the edit form / topology), not name.
+  if (parentId != null) {
+    payload.parent_id = parentId;
+  }
 
   const token = getCookie("token");
 
@@ -96,6 +100,38 @@ export async function getWorkerTypes(): Promise<{ id: string; name: string }[]> 
   return data.workers.map((item: any) => ({
     id: item.id,
     name: item.name,
+  }));
+}
+
+export async function getLocations(): Promise<
+  { id: number; name: string; area: string }[]
+> {
+  // page_size is large so the area list / parent picker covers every
+  // location, not just the default first page.
+  const url = `${import.meta.env.VITE_NMS_HOST}/locations?page_size=500`;
+
+  const token = getCookie("token");
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch locations: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  type RawLocation = { id: number; name: string; area?: string };
+  const rows: RawLocation[] = Array.isArray(data)
+    ? data
+    : data.data || data.locations || [];
+
+  return rows.map((item) => ({
+    id: item.id,
+    name: item.name,
+    area: item.area || "",
   }));
 }
 

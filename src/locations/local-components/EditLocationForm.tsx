@@ -44,7 +44,7 @@ export const EditLocationForm = ({
         area: location.area || "",
         status: location.status || "",
         location_type_id: String(location.location_type_id || ""),
-        parent_id: location && (location as any).parent_id ? String((location as any).parent_id) : null,
+        parent_id: (location as any).parent_id ? String((location as any).parent_id) : "",
       });
     }
   }, [location, open, locationId]);
@@ -57,17 +57,40 @@ export const EditLocationForm = ({
     }));
   }, [locationTypes]);
 
-  // Get parent locations (exclude current location)
-  // FIXED: Using comboboxOptions instead of selectBoxOptions for search functionality
-  const parentLocationOptions = useMemo(() => {
-    const filtered = locations
-      .filter((l) => l.id !== locationId)
-      .map((l) => l.name)
-      .filter((name, index, self) => self.indexOf(name) === index) // Remove duplicates
-      .sort((a, b) => a.localeCompare(b));
-    
-    return filtered;
+  // Parent options — exclude the location itself AND all of its descendants,
+  // otherwise the backend rejects it as a circular reference. Options are
+  // keyed by id (label = name) so duplicate names can't map to the wrong row.
+  const forbiddenParentIds = useMemo(() => {
+    const childrenByParent = new Map<number, number[]>();
+    for (const l of locations) {
+      const pid = (l as any).parent_id;
+      if (pid != null) {
+        const arr = childrenByParent.get(Number(pid)) ?? [];
+        arr.push(l.id);
+        childrenByParent.set(Number(pid), arr);
+      }
+    }
+    const forbidden = new Set<number>([locationId]);
+    const stack = [locationId];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const childId of childrenByParent.get(cur) ?? []) {
+        if (!forbidden.has(childId)) {
+          forbidden.add(childId);
+          stack.push(childId);
+        }
+      }
+    }
+    return forbidden;
   }, [locations, locationId]);
+
+  const parentLocationOptions = useMemo(() => {
+    const opts = locations
+      .filter((l) => !forbiddenParentIds.has(l.id))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((l) => ({ label: l.name, value: String(l.id) }));
+    return [{ label: "— None (top level) —", value: "" }, ...opts];
+  }, [locations, forbiddenParentIds]);
 
   // Get status options from existing locations
   const statusOptions = useMemo(() => {
@@ -113,11 +136,19 @@ export const EditLocationForm = ({
     setStatus({ message: "Updating location...", type: "info" });
 
     try {
-      // Find parent_id from parent location name
-      let parentId = undefined;
+      // Resolve parent by id and guard against circular references.
+      let parentId: number | null = null;
       if (formData.parent_id && formData.parent_id.trim()) {
-        const parentLocation = locations.find((l) => l.name === formData.parent_id && l.id !== locationId);
-        parentId = parentLocation ? parentLocation.id : undefined;
+        const pid = parseInt(formData.parent_id, 10);
+        if (Number.isNaN(pid) || forbiddenParentIds.has(pid)) {
+          setStatus({
+            message:
+              "That parent would create a circular reference. Pick a different location.",
+            type: "error",
+          });
+          return;
+        }
+        parentId = pid;
       }
 
       const updates: any = {
@@ -127,14 +158,9 @@ export const EditLocationForm = ({
         location_type_id: formData.location_type_id
           ? parseInt(formData.location_type_id)
           : undefined,
+        // null clears the parent (top-level); a number sets it.
+        parent_id: parentId,
       };
-
-      // Add parent_id if found
-      if (parentId) {
-        updates.parent_id = parentId;
-      } else if (formData.parent_id === null || formData.parent_id === "") {
-        updates.parent_id = null;
-      }
 
       await editLocationBulk(locationId, updates);
       setStatus({
@@ -214,12 +240,12 @@ export const EditLocationForm = ({
         openStateAction={(value) => handleOpenChange("locationType", value)}
       />
 
-      {/* Parent Location - Using combobox for better search */}
+      {/* Parent Location — id-keyed; self + descendants excluded */}
       <InputField
         label="Parent Location (Optional)"
-        placeholder="Search and select parent location"
-        type="combobox"
-        comboboxOptions={parentLocationOptions}
+        placeholder="Select parent location"
+        type="selectbox"
+        selectBoxOptions={parentLocationOptions}
         stateValue={formData.parent_id || ""}
         stateAction={(value) => handleInputChange("parent_id", value)}
         openState={openStates.parentLocation}

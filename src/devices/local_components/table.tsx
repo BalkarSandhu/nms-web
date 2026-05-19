@@ -146,11 +146,11 @@ export default function DevicesTable({
 
     // Get unique values for filter options
     const filterOptions = useMemo(() => {
-        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type?.name))].sort();
+        const uniqueTypes = [...new Set(devices.map(dev => dev.device_type?.name).filter(Boolean))].sort() as string[];
         const uniqueStatuses = [...new Set(devices.map(dev => dev.is_reachable ? 'Online' : 'Offline'))].sort();
         const uniqueLocations = [...new Set(devices.map(dev => dev.location?.name).filter(Boolean))].sort() as string[];
         const uniqueWorkers = [...new Set(devices.map(dev => dev.worker?.name).filter(Boolean))].sort() as string[];
-        const uniqueProtocols = [...new Set(devices.map(dev => dev.protocol.toUpperCase()))].sort();
+        const uniqueProtocols = [...new Set(devices.map(dev => dev.protocol?.toUpperCase()).filter(Boolean))].sort() as string[];
 
         return {
             types: uniqueTypes.map(type => ({ label: type, value: type })),
@@ -183,8 +183,8 @@ export default function DevicesTable({
             if (filters.type && device.device_type?.name !== filters.type) return false;
             if (filters.is_reachable && (device.is_reachable ? 'Online' : 'Offline') !== filters.is_reachable) return false;
             if (filters.location && device.location?.name !== filters.location) return false;
-            if (filters.worker && device.worker.name !== filters.worker) return false;
-            if (filters.protocol && device.protocol.toUpperCase() !== filters.protocol) return false;
+            if (filters.worker && device.worker?.name !== filters.worker) return false;
+            if (filters.protocol && device.protocol?.toUpperCase() !== filters.protocol) return false;
             if (filters.locationArea && device.location?.area !== filters.locationArea) return false;
             if (filters.search) {
                 const q = filters.search.toLowerCase();

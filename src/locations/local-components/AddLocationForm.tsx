@@ -1,26 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Form, InputField } from "@/components/form-components";
 import { Button } from "@/components/ui/button";
-import { addLocation, getLocationTypes, getWorkerTypes } from "./add-location-form";
+import { addLocation, getLocationTypes, getWorkerTypes, getLocations } from "./add-location-form";
 
 export const AddLocationForm = () => {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [parentLocation, setParentLocation] = useState("");
+  const [parentId, setParentId] = useState(""); // location id as string ("" = none)
   const [area, setArea] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [project, setProject] = useState("");
   const [statusI, setStatusI] = useState("");
   const [statusReason, setStatusReason] = useState("");
-  // const [workerId, setWorkerId] = useState("");
+  const [workerId, setWorkerId] = useState(""); // worker id — what the payload sends
   const [locationTypeOpen, setLocationTypeOpen] = useState(false);
-  const [workerTypeOpen, setWorkerTypeOpen] = useState(false);
+  const [areaOpen, setAreaOpen] = useState(false);
   const [parentLocationOpen, setParentLocationOpen] = useState(false);
   const [locationTypeOptions, setLocationTypeOptions] = useState<{ id: number; name: string }[]>([]);
-  const [workerTypeOptions, setWorkerTypeOptions] = useState<{ id: string; name: string }[]>([]);
+  const [workerOptions, setWorkerOptions] = useState<{ id: string; name: string }[]>([]);
+  const [locations, setLocations] = useState<{ id: number; name: string; area: string }[]>([]);
   const [locationType, setLocationType] = useState<string>("");
-  const [workerType, setWorkerType] = useState<string>("");
   const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
 
   useEffect(() => {
@@ -40,20 +40,74 @@ export const AddLocationForm = () => {
   }, []);
 
   useEffect(() => {
-    const fetchWorkersTypes = async () => {
+    const fetchWorkers = async () => {
       try {
-        const types = await getWorkerTypes();
-        setWorkerTypeOptions(types);
-        if (types.length > 0 && !workerType) {
-          setWorkerType(types[0].name);
-        }
+        const workers = await getWorkerTypes();
+        setWorkerOptions(workers);
       } catch (error) {
         console.error("Error fetching workers:", error);
-        setWorkerTypeOptions([]);
+        setWorkerOptions([]);
       }
     };
-    fetchWorkersTypes();
+    fetchWorkers();
   }, []);
+
+  useEffect(() => {
+    const fetchExistingLocations = async () => {
+      try {
+        const locs = await getLocations();
+        setLocations(locs);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+        setLocations([]);
+      }
+    };
+    fetchExistingLocations();
+  }, []);
+
+  // Unique, sorted area names pulled from existing locations.
+  const areaOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of locations) {
+      const a = (l.area || "").trim();
+      if (a) set.add(a);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [locations]);
+
+  // Each Area has exactly one Worker whose name == the area name. Derive the
+  // worker_id automatically from the selected Area (no manual picker), and
+  // re-derive if workers load after the area was chosen.
+  useEffect(() => {
+    if (!area.trim()) {
+      setWorkerId("");
+      return;
+    }
+    const match = workerOptions.find(
+      (w) => (w.name || "").trim().toLowerCase() === area.trim().toLowerCase()
+    );
+    setWorkerId(match ? match.id : "");
+  }, [area, workerOptions]);
+
+  const mappedWorkerName = useMemo(
+    () => workerOptions.find((w) => w.id === workerId)?.name ?? "",
+    [workerOptions, workerId]
+  );
+
+  // Parent options are scoped to the chosen area. "— None —" keeps it optional.
+  const parentLocationOptions = useMemo(() => {
+    const opts = locations
+      .filter((l) => area && (l.area || "").trim() === area.trim())
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((l) => ({ label: l.name, value: String(l.id) }));
+    return [{ label: "— None (top level) —", value: "" }, ...opts];
+  }, [locations, area]);
+
+  // Changing the area invalidates a parent picked from a different area.
+  const handleAreaChange = (value: string) => {
+    setArea(value);
+    setParentId("");
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -77,8 +131,13 @@ export const AddLocationForm = () => {
       return;
     }
 
-    const selectedWorker = workerTypeOptions.find((w: any) => w.name === workerType);
-    const selectedWorkerId = selectedWorker ? selectedWorker.id : "";
+    if (!workerId) {
+      setStatus({
+        message: `No worker is mapped to area "${area}". Pick an area that has a worker.`,
+        type: "error",
+      });
+      return;
+    }
 
     try {
       await addLocation({
@@ -87,11 +146,11 @@ export const AddLocationForm = () => {
         lng: Number(lng),
         locationTypeId: locationTypeId,
         name,
-        parentLocation,
+        parentId: parentId ? Number(parentId) : null,
         project,
         statusI,
         statusReason,
-        workerId: selectedWorkerId,
+        workerId,
       });
       setStatus({ message: "Location added successfully!", type: "success" });
     } catch (error: any) {
@@ -109,12 +168,12 @@ export const AddLocationForm = () => {
         setLat("");
         setLng("");
         setLocationType("");
-        setParentLocation("");
+        setParentId("");
         setArea("");
         setProject("");
         setStatusI("");
         setStatusReason("");
-        setWorkerType("");
+        setWorkerId("");
       }, 500);
     }, 2000);
   };
@@ -131,12 +190,21 @@ export const AddLocationForm = () => {
       <InputField label="Name" placeholder="e.g. Main Office" type="input" stateValue={name} stateAction={setName} />
 
 
-      <div className="grid g  rid-cols-1 md:grid-cols-2 w-full h-full gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 w-full h-full gap-2">
         <InputField label="Lat" placeholder="e.g. 23.45" type="input" stateValue={lat} stateAction={setLat} />
         <InputField label="Lng" placeholder="e.g. 85.32" type="input" stateValue={lng} stateAction={setLng} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 w-full h-full gap-2">
-        <InputField label="Area" placeholder="e.g. Zone 51" type="input" stateValue={area} stateAction={setArea} />
+        <InputField
+          label="Area"
+          placeholder="Select Area"
+          type="combobox"
+          comboboxOptions={areaOptions}
+          stateValue={area}
+          stateAction={handleAreaChange}
+          openState={areaOpen}
+          openStateAction={setAreaOpen}
+        />
         <InputField label="Project" placeholder="e.g. Project A" type="input" stateValue={project} stateAction={setProject} />
       </div>
       <InputField
@@ -150,24 +218,28 @@ export const AddLocationForm = () => {
         openStateAction={setLocationTypeOpen}
       />
 
-      <InputField
-        label="Worker"
-        placeholder="Select Worker"
-        type="combobox"
-        comboboxOptions={workerTypeOptions.map((t) => t.name)}
-        stateValue={workerType}
-        stateAction={setWorkerType}
-        openState={workerTypeOpen}
-        openStateAction={setWorkerTypeOpen}
-      />
+      {/* Worker is derived from the Area (1 worker per area). */}
+      <div className="flex flex-col w-full gap-2">
+        <label className="text-(--contrast) text-[12px] text-left">Worker (auto from Area)</label>
+        <div
+          className="px-4 py-1 rounded-[4px] w-full text-sm bg-(--contrast)/40 text-(--base)/90"
+          style={{ minHeight: 28, lineHeight: "26px" }}
+        >
+          {!area
+            ? "Select an area first"
+            : mappedWorkerName
+            ? mappedWorkerName
+            : "No worker mapped for this area"}
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row gap-4">
         <InputField
           label="Parent Location (Optional)"
-          placeholder="Select Parent"
-          type="combobox"
-          comboboxOptions={[""]}
-          stateValue={parentLocation}
-          stateAction={setParentLocation}
+          placeholder={area ? "Search location in area…" : "Select an area first"}
+          type="selectbox"
+          selectBoxOptions={parentLocationOptions}
+          stateValue={parentId}
+          stateAction={setParentId}
           openState={parentLocationOpen}
           openStateAction={setParentLocationOpen}
         />

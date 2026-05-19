@@ -1,28 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar,
+  LineChart, Line, BarChart, Bar,
   CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, Legend,
 } from "recharts";
 import {
    Clock, Gauge, AlertCircle, Signal, TrendingUp,
-  Download, Loader2, Users, MapPin, Smartphone, CheckCircle2,
+  MapPin, Smartphone,
 } from "lucide-react";
 
 import {
   fetchDeviceHistory,
+  mapLimit,
   type HistoryEntry,
-  type Granularity,
 } from "@/lib/useDeviceTelemetry";
 import {
-  generateAreaReport,
-  generateMultipleDevicesReport,
-  RANGE_OPTIONS,
+  rangeToWindow, aggregate, combine, emptyAgg, lastReachableState,
+  fmtPct, DAY_MS,
+  type Bucket, type DeviceAggregate,
+} from "@/lib/telemetry-aggregate";
+import { useHistoryView } from "@/contexts/HistoryViewContext";
+import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
+import {
+  ScopedDevicesTable, ScopedLocationsTable,
+  type ScopedDeviceRow, type ScopedLocationRow,
+} from "@/history/scoped-tables";
+
+// Bounded concurrency for per-device history fetches.
+const FETCH_CONCURRENCY = 5;
+import {
   type RangeKey,
-  type DeviceMeta,
-  type AreaMeta,
-  type LocationMeta,
 } from "@/lib/report-generator";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -43,158 +50,20 @@ export interface ScopedReportDashboardProps {
   areaId?: string;
   locationId?: string;
   typeId?: string;
+
+  /** Optional controlled timeline range (owned by the page topbar). When
+   *  provided, the in-dashboard Timeline selector is hidden. */
+  range?: RangeKey;
+  onRangeChange?: (r: RangeKey) => void;
+
+  /** When provided, a back arrow is shown in the Report-scope header. */
+  onBack?: () => void;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Helpers — local copies kept lightweight; mirror logic in report-generator.ts
+// Aggregation helpers now live in @/lib/telemetry-aggregate (shared with the
+// History landing page so its area cards can be recomputed from telemetry).
 // ──────────────────────────────────────────────────────────────────────────────
-
-interface Bucket {
-  bucketStart: number;
-  timeLabel: string;
-  online: number;
-  offline: number;
-  total: number;
-  latencySum: number; latencyCount: number;
-  jitterSum: number;  jitterCount: number;
-  lossSum: number;    lossCount: number;
-}
-
-interface DeviceAggregate {
-  uptimePct: number;
-  totalChecks: number;
-  onlineChecks: number;
-  offlineChecks: number;
-  avgLatency: number;
-  maxLatency: number;
-  avgJitter: number;
-  avgPacketLoss: number;
-  incidentCount: number;
-  longestDowntimeMs: number;
-}
-
-function emptyAgg(): DeviceAggregate {
-  return {
-    uptimePct: 0, totalChecks: 0, onlineChecks: 0, offlineChecks: 0,
-    avgLatency: 0, maxLatency: 0, avgJitter: 0, avgPacketLoss: 0,
-    incidentCount: 0, longestDowntimeMs: 0,
-  };
-}
-
-function rangeToWindow(range: RangeKey): { start: Date; end: Date; granularity: Granularity } {
-  const end = new Date();
-  let start: Date;
-  let granularity: Granularity;
-  switch (range) {
-    case "1h":  start = new Date(end.getTime() - 60 * 60 * 1000);                granularity = "raw";    break;
-    case "24h": start = new Date(end.getTime() - 24 * 60 * 60 * 1000);           granularity = "hourly"; break;
-    case "1w":  start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);       granularity = "hourly"; break;
-    case "1m":  start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);      granularity = "daily";  break;
-    case "3m":  start = new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000);      granularity = "daily";  break;
-  }
-  return { start, end, granularity };
-}
-
-function bucketMs(granularity: Granularity): number {
-  if (granularity === "daily")  return 24 * 60 * 60 * 1000;
-  if (granularity === "hourly") return 60 * 60 * 1000;
-  return 5 * 60 * 1000;
-}
-
-function aggregate(history: HistoryEntry[]): DeviceAggregate {
-  if (history.length === 0) return emptyAgg();
-  const sorted = [...history].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-  let online = 0, offline = 0;
-  let latSum = 0, latCount = 0, latMax = 0;
-  let jitSum = 0, jitCount = 0;
-  let lossSum = 0, lossCount = 0;
-
-  // Outage events
-  let incidents = 0;
-  let longest = 0;
-  let openStart: string | null = null;
-
-  for (const e of sorted) {
-    if (e.is_reachable) {
-      online++;
-      if (openStart !== null) {
-        const d = new Date(e.timestamp).getTime() - new Date(openStart).getTime();
-        incidents++;
-        if (d > longest) longest = d;
-        openStart = null;
-      }
-    } else {
-      offline++;
-      if (openStart === null) openStart = e.timestamp;
-    }
-    if (typeof e.latency_ms === "number" && !isNaN(e.latency_ms)) {
-      latSum += e.latency_ms; latCount++;
-      if (e.latency_ms > latMax) latMax = e.latency_ms;
-    }
-    if (typeof e.jitter_ms === "number" && !isNaN(e.jitter_ms)) {
-      jitSum += e.jitter_ms; jitCount++;
-    }
-    if (typeof e.packet_loss_percent === "number" && !isNaN(e.packet_loss_percent)) {
-      lossSum += e.packet_loss_percent; lossCount++;
-    }
-  }
-  if (openStart !== null) {
-    incidents++;
-    const d = Date.now() - new Date(openStart).getTime();
-    if (d > longest) longest = d;
-  }
-
-  const total = online + offline;
-  return {
-    uptimePct: total ? (online / total) * 100 : 0,
-    totalChecks: total,
-    onlineChecks: online,
-    offlineChecks: offline,
-    avgLatency: latCount ? latSum / latCount : 0,
-    maxLatency: latMax,
-    avgJitter:  jitCount ? jitSum / jitCount : 0,
-    avgPacketLoss: lossCount ? lossSum / lossCount : 0,
-    incidentCount: incidents,
-    longestDowntimeMs: longest,
-  };
-}
-
-function combine(aggs: DeviceAggregate[]): DeviceAggregate {
-  const ok = aggs.filter(a => a.totalChecks > 0);
-  if (!ok.length) return emptyAgg();
-  const total = ok.reduce((s, a) => s + a.totalChecks, 0);
-  const online = ok.reduce((s, a) => s + a.onlineChecks, 0);
-  const offline = ok.reduce((s, a) => s + a.offlineChecks, 0);
-  const weight = (sel: (a: DeviceAggregate) => number) =>
-    ok.reduce((s, a) => s + sel(a) * a.totalChecks, 0) / (total || 1);
-  return {
-    uptimePct: total ? (online / total) * 100 : 0,
-    totalChecks: total,
-    onlineChecks: online,
-    offlineChecks: offline,
-    avgLatency: weight(a => a.avgLatency),
-    maxLatency: ok.reduce((m, a) => Math.max(m, a.maxLatency), 0),
-    avgJitter:  weight(a => a.avgJitter),
-    avgPacketLoss: weight(a => a.avgPacketLoss),
-    incidentCount: ok.reduce((s, a) => s + a.incidentCount, 0),
-    longestDowntimeMs: ok.reduce((m, a) => Math.max(m, a.longestDowntimeMs), 0),
-  };
-}
-
-function fmtPct(n: number, dp = 1) { return `${n.toFixed(dp)}%`; }
-function fmtMs(n: number) { return n > 0 ? `${n.toFixed(1)} ms` : "—"; }
-function fmtDuration(ms: number): string {
-  if (!ms || ms < 1000) return "—";
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return `${s}s`;
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // UI primitives
@@ -230,56 +99,21 @@ function StatTile({
 // ──────────────────────────────────────────────────────────────────────────────
 
 export default function ScopedReportDashboard({
-  devices, locations, workers, deviceTypes, areaId, locationId, typeId,
+  devices, locations,
+  range: rangeProp,
 }: ScopedReportDashboardProps) {
-  const [range, setRange] = useState<RangeKey>("24h");
+  const range: RangeKey = rangeProp ?? "24h";
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [perDevice, setPerDevice] = useState<Array<{ device: any; agg: DeviceAggregate; history: HistoryEntry[] }>>([]);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadMsg, setDownloadMsg] = useState<string>("");
-  const [showThanks, setShowThanks] = useState(false);
-  const prevLoadingRef = useRef(false);
-
-  // Long ranges hit a lot of data — give the user a patient message and a
-  // thank-you note when the fetch settles successfully.
-  const isLongRange = range === "1w" || range === "1m" || range === "3m";
-  const rangeText =
-    range === "1h"  ? "1 hour"   :
-    range === "24h" ? "24 hours" :
-    range === "1w"  ? "1 week"   :
-    range === "1m"  ? "1 month"  :
-    range === "3m"  ? "3 months" : range;
-
-  useEffect(() => {
-    const wasLoading = prevLoadingRef.current;
-    prevLoadingRef.current = loading;
-    if (wasLoading && !loading && !error && isLongRange) {
-      setShowThanks(true);
-      const t = window.setTimeout(() => setShowThanks(false), 4000);
-      return () => window.clearTimeout(t);
-    }
-  }, [loading, error, isLongRange]);
+  const [perDevice, setPerDevice] = useState<
+    Array<{ device: any; agg: DeviceAggregate; history: HistoryEntry[]; lastState: boolean | null }>
+  >([]);
+  // Devices ⇄ Locations toggle — now driven by the global top-bar toggle so
+  // it sits just before Logout (mirroring the Dashboard's mode toggle).
+  const { view } = useHistoryView();
 
   const deviceIdsKey = useMemo(() => devices.map((d: any) => d.id).sort().join(","), [devices]);
-
-  // Resolve scope label
-  const scopeLabel = useMemo(() => {
-    const parts: { icon: React.ReactNode; text: string }[] = [];
-    if (areaId) {
-      const w = workers.find((x: any) => String(x.id) === areaId);
-      parts.push({ icon: <Users className="h-3.5 w-3.5" />, text: w?.name || `Area ${areaId}` });
-    }
-    if (locationId) {
-      const l = locations.find((x: any) => String(x.id) === locationId);
-      parts.push({ icon: <MapPin className="h-3.5 w-3.5" />, text: l?.name || `Location ${locationId}` });
-    }
-    if (typeId) {
-      const t = deviceTypes.find((x: any) => String(x.id) === typeId);
-      parts.push({ icon: <Smartphone className="h-3.5 w-3.5" />, text: t?.name || `Type ${typeId}` });
-    }
-    return parts;
-  }, [areaId, locationId, typeId, workers, locations, deviceTypes]);
 
   // Fetch on scope/range change
   useEffect(() => {
@@ -290,20 +124,29 @@ export default function ScopedReportDashboard({
     const { start, end, granularity } = rangeToWindow(range);
     let cancelled = false;
     setLoading(true);
+    setProgress({ done: 0, total: devices.length });
     setError(null);
 
-    Promise.allSettled(
-      devices.map(async (d: any) => ({
+    mapLimit(
+      devices,
+      FETCH_CONCURRENCY,
+      async (d: any) => ({
         device: d,
         history: await fetchDeviceHistory(d.id, start, end, granularity),
-      })),
+      }),
+      (done, total) => { if (!cancelled) setProgress({ done, total }); },
     ).then((settled) => {
       if (cancelled) return;
       const rows = settled.map((r, i) => {
         if (r.status === "fulfilled") {
-          return { device: r.value.device, agg: aggregate(r.value.history), history: r.value.history };
+          return {
+            device: r.value.device,
+            agg: aggregate(r.value.history),
+            history: r.value.history,
+            lastState: lastReachableState(r.value.history),
+          };
         }
-        return { device: devices[i], agg: emptyAgg(), history: [] as HistoryEntry[] };
+        return { device: devices[i], agg: emptyAgg(), history: [] as HistoryEntry[], lastState: null };
       });
       const anyData = rows.some((r) => r.history.length > 0);
       setPerDevice(rows);
@@ -321,8 +164,7 @@ export default function ScopedReportDashboard({
   // Bucketed series for charts
   const buckets = useMemo<Bucket[]>(() => {
     if (perDevice.length === 0) return [];
-    const { granularity } = rangeToWindow(range);
-    const size = bucketMs(granularity);
+    const { bucketSize: size } = rangeToWindow(range);
     const map = new Map<number, Bucket>();
     for (const p of perDevice) {
       for (const e of p.history) {
@@ -331,7 +173,10 @@ export default function ScopedReportDashboard({
         let b = map.get(k);
         if (!b) {
           b = {
-            bucketStart: k, timeLabel: new Date(k).toLocaleString(),
+            bucketStart: k,
+            timeLabel: size >= DAY_MS
+              ? new Date(k).toLocaleDateString()
+              : new Date(k).toLocaleString(),
             online: 0, offline: 0, total: 0,
             latencySum: 0, latencyCount: 0,
             jitterSum: 0, jitterCount: 0,
@@ -357,8 +202,7 @@ export default function ScopedReportDashboard({
   const availabilitySeries = useMemo(() => {
     if (perDevice.length === 0 || buckets.length === 0) return [];
 
-    const { granularity } = rangeToWindow(range);
-    const size = bucketMs(granularity);
+    const { bucketSize: size } = rangeToWindow(range);
 
     type Track = { sorted: HistoryEntry[]; pointer: number; state: boolean | null };
     const tracks: Track[] = perDevice.map((p) => ({
@@ -397,11 +241,24 @@ export default function ScopedReportDashboard({
       };
     });
   }, [perDevice, buckets, range]);
+  // Two-line "device status" series: Online (green) & Offline (red), with a
+  // synthetic zero point at the window start so both lines rise from origin.
+  const statusLineSeries = useMemo(() => {
+    if (availabilitySeries.length === 0) return [];
+    const { start } = rangeToWindow(range);
+    return [
+      { timeLabel: start.toLocaleString(), online: 0, offline: 0 },
+      ...availabilitySeries.map((p) => ({
+        timeLabel: p.timeLabel, online: p.online, offline: p.offline,
+      })),
+    ];
+  }, [availabilitySeries, range]);
+
   const latencySeries = buckets.map((b) => ({
     timeLabel: b.timeLabel,
     latency: b.latencyCount ? +(b.latencySum / b.latencyCount).toFixed(2) : null,
   }));
-  
+
   const lossSeries = buckets.map((b) => ({
     timeLabel: b.timeLabel,
     loss: b.lossCount ? +(b.lossSum / b.lossCount).toFixed(2) : 0,
@@ -413,25 +270,35 @@ export default function ScopedReportDashboard({
     [perDevice],
   );
 
-  // Per-location summary
+  // Per-location summary. Device state over the range = its last probe in
+  // the window (`lastState`), so the location table reflects the timeline.
   const perLocation = useMemo(() => {
     const map = new Map<string, {
-      name: string; deviceCount: number; onlineNow: number;
+      name: string; type?: string; area?: string;
+      deviceCount: number;
+      onlineLast: number; offlineLast: number; noData: number;
       uptimeSum: number; uptimeCount: number;
       latencySum: number; latencyCount: number;
       incidents: number;
     }>();
     for (const r of perDevice) {
-      const name = r.device.location?.name
-        || locations.find((l: any) => String(l.id) === String(r.device.location_id))?.name
-        || "Unknown";
+      const locObj: any = locations.find((l: any) => String(l.id) === String(r.device.location_id));
+      const name = r.device.location?.name || locObj?.name || "Unknown";
       let m = map.get(name);
       if (!m) {
-        m = { name, deviceCount: 0, onlineNow: 0, uptimeSum: 0, uptimeCount: 0, latencySum: 0, latencyCount: 0, incidents: 0 };
+        m = {
+          name,
+          type: locObj?.type_name || locObj?.location_type || r.device.location?.type?.name,
+          area: locObj?.area || r.device.location?.area || r.device.worker?.name,
+          deviceCount: 0, onlineLast: 0, offlineLast: 0, noData: 0,
+          uptimeSum: 0, uptimeCount: 0, latencySum: 0, latencyCount: 0, incidents: 0,
+        };
         map.set(name, m);
       }
       m.deviceCount++;
-      if (r.device.is_reachable) m.onlineNow++;
+      if (r.lastState === null) m.noData++;
+      else if (r.lastState) m.onlineLast++;
+      else m.offlineLast++;
       if (r.agg.totalChecks > 0) {
         m.uptimeSum += r.agg.uptimePct;
         m.uptimeCount++;
@@ -443,8 +310,15 @@ export default function ScopedReportDashboard({
     return [...map.values()]
       .map((m) => ({
         name: m.name,
+        type: m.type,
+        area: m.area,
         deviceCount: m.deviceCount,
-        onlineNow: m.onlineNow,
+        onlineLast: m.onlineLast,
+        offlineLast: m.offlineLast,
+        noData: m.noData,
+        hasData: m.uptimeCount > 0,
+        // Location "online" over the range = ≥1 device up at the window end.
+        statusOnline: (m.onlineLast > 0 ? true : m.offlineLast > 0 ? false : null) as boolean | null,
         avgUptime: m.uptimeCount ? m.uptimeSum / m.uptimeCount : 0,
         avgLatency: m.latencyCount ? m.latencySum / m.latencyCount : 0,
         incidents: m.incidents,
@@ -452,488 +326,440 @@ export default function ScopedReportDashboard({
       .sort((a, b) => b.avgUptime - a.avgUptime);
   }, [perDevice, locations]);
 
-  // Top / Bottom 5 by uptime
+  // Rows for the Dashboard-styled scoped tables.
+  const scopedDeviceRows: ScopedDeviceRow[] = useMemo(
+    () => [...perDevice]
+      .sort((a, b) =>
+        (a.device.display || a.device.hostname || "").localeCompare(
+          b.device.display || b.device.hostname || "",
+        ),
+      )
+      .map((r) => ({
+        id: r.device.id,
+        name: r.device.display || r.device.hostname || `Device ${r.device.id}`,
+        hostname: r.device.hostname,
+        area: r.device.worker?.name || r.device.location?.area,
+        type: r.device.device_type?.name || r.device.type,
+        online: r.lastState,
+        uptimePct: r.agg.uptimePct,
+        hasData: r.agg.totalChecks > 0,
+      })),
+    [perDevice],
+  );
+  const scopedLocationRows: ScopedLocationRow[] = useMemo(
+    () => perLocation.map((l) => ({
+      name: l.name,
+      type: l.type,
+      area: l.area,
+      online: l.statusOnline,
+      devicesOnline: l.onlineLast,
+      devicesOffline: l.offlineLast,
+      devicesTotal: l.deviceCount,
+      uptimePct: l.avgUptime,
+      hasData: l.hasData,
+    })),
+    [perLocation],
+  );
+
+  // Top / Bottom 5 by uptime — devices
   const top5 = ranked.filter((r) => r.agg.totalChecks > 0).slice(0, 5);
   const bottom5 = ranked.filter((r) => r.agg.totalChecks > 0).slice(-5).reverse();
 
-  // ─── Download handlers ────────────────────────────────────────────────────
-  const onProgress = (m: string) => setDownloadMsg(m);
-
-  const toMeta = (d: any): DeviceMeta => ({
-    id: d.id,
-    display: d.display,
-    hostname: d.hostname,
-    ip: d.ip,
-    type: d.device_type?.name
-      || deviceTypes.find((t: any) => String(t.id) === String(d.device_type_id))?.name
-      || "Unknown",
-    location: d.location?.name
-      || locations.find((l: any) => String(l.id) === String(d.location_id))?.name
-      || "Unknown",
-    area: d.worker?.name
-      || workers.find((w: any) => String(w.id) === String(d.worker_id))?.name
-      || "N/A",
-    is_reachable: d.is_reachable,
-  });
-
-  const handleDownload = async () => {
-    setError(null);
-    setDownloading(true);
-    setDownloadMsg("Preparing…");
-    try {
-      if (areaId) {
-        const w = workers.find((x: any) => String(x.id) === areaId);
-        const area: AreaMeta = { id: areaId, name: w?.name || `Area ${areaId}` };
-        const locs: LocationMeta[] = locations
-          .filter((l: any) => String(l.worker_id ?? "") === areaId)
-          .map((l: any) => ({ id: l.id, name: l.name }));
-        await generateAreaReport(area, devices.map(toMeta), locs, range, onProgress);
-      } else {
-        await generateMultipleDevicesReport(devices.map(toMeta), range, onProgress);
-      }
-      setDownloadMsg("Report downloaded.");
-    } catch (e: any) {
-      setError(e?.message || "Failed to download report");
-      setDownloadMsg("");
-    } finally {
-      setDownloading(false);
+  // ── Summary metrics for the first row ──
+  const onlineNow = useMemo(
+    () => devices.filter((d: any) => d.is_reachable).length,
+    [devices],
+  );
+  const totalLocations = useMemo(
+    () => new Set(devices.map((d: any) => d.location_id)).size,
+    [devices],
+  );
+  // Locations with ≥1 device reachable now — mirrors the "N online now"
+  // sub-label on the Total Devices tile.
+  const onlineLocations = useMemo(() => {
+    const up = new Map<any, boolean>();
+    for (const d of devices as any[]) {
+      up.set(d.location_id, (up.get(d.location_id) ?? false) || !!d.is_reachable);
     }
-  };
+    let n = 0;
+    up.forEach((v) => { if (v) n++; });
+    return n;
+  }, [devices]);
+  const locationAvgUptime = useMemo(
+    () => (perLocation.length
+      ? perLocation.reduce((s, l) => s + l.avgUptime, 0) / perLocation.length
+      : 0),
+    [perLocation],
+  );
+
+  // ── Location reliability ranking + chart series ──
+  const topLocations = perLocation.slice(0, 5);
+  const bottomLocations = perLocation.length > 5
+    ? [...perLocation].slice(-5).reverse()
+    : [...perLocation].reverse();
+  const locSeries = useMemo(
+    () => perLocation.map((l) => ({
+      name: l.name,
+      uptime: +l.avgUptime.toFixed(1),
+      latency: +l.avgLatency.toFixed(1),
+    })),
+    [perLocation],
+  );
+
+  const uptimeAccent = (p: number): "emerald" | "amber" | "red" =>
+    p >= 95 ? "emerald" : p >= 80 ? "amber" : "red";
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      {/* Range + download header */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-        <CardContent className="p-3 md:p-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 mb-1">
-                Report scope
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {scopeLabel.length === 0 && (
-                  <span className="text-sm text-slate-300">
-                    All devices ({devices.length})
-                  </span>
-                )}
-                {scopeLabel.map((p, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-cyan-600/40 bg-cyan-500/10 text-cyan-200 text-xs"
-                  >
-                    {p.icon}
-                    {p.text}
-                  </span>
-                ))}
-                <span className="text-xs text-slate-400">
-                  · {devices.length} device{devices.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
+      {/* Blocking progress modal while per-device telemetry is fetched. */}
+      <TelemetryProgressDialog
+        open={loading}
+        done={progress.done}
+        total={progress.total}
+        label="Fetching telemetry"
+      />
 
-            <div className="flex items-end gap-3">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 mb-1">
-                  Timeline
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {RANGE_OPTIONS.map((r) => (
-                    <Button
-                      key={r.key}
-                      size="sm"
-                      variant="ghost"
-                      className={
-                        range === r.key
-                          ? "bg-cyan-500 text-white hover:bg-cyan-400 h-8 px-3 text-xs"
-                          : "bg-slate-700 text-slate-200 hover:bg-slate-600 h-8 px-3 text-xs"
-                      }
-                      onClick={() => setRange(r.key)}
-                    >
-                      {r.label.replace("Last ", "")}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+      {error && !loading && (
+        <div className="text-amber-300 text-xs px-1">{error}</div>
+      )}
 
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={downloading || devices.length === 0}
-                className="h-9 px-4 inline-flex items-center gap-2 rounded-md text-sm font-semibold disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(180deg, #22D3EE 0%, #06B6D4 100%)",
-                  color: "#0B1220",
-                  boxShadow: "0 8px 18px -8px rgba(6,182,212,0.55)",
-                }}
-              >
-                {downloading
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Download className="h-4 w-4" />}
-                Download PDF
-              </button>
-            </div>
-          </div>
-
-          {(loading || downloading || error || downloadMsg || showThanks) && (
-            <div className="mt-3 text-xs">
-              {loading && isLongRange && (
-                <span className="text-cyan-300 inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Fetching {devices.length} device{devices.length !== 1 ? "s" : ""} over the last {rangeText}… this may take a few seconds, please wait.
-                </span>
-              )}
-              {loading && !isLongRange && (
-                <span className="text-cyan-300 inline-flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Loading telemetry for {devices.length} device{devices.length !== 1 ? "s" : ""}…
-                </span>
-              )}
-              {!loading && showThanks && (
-                <span className="text-emerald-300 inline-flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Thanks for your patience — data loaded.
-                </span>
-              )}
-              {!loading && downloading && (
-                <span className="text-cyan-300 inline-flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {downloadMsg}
-                </span>
-              )}
-              {!loading && !downloading && !showThanks && downloadMsg && !error && (
-                <span className="text-emerald-300">{downloadMsg}</span>
-              )}
-              {error && <span className="text-amber-300">{error}</span>}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Aggregate KPI tiles */}
+      {/* ── First row: 4 summary metrics ──────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatTile
-          label="Avg Uptime"
+          label="Total Devices"
+          value={String(devices.length)}
+          accent="slate"
+          icon={<Smartphone className="h-3.5 w-3.5" />}
+          sub={`${onlineNow} online now`}
+        />
+        <StatTile
+          label="Total Locations"
+          value={String(totalLocations)}
+          accent="slate"
+          icon={<MapPin className="h-3.5 w-3.5" />}
+          sub={`${onlineLocations} online now`}
+        />
+        <StatTile
+          label="Devices Avg Uptime"
           value={fmtPct(overall.uptimePct)}
-          accent={overall.uptimePct >= 95 ? "emerald" : overall.uptimePct >= 80 ? "amber" : "red"}
+          accent={uptimeAccent(overall.uptimePct)}
           icon={<TrendingUp className="h-3.5 w-3.5" />}
           sub={`${overall.onlineChecks}/${overall.totalChecks} checks`}
         />
         <StatTile
-          label="Avg Latency"
-          value={fmtMs(overall.avgLatency)}
-          accent="cyan"
-          icon={<Clock className="h-3.5 w-3.5" />}
-          sub={`Max ${fmtMs(overall.maxLatency)}`}
-        />
-        <StatTile
-          label="Avg Jitter"
-          value={fmtMs(overall.avgJitter)}
-          accent="violet"
+          label="Location Avg Uptime"
+          value={fmtPct(locationAvgUptime)}
+          accent={uptimeAccent(locationAvgUptime)}
           icon={<Gauge className="h-3.5 w-3.5" />}
         />
-        <StatTile
-          label="Avg Packet Loss"
-          value={fmtPct(overall.avgPacketLoss, 2)}
-          accent={overall.avgPacketLoss > 1 ? "red" : "emerald"}
-          icon={<AlertCircle className="h-3.5 w-3.5" />}
-        />
       </div>
 
-      {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatTile
-          label="Outage events"
-          value={String(overall.incidentCount)}
-          accent={overall.incidentCount > 0 ? "red" : "emerald"}
-          icon={<AlertCircle className="h-3.5 w-3.5" />}
-        />
-        <StatTile
-          label="Longest downtime"
-          value={fmtDuration(overall.longestDowntimeMs)}
-          accent="red"
-          icon={<Clock className="h-3.5 w-3.5" />}
-        />
-        <StatTile
-          label="Devices in scope"
-          value={String(devices.length)}
-          accent="slate"
-          icon={<Smartphone className="h-3.5 w-3.5" />}
-          sub={`${devices.filter((d: any) => d.is_reachable).length} online now`}
-        />
-        <StatTile
-          label="Locations"
-          value={String(new Set(devices.map((d: any) => d.location_id)).size)}
-          accent="slate"
-          icon={<MapPin className="h-3.5 w-3.5" />}
-        />
-      </div>
-
-      {/* Devices online over time — stacked area showing device states (not raw probe counts) */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-white flex items-center gap-2">
-            <Signal className="h-5 w-5 text-emerald-300" />
-            Devices status
-            <span className="ml-auto text-[11px] font-normal text-slate-400">
-              of {devices.length} device{devices.length !== 1 ? "s" : ""} in scope
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {availabilitySeries.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
-              {loading ? "Loading…" : "No availability data"}
-            </div>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={availabilitySeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="srd-online" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#10b981" stopOpacity={0.65} />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="srd-offline" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#ef4444" stopOpacity={0.65} />
-                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="srd-nodata" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#64748b" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#64748b" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "#cbd5e1" }}
-                    allowDecimals={false}
-                    domain={[0, devices.length]}
-                    label={{ value: "Devices", angle: -90, position: "insideLeft", style: { fill: "#94a3b8", fontSize: 11 } }}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }}
-                    labelStyle={{ color: "#cbd5e1" }}
-                    formatter={(value: any, name: any) => {
-                      const total = devices.length || 1;
-                      const pct = Math.round((Number(value) / total) * 100);
-                      return [`${value} (${pct}%)`, name];
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11, color: "#cbd5e1" }} />
-                  <Area type="monotone" dataKey="online"  stackId="1" stroke="#10b981" fill="url(#srd-online)"  strokeWidth={2} name="Online" />
-                  <Area type="monotone" dataKey="offline" stackId="1" stroke="#ef4444" fill="url(#srd-offline)" strokeWidth={2} name="Offline" />
-                  <Area type="monotone" dataKey="noData"  stackId="1" stroke="#64748b" fill="url(#srd-nodata)"  strokeWidth={1} name="No data" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Latency */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-white flex items-center gap-2">
-            <Clock className="h-5 w-5 text-cyan-400" />
-            Average Latency
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {latencySeries.every((p) => p.latency === null) ? (
-            <div className="h-56 flex items-center justify-center text-slate-400 text-sm">
-              {loading ? "Loading…" : "No latency data"}
-            </div>
-          ) : (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={latencySeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
-                  <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} domain={[0, "dataMax + 10"]} />
-                  <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
-                  <ReferenceArea y1={0}   y2={80}      fill="#16a34a" fillOpacity={0.05} />
-                  <ReferenceArea y1={80}  y2={120}     fill="#fbbf24" fillOpacity={0.05} />
-                  <ReferenceArea y1={120} y2="dataMax" fill="#ef4444" fillOpacity={0.05} />
-                  <Line type="monotone" dataKey="latency" stroke="#22d3ee" strokeWidth={2} dot={false} name="Avg latency (ms)" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-       <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+      {/* ── Table (toggle) — Dashboard-styled, scoped & read-only ─────── */}
+      {view === "devices" ? (
+        <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
           <CardHeader className="pb-3">
             <CardTitle className="text-base text-white flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-300" />
-              Packet Loss
+              <Smartphone className="h-5 w-5 text-cyan-400" />
+              Devices
+              <span className="ml-auto text-[11px] font-normal text-slate-400">
+                {scopedDeviceRows.length} in scope
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {lossSeries.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No data</div>
-            ) : (
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={lossSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
-                    <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} unit="%" />
-                    <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
-                    <Bar dataKey="loss" fill="#ef4444" name="Avg loss (%)" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <ScopedDevicesTable rows={scopedDeviceRows} />
           </CardContent>
         </Card>
+      ) : (
+        <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-white flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-cyan-400" />
+              Locations
+              <span className="ml-auto text-[11px] font-normal text-slate-400">
+                {scopedLocationRows.length} in scope
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScopedLocationsTable rows={scopedLocationRows} />
+          </CardContent>
+        </Card>
+      )}
 
-     
+      {/* ── Most / Least reliable (toggle) ────────────────────────────── */}
+      {view === "devices" ? (
+        (top5.length > 0 || bottom5.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-300" />
+                  Most reliable devices
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {top5.length === 0 ? (
+                  <div className="text-slate-400 text-sm">No data.</div>
+                ) : (
+                  <ol className="space-y-1">
+                    {top5.map((r, i) => (
+                      <li key={r.device.id} className="flex items-center gap-2 text-sm">
+                        <span className="w-5 text-slate-400 tabular-nums">{i + 1}.</span>
+                        <span className="flex-1 truncate text-slate-100">{r.device.display || r.device.hostname}</span>
+                        <span className="text-emerald-300 font-semibold tabular-nums">{fmtPct(r.agg.uptimePct)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </CardContent>
+            </Card>
 
-      {/* Per-location summary */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-white flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-cyan-400" />
-            Per-location summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {perLocation.length === 0 ? (
-            <div className="text-slate-400 text-sm">No location data.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 border-b border-slate-700">
-                  <th className="py-2 pr-2">Location</th>
-                  <th className="py-2 pr-2">Devices</th>
-                  <th className="py-2 pr-2">Online now</th>
-                  <th className="py-2 pr-2">Avg Uptime</th>
-                  <th className="py-2 pr-2">Avg Latency</th>
-                  <th className="py-2 pr-2">Outages</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perLocation.map((l) => (
-                  <tr key={l.name} className="border-b border-slate-700/50">
-                    <td className="py-2 pr-2 text-slate-100">{l.name}</td>
-                    <td className="py-2 pr-2 tabular-nums text-slate-300">{l.deviceCount}</td>
-                    <td className="py-2 pr-2 tabular-nums text-emerald-300">{l.onlineNow}</td>
-                    <td className={`py-2 pr-2 tabular-nums font-semibold ${
-                      l.avgUptime >= 95 ? "text-emerald-300" :
-                      l.avgUptime >= 80 ? "text-amber-300"   : "text-red-300"
-                    }`}>{fmtPct(l.avgUptime)}</td>
-                    <td className="py-2 pr-2 tabular-nums text-slate-300">{fmtMs(l.avgLatency)}</td>
-                    <td className="py-2 pr-2 tabular-nums text-slate-300">{l.incidents}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Per-device summary */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base text-white flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-cyan-400" />
-            Per-device summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {ranked.length === 0 ? (
-            <div className="text-slate-400 text-sm">No devices.</div>
-          ) : (
-            <div className="space-y-1 max-h-[440px] overflow-y-auto pr-1">
-              {ranked.map((row) => {
-                const u = row.agg.uptimePct;
-                const barColor = row.agg.totalChecks === 0 ? "bg-slate-600"
-                  : u >= 95 ? "bg-emerald-400"
-                  : u >= 80 ? "bg-amber-400"
-                  : "bg-red-400";
-                const textColor = row.agg.totalChecks === 0 ? "text-slate-400"
-                  : u >= 95 ? "text-emerald-300"
-                  : u >= 80 ? "text-amber-300"
-                  : "text-red-300";
-                return (
-                  <div key={row.device.id} className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-slate-700/40">
-                    <div className="w-1/3 truncate text-sm text-slate-100">
-                      {row.device.display || row.device.hostname}
-                    </div>
-                    <div className="flex-1 h-2 rounded-full bg-slate-700 overflow-hidden">
-                      <div className={`h-full ${barColor}`} style={{ width: `${u}%` }} />
-                    </div>
-                    <div className={`w-16 text-right text-xs font-semibold tabular-nums ${textColor}`}>
-                      {row.agg.totalChecks === 0 ? "—" : fmtPct(u)}
-                    </div>
-                    <div className="w-20 text-right text-xs text-slate-400 tabular-nums">
-                      {fmtMs(row.agg.avgLatency)}
-                    </div>
-                    <div className="w-14 text-right text-xs text-slate-400 tabular-nums">
-                      {row.agg.incidentCount} out
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Top / Bottom */}
-      {(top5.length > 0 || bottom5.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base text-white flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-emerald-300" />
-                Most reliable
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {top5.length === 0 ? (
-                <div className="text-slate-400 text-sm">No data.</div>
-              ) : (
+            <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-300" />
+                  Least reliable devices
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {bottom5.length === 0 ? (
+                  <div className="text-slate-400 text-sm">No data.</div>
+                ) : (
+                  <ol className="space-y-1">
+                    {bottom5.map((r, i) => (
+                      <li key={r.device.id} className="flex items-center gap-2 text-sm">
+                        <span className="w-5 text-slate-400 tabular-nums">{i + 1}.</span>
+                        <span className="flex-1 truncate text-slate-100">{r.device.display || r.device.hostname}</span>
+                        <span className={`font-semibold tabular-nums ${
+                          r.agg.uptimePct >= 80 ? "text-amber-300" : "text-red-300"
+                        }`}>{fmtPct(r.agg.uptimePct)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )
+      ) : (
+        perLocation.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-300" />
+                  Most reliable locations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <ol className="space-y-1">
-                  {top5.map((r, i) => (
-                    <li key={r.device.id} className="flex items-center gap-2 text-sm">
+                  {topLocations.map((l, i) => (
+                    <li key={l.name} className="flex items-center gap-2 text-sm">
                       <span className="w-5 text-slate-400 tabular-nums">{i + 1}.</span>
-                      <span className="flex-1 truncate text-slate-100">{r.device.display || r.device.hostname}</span>
-                      <span className="text-emerald-300 font-semibold tabular-nums">{fmtPct(r.agg.uptimePct)}</span>
+                      <span className="flex-1 truncate text-slate-100">{l.name}</span>
+                      <span className="text-emerald-300 font-semibold tabular-nums">{fmtPct(l.avgUptime)}</span>
                     </li>
                   ))}
                 </ol>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-white flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-300" />
+                  Least reliable locations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-1">
+                  {bottomLocations.map((l, i) => (
+                    <li key={l.name} className="flex items-center gap-2 text-sm">
+                      <span className="w-5 text-slate-400 tabular-nums">{i + 1}.</span>
+                      <span className="flex-1 truncate text-slate-100">{l.name}</span>
+                      <span className={`font-semibold tabular-nums ${
+                        l.avgUptime >= 80 ? "text-amber-300" : "text-red-300"
+                      }`}>{fmtPct(l.avgUptime)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      )}
+
+      {/* ── Charts (toggle) ───────────────────────────────────────────── */}
+      {view === "devices" ? (
+        <>
+          {/* Device status over time — Online (green) vs Offline (red),
+              both rising from the origin (0) at the window start. */}
+          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-white flex items-center gap-2">
+                <Signal className="h-5 w-5 text-emerald-300" />
+                Device Status
+                <span className="ml-auto text-[11px] font-normal text-slate-400">
+                  of {devices.length} device{devices.length !== 1 ? "s" : ""} in scope
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statusLineSeries.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
+                  {loading ? "Loading…" : "No availability data"}
+                </div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={statusLineSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "#cbd5e1" }}
+                        allowDecimals={false}
+                        domain={[0, Math.max(1, devices.length)]}
+                        label={{ value: "Devices", angle: -90, position: "insideLeft", style: { fill: "#94a3b8", fontSize: 11 } }}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }}
+                        labelStyle={{ color: "#cbd5e1" }}
+                        formatter={(value: any, name: any) => {
+                          const total = devices.length || 1;
+                          const pct = Math.round((Number(value) / total) * 100);
+                          return [`${value} (${pct}%)`, name];
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 11, color: "#cbd5e1" }} />
+                      <Line type="monotone" dataKey="online"  stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} name="Online" />
+                      <Line type="monotone" dataKey="offline" stroke="#ef4444" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} name="Offline" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
 
+          {/* Latency */}
+          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-white flex items-center gap-2">
+                <Clock className="h-5 w-5 text-cyan-400" />
+                Average Latency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {latencySeries.every((p) => p.latency === null) ? (
+                <div className="h-56 flex items-center justify-center text-slate-400 text-sm">
+                  {loading ? "Loading…" : "No latency data"}
+                </div>
+              ) : (
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={latencySeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
+                      <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} domain={[0, "dataMax + 10"]} />
+                      <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
+                      <ReferenceArea y1={0}   y2={80}      fill="#16a34a" fillOpacity={0.05} />
+                      <ReferenceArea y1={80}  y2={120}     fill="#fbbf24" fillOpacity={0.05} />
+                      <ReferenceArea y1={120} y2="dataMax" fill="#ef4444" fillOpacity={0.05} />
+                      <Line type="monotone" dataKey="latency" stroke="#22d3ee" strokeWidth={2} dot={false} name="Avg latency (ms)" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Packet loss */}
           <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
             <CardHeader className="pb-3">
               <CardTitle className="text-base text-white flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-red-300" />
-                Least reliable
+                Packet Loss
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {bottom5.length === 0 ? (
-                <div className="text-slate-400 text-sm">No data.</div>
+              {lossSeries.length === 0 ? (
+                <div className="h-48 flex items-center justify-center text-slate-400 text-sm">No data</div>
               ) : (
-                <ol className="space-y-1">
-                  {bottom5.map((r, i) => (
-                    <li key={r.device.id} className="flex items-center gap-2 text-sm">
-                      <span className="w-5 text-slate-400 tabular-nums">{i + 1}.</span>
-                      <span className="flex-1 truncate text-slate-100">{r.device.display || r.device.hostname}</span>
-                      <span className={`font-semibold tabular-nums ${
-                        r.agg.uptimePct >= 80 ? "text-amber-300" : "text-red-300"
-                      }`}>{fmtPct(r.agg.uptimePct)}</span>
-                    </li>
-                  ))}
-                </ol>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lossSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="timeLabel" tick={{ fontSize: 10, fill: "#cbd5e1" }} minTickGap={24} />
+                      <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} unit="%" />
+                      <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
+                      <Bar dataKey="loss" fill="#ef4444" name="Avg loss (%)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </>
+      ) : (
+        <>
+          {/* Per-location avg uptime */}
+          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-white flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-emerald-300" />
+                Locations — Avg Uptime
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {locSeries.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-slate-400 text-sm">No location data</div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={locSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#cbd5e1" }} interval={0} angle={-25} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} unit="%" domain={[0, 100]} />
+                      <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
+                      <ReferenceArea y1={0}  y2={80}  fill="#ef4444" fillOpacity={0.05} />
+                      <ReferenceArea y1={80} y2={95}  fill="#fbbf24" fillOpacity={0.05} />
+                      <ReferenceArea y1={95} y2={100} fill="#16a34a" fillOpacity={0.05} />
+                      <Bar dataKey="uptime" fill="#10b981" name="Avg uptime (%)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Per-location avg latency */}
+          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-white flex items-center gap-2">
+                <Clock className="h-5 w-5 text-cyan-400" />
+                Locations — Avg Latency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {locSeries.length === 0 ? (
+                <div className="h-56 flex items-center justify-center text-slate-400 text-sm">No location data</div>
+              ) : (
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={locSeries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#cbd5e1" }} interval={0} angle={-25} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 10, fill: "#cbd5e1" }} unit=" ms" />
+                      <Tooltip contentStyle={{ background: "#0f172a", borderColor: "#334155", color: "#e2e8f0", fontSize: 12 }} labelStyle={{ color: "#cbd5e1" }} />
+                      <Bar dataKey="latency" fill="#22d3ee" name="Avg latency (ms)" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

@@ -1,7 +1,10 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-import { fetchDeviceHistory, type HistoryEntry, type Granularity } from "@/lib/useDeviceTelemetry";
+import { fetchDeviceHistory, mapLimit, type HistoryEntry, type Granularity } from "@/lib/useDeviceTelemetry";
+
+// Bounded concurrency for per-device history fetches in reports.
+const REPORT_FETCH_CONCURRENCY = 5;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public API
@@ -104,12 +107,10 @@ export async function generateMultipleDevicesReport(
   const { start, end, granularity } = rangeToWindow(range);
   onProgress?.(`Fetching history for ${devices.length} device${devices.length === 1 ? "" : "s"}…`);
 
-  const results = await Promise.allSettled(
-    devices.map(async (d) => ({
-      device: d,
-      history: await fetchDeviceHistory(d.id, start, end, granularity),
-    })),
-  );
+  const results = await mapLimit(devices, REPORT_FETCH_CONCURRENCY, async (d) => ({
+    device: d,
+    history: await fetchDeviceHistory(d.id, start, end, granularity),
+  }));
 
   const rows = results.map((r, idx) => {
     if (r.status === "fulfilled") {
@@ -219,12 +220,10 @@ export async function generateAreaReport(
   const { start, end, granularity } = rangeToWindow(range);
   onProgress?.(`Fetching telemetry for ${devices.length} device${devices.length === 1 ? "" : "s"} in ${area.name}…`);
 
-  const results = await Promise.allSettled(
-    devices.map(async (d) => ({
-      device: d,
-      history: await fetchDeviceHistory(d.id, start, end, granularity),
-    })),
-  );
+  const results = await mapLimit(devices, REPORT_FETCH_CONCURRENCY, async (d) => ({
+    device: d,
+    history: await fetchDeviceHistory(d.id, start, end, granularity),
+  }));
 
   const perDevice = results.map((r, idx) => {
     if (r.status === "fulfilled") {
@@ -959,7 +958,7 @@ function rangeToWindow(range: RangeKey): { start: Date; end: Date; granularity: 
       break;
     case "1w":
       start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
-      granularity = "hourly";
+      granularity = "daily";
       break;
     case "1m":
       start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);

@@ -6,11 +6,16 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/app-sidebar'
 import { Separator } from '@/components/ui/separator'
 import "@/index.css";
-import { Server, Link2, LogOut } from 'lucide-react';
+import { Server, Link2, LogOut, Clock, Download, Loader2, ArrowLeft, MapPin } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useOverviewMode, type OverviewMode } from '@/contexts/OverviewModeContext'
 import { useAreaView } from '@/contexts/AreaViewContext'
-import { useAppDispatch } from '@/store/hooks'
+import { useHistoryRange, HISTORY_RANGES } from '@/contexts/HistoryRangeContext'
+import { useHistoryNav } from '@/contexts/HistoryNavContext'
+import { useHistoryView, type HistoryView } from '@/contexts/HistoryViewContext'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { logout } from '@/store/authSlice'
+import { generateAreaReport } from '@/lib/report-generator'
 
 import { LoadingPage } from './components/loading-screen'
 import { getAuthToken, clearAuthToken, subscribeToAuthChanges, extractTokenFromUrl, completeUrlTokenAuth } from '@/lib/auth'
@@ -91,6 +96,46 @@ function ModeToggle() {
   )
 }
 
+/* History Devices ⇄ Locations toggle — lives in the top header bar (just
+   before Logout, like the Dashboard's mode toggle). Drives both the History
+   landing area cards and the opened Area Card report. */
+function HistoryViewToggle() {
+  const { view, setView } = useHistoryView()
+  const opts: { key: HistoryView; label: string; icon: React.ReactNode }[] = [
+    { key: 'devices', label: 'Devices', icon: <Server className="size-3.5" /> },
+    { key: 'locations', label: 'Locations', icon: <MapPin className="size-3.5" /> },
+  ]
+  return (
+    <div role="radiogroup" aria-label="History data kind" className="flex items-center gap-4">
+      {opts.map(o => {
+        const active = view === o.key
+        return (
+          <label
+            key={o.key}
+            className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold select-none"
+            style={{
+              color: active ? 'var(--brand)' : 'var(--text-mid)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            <input
+              type="radio"
+              name="history-view"
+              value={o.key}
+              checked={active}
+              onChange={() => setView(o.key)}
+              className="size-3.5 cursor-pointer"
+              style={{ accentColor: 'var(--brand)' }}
+            />
+            {o.icon}
+            {o.label}
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
 /* Radios shown when drilled into a specific area: Locations vs Devices.
    This choice applies to BOTH the table (default view) and the topology
    graph (opened via the Map icon in the table header). */
@@ -141,6 +186,7 @@ function HeaderBar({ pageName }: { pageName: string }) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const isOverview = pathname === '/'
+  const isHistory = pathname.startsWith('/history')
   const isAreaScreen =
     pathname.startsWith('/topology') &&
     !!new URLSearchParams(search).get('area')
@@ -184,6 +230,17 @@ function HeaderBar({ pageName }: { pageName: string }) {
           </>
         )}
 
+        {/* Devices / Locations radios — History page, just before Logout */}
+        {isHistory && (
+          <>
+            <HistoryViewToggle />
+            <Separator
+              orientation="vertical"
+              className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)] hidden sm:block"
+            />
+          </>
+        )}
+
         {/* Topology / Table radios — when drilled into a specific area */}
         {isAreaScreen && (
           <>
@@ -216,13 +273,217 @@ function HeaderBar({ pageName }: { pageName: string }) {
   )
 }
 
-/* ── Second top bar: company name (left) · Live status tag ── */
+/* History controls — clock-icon timeline dropdown + per-area report.
+   • An area card open (?area=) → "Report" generates that area's PDF on click.
+   • All-areas page → "Report" opens a dropdown of areas; picking one
+     downloads that area's PDF. Shown only on the History page. */
+function HistoryControls() {
+  const { range, setRange } = useHistoryRange()
+  const { search } = useLocation()
+  const [tlOpen, setTlOpen] = useState(false)
+  const [areaOpen, setAreaOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const { devices = [] } = useAppSelector(s => s.devices)
+  const { locations = [] } = useAppSelector(s => s.locations)
+  const { workers = [] } = useAppSelector(s => s.workers)
+
+  const params = new URLSearchParams(search)
+  const openedAreaId = params.get('area') ?? ''
+  const current = HISTORY_RANGES.find(r => r.key === range)
+
+  const areasSorted = [...workers].sort(
+    (a: any, b: any) => (a.name || '').localeCompare(b.name || ''),
+  )
+
+  const runAreaReport = async (workerId: string) => {
+    const w: any = workers.find((x: any) => String(x.id) === String(workerId))
+    if (!w || busy) return
+    const areaDevices = (devices as any[]).filter(
+      d => String(d.worker_id ?? '') === String(workerId),
+    )
+    if (areaDevices.length === 0) return
+    const locs = (locations as any[])
+      .filter(l => String(l.worker_id ?? '') === String(workerId))
+      .map(l => ({ id: l.id, name: l.name }))
+    const metas = areaDevices.map(d => ({
+      id: d.id,
+      display: d.display,
+      hostname: d.hostname,
+      ip: d.ip,
+      type: d.device_type?.name || 'Unknown',
+      location: d.location?.name || 'Unknown',
+      area: d.worker?.name || w.name || 'N/A',
+      is_reachable: d.is_reachable,
+    }))
+    setBusy(true)
+    try {
+      await generateAreaReport(
+        { id: String(w.id), name: w.name || `Area ${w.id}` },
+        metas,
+        locs,
+        range,
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Timeline — clock icon opens the range dropdown */}
+      <Popover open={tlOpen} onOpenChange={setTlOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            title="Timeline"
+            aria-label="Timeline"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-semibold transition-colors"
+            style={{
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text-mid)',
+              cursor: 'pointer',
+            }}
+          >
+            <Clock className="size-3.5" />
+            <span className="hidden sm:inline">{current?.label ?? 'Timeline'}</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-40 p-1"
+          style={{
+            background: 'var(--bg-panel)',
+            border: '1px solid var(--border-soft)',
+            color: 'var(--text-hi)',
+          }}
+        >
+          {HISTORY_RANGES.map(r => {
+            const active = range === r.key
+            return (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => { setRange(r.key); setTlOpen(false) }}
+                className="w-full text-left px-2.5 py-2 rounded-md text-sm transition-colors"
+                style={{
+                  background: active ? 'var(--brand-soft)' : 'transparent',
+                  color: active ? 'var(--brand)' : 'var(--text-mid)',
+                }}
+              >
+                {r.label}
+              </button>
+            )
+          })}
+        </PopoverContent>
+      </Popover>
+
+      {/* Report — direct per-area when an area is open, else pick an area */}
+      {openedAreaId ? (
+        <button
+          type="button"
+          onClick={() => runAreaReport(openedAreaId)}
+          disabled={busy}
+          title="Download this area's report"
+          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-semibold transition-colors disabled:opacity-50"
+          style={{
+            background: 'var(--brand-soft)',
+            border: '1px solid var(--border-brand)',
+            color: 'var(--brand)',
+            cursor: busy ? 'wait' : 'pointer',
+          }}
+        >
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+          <span className="hidden sm:inline">Report</span>
+        </button>
+      ) : (
+        <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={busy}
+              title="Download an area report"
+              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{
+                background: 'var(--brand-soft)',
+                border: '1px solid var(--border-brand)',
+                color: 'var(--brand)',
+                cursor: busy ? 'wait' : 'pointer',
+              }}
+            >
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+              <span className="hidden sm:inline">Report</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-56 p-1 max-h-[60vh] overflow-y-auto"
+            style={{
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text-hi)',
+            }}
+          >
+            <div
+              className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              style={{ color: 'var(--text-lo)' }}
+            >
+              Select area
+            </div>
+            {areasSorted.length === 0 && (
+              <div className="px-2.5 py-2 text-sm" style={{ color: 'var(--text-lo)' }}>
+                No areas
+              </div>
+            )}
+            {areasSorted.map((w: any) => (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => { setAreaOpen(false); runAreaReport(String(w.id)) }}
+                className="w-full text-left px-2.5 py-2 rounded-md text-sm transition-colors"
+                style={{ color: 'var(--text-mid)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--brand-soft)'
+                  e.currentTarget.style.color = 'var(--brand)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--text-mid)'
+                }}
+              >
+                {w.name || `Area ${w.id}`}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  )
+}
+
+/* ── Second top bar: company name (left) · Live status · (History timeline) ── */
 function SubHeaderBar() {
+  const { pathname } = useLocation()
+  const isHistory = pathname.startsWith('/history')
+  const { back } = useHistoryNav()
   return (
     <div
-      className="shrink-0 w-full border-b border-[var(--border-soft)] flex items-center gap-6 px-4 h-11"
+      className="shrink-0 w-full border-b border-[var(--border-soft)] flex items-center gap-3 px-4 h-11"
       style={{ backgroundColor: 'rgba(11,18,32,0.6)' }}
     >
+      {back && (
+        <button
+          type="button"
+          onClick={back}
+          title="Back to areas"
+          aria-label="Back to areas"
+          className="inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)] text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors shrink-0"
+          style={{ width: 30, height: 30, cursor: 'pointer' }}
+        >
+          <ArrowLeft className="size-4" />
+        </button>
+      )}
       <span className="text-sm md:text-base font-bold tracking-tight text-[var(--text-hi)] truncate">
         Bharat Coking Coal Limited
       </span>
@@ -243,6 +504,9 @@ function SubHeaderBar() {
         />
         Live status
       </span>
+
+      <div className="flex-1" />
+      {isHistory && <HistoryControls />}
     </div>
   )
 }

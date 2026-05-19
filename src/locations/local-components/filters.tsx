@@ -205,7 +205,7 @@ function FilterComboBox({ label, filterValue, setFilterValue, filterOptions }: F
                     color: 'var(--text-hi)',
                 }}
             >
-                <Command style={{ background: 'transparent', color: 'var(--text-hi)' }}>
+                <Command shouldFilter={false} style={{ background: 'transparent', color: 'var(--text-hi)' }}>
                     <CommandInput
                         placeholder={`Search ${label.toLowerCase()}…`}
                         className="h-9"

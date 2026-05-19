@@ -1,225 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAllDevices, fetchDeviceTypes } from "@/store/deviceSlice";
 import { fetchLocations, fetchLocationsforMap } from "@/store/locationsSlice";
 import { fetchWorkers } from "@/store/workerSlice";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Search, Smartphone, ChevronDown, History as HistoryIcon, X, Download,
-} from "lucide-react";
+import { History as HistoryIcon } from "lucide-react";
 
 import DeviceHistoryView from "@/components/device-history-view";
-import ReportDialog from "@/history/ReportDialog";
 import ScopedReportDashboard from "@/history/ScopedReportDashboard";
+import { useHistoryRange } from "@/contexts/HistoryRangeContext";
+import { useHistoryNav } from "@/contexts/HistoryNavContext";
+import { useHistoryView } from "@/contexts/HistoryViewContext";
+import { fetchDeviceHistory, mapLimit } from "@/lib/useDeviceTelemetry";
+import { rangeToWindow, lastReachableState } from "@/lib/telemetry-aggregate";
+import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Toolbar primitives — keep visual language consistent with the rest of the app
-// ──────────────────────────────────────────────────────────────────────────────
-
-function ToolbarLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 mb-1 block">
-      {children}
-    </span>
-  );
-}
-
-function ToolbarSelect({
-  value, onChange, children, ariaLabel,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  children: React.ReactNode;
-  ariaLabel?: string;
-}) {
-  return (
-    <select
-      aria-label={ariaLabel}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-9 w-full min-w-[140px] px-3 pr-8 rounded-md text-sm bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-400 transition-colors"
-    >
-      {children}
-    </select>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// DevicePicker — searchable dropdown so the device list never claims layout space
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface PickerDevice {
-  id: number | string;
-  display?: string;
-  hostname?: string;
-  ip?: string;
-  is_reachable?: any;
-}
-
-function DevicePicker({
-  devices, value, onChange,
-}: {
-  devices: PickerDevice[];
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  const selected = useMemo(
-    () => devices.find((d) => String(d.id) === value) || null,
-    [devices, value],
-  );
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return devices;
-    const q = query.trim().toLowerCase();
-    return devices.filter((d) =>
-      (d.display || "").toLowerCase().includes(q) ||
-      (d.hostname || "").toLowerCase().includes(q) ||
-      (d.ip || "").toLowerCase().includes(q),
-    );
-  }, [devices, query]);
-
-  return (
-    <div ref={wrapRef} className="relative w-full">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="h-9 w-full min-w-[220px] pl-3 pr-8 rounded-md text-sm bg-slate-800 border border-slate-700 text-slate-100 hover:border-slate-500 focus:outline-none focus:border-cyan-400 transition-colors flex items-center gap-2 text-left"
-      >
-        <Smartphone className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-        {selected ? (
-          <span className="truncate flex items-center gap-2 min-w-0">
-            <span
-              className={`size-2 rounded-full shrink-0 ${
-                selected.is_reachable ? "bg-emerald-400" : "bg-red-400"
-              }`}
-            />
-            <span className="truncate text-slate-100">
-              {selected.display || selected.hostname}
-            </span>
-            {selected.ip && (
-              <span className="text-[11px] text-slate-400 font-mono truncate">
-                {selected.ip}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span className="text-slate-400 truncate">
-            {devices.length === 0 ? "No devices in scope" : `Select device (${devices.length})`}
-          </span>
-        )}
-        <ChevronDown className="h-4 w-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
-      </button>
-
-      {open && (
-        <div
-          className="absolute z-40 mt-1 left-0 right-0 w-full min-w-[280px] rounded-md border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden"
-          style={{ maxHeight: "min(60vh, 420px)" }}
-        >
-          <div className="p-2 border-b border-slate-700">
-            <div className="relative">
-              <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                autoFocus
-                type="search"
-                placeholder="Search devices…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-8 pr-2 py-1.5 rounded text-sm bg-slate-800 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-          </div>
-
-          <div className="overflow-y-auto" style={{ maxHeight: "calc(min(60vh, 420px) - 52px)" }}>
-            {filtered.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-slate-400">
-                No devices match
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-700/60">
-                {filtered.map((d) => {
-                  const isSel = String(d.id) === value;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => {
-                        onChange(String(d.id));
-                        setOpen(false);
-                        setQuery("");
-                      }}
-                      className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
-                        isSel ? "bg-cyan-500/15" : "hover:bg-slate-800"
-                      }`}
-                    >
-                      <span
-                        className={`size-2 rounded-full shrink-0 ${
-                          d.is_reachable ? "bg-emerald-400" : "bg-red-400"
-                        }`}
-                        style={{
-                          boxShadow: d.is_reachable
-                            ? "0 0 8px rgba(16,185,129,0.6)"
-                            : "0 0 8px rgba(239,68,68,0.6)",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate text-slate-100">
-                          {d.display || d.hostname}
-                        </div>
-                        {d.ip && (
-                          <div className="text-[11px] font-mono truncate text-slate-400">
-                            {d.ip}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Page
-// ──────────────────────────────────────────────────────────────────────────────
+// Bounded concurrency for per-device history fetches (mirrors the report view).
+const FETCH_CONCURRENCY = 5;
 
 export default function HistoryPage() {
   const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { setBack } = useHistoryNav();
+  const { range } = useHistoryRange();
+  const { view } = useHistoryView();
 
   const { devices = [], deviceTypes = [] } = useAppSelector((s) => s.devices);
   const { locations = [] }                = useAppSelector((s) => s.locations);
   const { workers = [] }                  = useAppSelector((s) => s.workers);
 
   useEffect(() => {
-    if (devices.length === 0)    dispatch(fetchAllDevices());
+    if (devices.length === 0)     dispatch(fetchAllDevices());
     if (deviceTypes.length === 0) dispatch(fetchDeviceTypes());
     if (locations.length === 0) {
       dispatch(fetchLocations());
       dispatch(fetchLocationsforMap());
     }
-    if (workers.length === 0)    dispatch(fetchWorkers({}));
+    if (workers.length === 0)     dispatch(fetchWorkers({}));
   }, [dispatch]);
 
   // ─── Selection state (deep-linkable) ───────────────────────────────────────
@@ -237,16 +55,10 @@ export default function HistoryPage() {
     setSearchParams(next, { replace: true });
   }, [areaId, locationId, typeId, deviceId]);
 
-  // ─── Filters / lists ───────────────────────────────────────────────────────
   const areasSorted = useMemo(
     () => [...workers].sort((a, b) => (a.name || "").localeCompare(b.name || "")),
     [workers],
   );
-
-  const locationsForArea = useMemo(() => {
-    if (!areaId) return locations;
-    return locations.filter((l: any) => String(l.worker_id ?? "") === areaId);
-  }, [locations, areaId]);
 
   const devicesFiltered = useMemo(() => {
     let list = devices as any[];
@@ -255,16 +67,6 @@ export default function HistoryPage() {
     if (typeId)     list = list.filter((d) => String(d.device_type_id ?? "") === typeId);
     return list;
   }, [devices, areaId, locationId, typeId]);
-
-  // Reset child selections when parent invalidates them
-  useEffect(() => {
-    if (!locationId) return;
-    const stillValid = locations.some((l: any) =>
-      String(l.id) === locationId &&
-      (!areaId || String(l.worker_id ?? "") === areaId),
-    );
-    if (!stillValid) setLocationId("");
-  }, [areaId, locations, locationId]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -278,222 +80,212 @@ export default function HistoryPage() {
   );
 
   const hasFilters = !!(areaId || locationId || typeId);
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setAreaId(""); setLocationId(""); setTypeId(""); setDeviceId("");
-  };
+  }, []);
 
-  const [reportOpen, setReportOpen] = useState(false);
+  const scoped = !!selectedDevice || (hasFilters && devicesFiltered.length > 0);
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // Publish the "back to areas" handler to the global top bar while scoped.
+  useEffect(() => {
+    setBack(scoped ? clearAll : null);
+    return () => setBack(null);
+  }, [scoped, clearAll, setBack]);
+
+  // The area-card grid (landing) is only shown when nothing is drilled into.
+  const landingActive = !selectedDevice && !(hasFilters && devicesFiltered.length > 0);
+
+  // ─── Recompute the area cards from telemetry for the selected timeline ─────
+  // For every device we fetch its history over `range` and remember its state
+  // at the END of the window (most recent probe). The cards then reflect the
+  // chosen timeline, not just live status.
+  const devicesKey = useMemo(
+    () => (devices as any[]).map((d) => d.id).sort().join(","),
+    [devices],
+  );
+  const [histState, setHistState] = useState<Map<number | string, boolean | null>>(new Map());
+  const [histLoading, setHistLoading] = useState(false);
+  const [histProgress, setHistProgress] = useState({ done: 0, total: 0 });
+  const loadedKeyRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!landingActive) return;
+    if (devices.length === 0) { setHistState(new Map()); return; }
+
+    const key = `${devicesKey}|${range}`;
+    if (loadedKeyRef.current === key) return; // already have this window cached
+
+    const { start, end, granularity } = rangeToWindow(range);
+    let cancelled = false;
+    setHistLoading(true);
+    setHistProgress({ done: 0, total: devices.length });
+
+    mapLimit(
+      devices as any[],
+      FETCH_CONCURRENCY,
+      async (d: any) => ({
+        id: d.id,
+        state: lastReachableState(await fetchDeviceHistory(d.id, start, end, granularity)),
+      }),
+      (done, total) => { if (!cancelled) setHistProgress({ done, total }); },
+    ).then((settled) => {
+      if (cancelled) return;
+      const map = new Map<number | string, boolean | null>();
+      settled.forEach((r, i) => {
+        if (r.status === "fulfilled") map.set(r.value.id, r.value.state);
+        else map.set((devices as any[])[i].id, null);
+      });
+      setHistState(map);
+      loadedKeyRef.current = key;
+    }).finally(() => {
+      if (!cancelled) setHistLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [devicesKey, range, landingActive, devices.length]);
+
+  // Per-area tallies derived from the historical states + the active toggle.
+  const areaCards = useMemo(
+    () =>
+      areasSorted.map((w) => {
+        const inArea = (devices as any[]).filter(
+          (d) => String(d.worker_id ?? "") === String(w.id),
+        );
+
+        if (view === "locations") {
+          // A location is "online" over the range if ≥1 of its devices was
+          // up at the window end.
+          const byLoc = new Map<any, boolean>();
+          for (const d of inArea) {
+            const up = histState.get(d.id) === true;
+            byLoc.set(d.location_id, (byLoc.get(d.location_id) ?? false) || up);
+          }
+          let online = 0;
+          byLoc.forEach((v) => { if (v) online++; });
+          const total = byLoc.size;
+          return { id: String(w.id), name: w.name || `Area #${w.id}`, total, online, offline: total - online };
+        }
+
+        const online = inArea.filter((d) => histState.get(d.id) === true).length;
+        return {
+          id: String(w.id),
+          name: w.name || `Area #${w.id}`,
+          total: inArea.length,
+          online,
+          offline: inArea.length - online,
+        };
+      }),
+    [areasSorted, devices, view, histState],
+  );
+
+  const caption = view === "locations" ? "Locations Online" : "Devices Online";
+
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-6 fade-in">
-      {/* Header
-      <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
-        
-        <div className="text-xs text-slate-400 flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5" />
-          {devicesFiltered.length} device{devicesFiltered.length !== 1 ? "s" : ""} in scope
-        </div>
-      </div> */}
+      {landingActive && (
+        <TelemetryProgressDialog
+          open={histLoading}
+          done={histProgress.done}
+          total={histProgress.total}
+          label="Fetching telemetry"
+        />
+      )}
 
-      {/* Horizontal toolbar (filters + device picker) — under the page header */}
-      <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100 mb-5">
-        <CardContent className="p-3 md:p-4 space-y-3">
-          {/* Title row inside the toolbar (matches the commented page-level header) */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 rounded-lg bg-cyan-900/50 shrink-0">
-                <HistoryIcon className="h-5 w-5 text-cyan-300" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold text-white leading-tight truncate">History</h1>
-                <p className="text-[11px] text-slate-400 truncate">
-                  Historical telemetry across areas, locations and devices · {devicesFiltered.length} in scope
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setReportOpen(true)}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md text-sm font-semibold transition-all"
-              style={{
-                background: "linear-gradient(180deg, #22D3EE 0%, #06B6D4 100%)",
-                color: "#0B1220",
-                boxShadow: "0 8px 18px -8px rgba(6,182,212,0.55)",
-              }}
-              title="Download a PDF report"
-            >
-              <Download className="h-4 w-4" />
-              Download Report
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-            <div className="lg:col-span-2">
-              <ToolbarLabel>Area</ToolbarLabel>
-              <ToolbarSelect
-                ariaLabel="Area"
-                value={areaId}
-                onChange={(v) => { setAreaId(v); setLocationId(""); setDeviceId(""); }}
-              >
-                <option value="">All areas</option>
-                {areasSorted.map((w) => (
-                  <option key={w.id} value={String(w.id)}>{w.name || `Area #${w.id}`}</option>
-                ))}
-              </ToolbarSelect>
-            </div>
-
-            <div className="lg:col-span-3">
-              <ToolbarLabel>Location</ToolbarLabel>
-              <ToolbarSelect
-                ariaLabel="Location"
-                value={locationId}
-                onChange={(v) => { setLocationId(v); setDeviceId(""); }}
-              >
-                <option value="">All locations</option>
-                {locationsForArea.map((l: any) => (
-                  <option key={l.id} value={String(l.id)}>{l.name}</option>
-                ))}
-              </ToolbarSelect>
-            </div>
-
-            <div className="lg:col-span-2">
-              <ToolbarLabel>Device Type</ToolbarLabel>
-              <ToolbarSelect
-                ariaLabel="Device type"
-                value={typeId}
-                onChange={(v) => { setTypeId(v); setDeviceId(""); }}
-              >
-                <option value="">All types</option>
-                {deviceTypes.map((t: any) => (
-                  <option key={t.id} value={String(t.id)}>{t.name}</option>
-                ))}
-              </ToolbarSelect>
-            </div>
-
-            <div className="lg:col-span-4">
-              <ToolbarLabel>Device</ToolbarLabel>
-              <DevicePicker
-                devices={devicesFiltered}
-                value={deviceId}
-                onChange={setDeviceId}
-              />
-            </div>
-
-            <div className="lg:col-span-1 flex justify-end">
+      {selectedDevice ? (
+        // 1. A specific device is selected → its full history.
+        //    Back arrow lives in the global top bar.
+        <DeviceHistoryView
+          deviceId={selectedDevice.id}
+          deviceName={selectedDevice.display || selectedDevice.hostname}
+        />
+      ) : (hasFilters && devicesFiltered.length > 0) ? (
+        // 2. An area is selected → scoped report dashboard (global timeline).
+        //    Back arrow lives in the global top bar.
+        <ScopedReportDashboard
+          devices={devicesFiltered}
+          locations={locations}
+          workers={workers}
+          deviceTypes={deviceTypes}
+          areaId={areaId}
+          locationId={locationId}
+          typeId={typeId}
+          range={range}
+        />
+      ) : areaCards.length === 0 ? (
+        // 3a. No areas
+        <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+          <CardContent className="p-12 text-center">
+            <HistoryIcon className="h-12 w-12 mx-auto text-slate-500 mb-3" />
+            <p className="text-base font-medium text-slate-200">No areas available</p>
+          </CardContent>
+        </Card>
+      ) : (
+        // 3b. Area cards — click one to open its full history
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {areaCards.map((a) => {
+            const pct = a.total > 0 ? Math.round((a.online / a.total) * 100) : 0;
+            const accent =
+              a.total === 0 ? "#64748B"
+              : pct >= 80 ? "#10B981"
+              : pct >= 50 ? "#F59E0B"
+              : "#EF4444";
+            return (
               <button
+                key={a.id}
                 type="button"
-                onClick={clearAll}
-                disabled={!hasFilters && !deviceId}
-                className="h-9 w-full inline-flex items-center justify-center gap-1 rounded-md border border-slate-700 text-xs text-slate-300 hover:text-white hover:border-slate-500 disabled:opacity-40 disabled:pointer-events-none transition-colors"
-                title="Clear filters"
+                onClick={() => { setAreaId(a.id); setLocationId(""); setTypeId(""); setDeviceId(""); }}
+                className="group relative rounded-xl overflow-hidden text-left transition-all hover:-translate-y-0.5"
+                style={{
+                  background: "linear-gradient(180deg, rgba(30,41,59,0.55) 0%, rgba(15,23,42,0.92) 100%)",
+                  border: `1px solid color-mix(in oklab, ${accent} 35%, var(--border-soft))`,
+                  boxShadow: `0 0 0 1px color-mix(in oklab, ${accent} 8%, transparent), var(--shadow-card)`,
+                  minHeight: 132,
+                  cursor: "pointer",
+                }}
               >
-                <X className="h-3.5 w-3.5" />
-                Clear
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Report dialog */}
-      <ReportDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        devices={devices}
-        locations={locations}
-        workers={workers}
-        deviceTypes={deviceTypes}
-        preselectedAreaId={areaId}
-        preselectedDeviceId={deviceId}
-      />
-
-      {/* Content area — full width */}
-      <div>
-        {selectedDevice ? (
-          // ───────────────────────────────────────────────────────────────
-          // 1. A specific device is selected → show its full history
-          // ───────────────────────────────────────────────────────────────
-          <div className="space-y-4">
-            {/* Selected device summary strip */}
-            {/* <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className={`p-2 rounded-lg ${selectedDevice.is_reachable ? "bg-emerald-900" : "bg-red-900"}`}>
-                    <Smartphone className={`h-5 w-5 ${selectedDevice.is_reachable ? "text-emerald-300" : "text-red-300"}`} />
+                <span
+                  aria-hidden
+                  className="absolute top-0 left-0 right-0"
+                  style={{ height: 3, background: `linear-gradient(90deg, ${accent}, transparent)` }}
+                />
+                <div className="relative h-full flex flex-col p-4">
+                  <span className="text-base font-bold tracking-tight truncate text-slate-100" title={a.name}>
+                    {a.name}
+                  </span>
+                  <div className="flex-1 flex flex-col items-center justify-center py-1">
+                    <span className="text-3xl font-bold tabular-nums leading-none" style={{ color: accent }}>
+                      {pct}
+                      <span className="text-base align-top">%</span>
+                    </span>
+                    <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      {caption}
+                    </span>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-lg font-semibold text-white truncate">
-                      {selectedDevice.display || selectedDevice.hostname}
-                    </div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
-                      Device history
-                    </div>
-                  </div>
-
-                  <div className="ml-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <div>
-                      <div className="text-slate-400 uppercase tracking-[0.14em]">IP</div>
-                      <div className="text-slate-100 font-mono">{selectedDevice.ip}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 uppercase tracking-[0.14em]">Type</div>
-                      <div className="text-slate-100">{selectedDevice.device_type?.name || "Unknown"}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 uppercase tracking-[0.14em]">Location</div>
-                      <div className="text-slate-100 truncate flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-slate-400" />
-                        {selectedDevice.location?.name || "Unknown"}
+                  <div
+                    className="grid grid-cols-3 gap-2 pt-2"
+                    style={{ borderTop: "1px solid var(--border-soft)" }}
+                  >
+                    {[
+                      { label: "Total", value: a.total, color: "#F1F5F9" },
+                      { label: "Online", value: a.online, color: "#10B981" },
+                      { label: "Offline", value: a.offline, color: "#EF4444" },
+                    ].map((s) => (
+                      <div key={s.label} className="flex flex-col items-center gap-0.5">
+                        <span className="text-sm font-bold leading-none tabular-nums" style={{ color: s.color }}>
+                          {s.value}
+                        </span>
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                          {s.label}
+                        </span>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 uppercase tracking-[0.14em]">Area</div>
-                      <div className="text-slate-100 truncate">{selectedDevice.worker?.name || "N/A"}</div>
-                    </div>
+                    ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card> */}
-
-            {/* All history charts */}
-            <DeviceHistoryView
-              deviceId={selectedDevice.id}
-              deviceName={selectedDevice.display || selectedDevice.hostname}
-            />
-          </div>
-        ) : (hasFilters && devicesFiltered.length > 0) ? (
-          // ───────────────────────────────────────────────────────────────
-          // 2. A scope filter (area / location / type) is set → render
-          //    the scoped report dashboard with the same metrics the PDF
-          //    contains, and a Download PDF button on the dashboard itself.
-          // ───────────────────────────────────────────────────────────────
-          <ScopedReportDashboard
-            devices={devicesFiltered}
-            locations={locations}
-            workers={workers}
-            deviceTypes={deviceTypes}
-            areaId={areaId}
-            locationId={locationId}
-            typeId={typeId}
-          />
-        ) : (
-          // ───────────────────────────────────────────────────────────────
-          // 3. Empty scope → guidance
-          // ───────────────────────────────────────────────────────────────
-          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
-            <CardContent className="p-12 text-center">
-              <HistoryIcon className="h-12 w-12 mx-auto text-slate-500 mb-3" />
-              <p className="text-base font-medium text-slate-200">No devices in scope</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                Use the filters above to pick an area, location, or device type — the dashboard appears
-                automatically once devices are in scope. Or pick a single device from the dropdown for
-                its detailed history.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
