@@ -1,0 +1,406 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { Form, InputField } from "@/components/form-components";
+import { Button } from "@/components/ui/button";
+import { addDevice, getDeviceTypes, getWorkerTypes, getLocations } from './add-device-form';
+
+export default function AddDeviceForm() {
+  const [open, setOpen] = useState(false);
+  const [protocol, setProtocol] = useState("ICMP");
+  const [protocolOpen, setProtocolOpen] = useState(false);
+  const [ipAddress, setIpAddress] = useState("");
+  const [deviceType, setDeviceType] = useState("");
+  const [checkInterval, setCheckInterval] = useState("3600");
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [device, setDevice] = useState("");
+  const [status, setStatus] = useState<{ message: string; type: "error" | "success" | "info" } | undefined>(undefined);
+  const [area, setArea] = useState<string>("");
+  const [areaOpen, setAreaOpen] = useState(false);
+  const [workerId, setWorkerId] = useState<string>(""); // auto-mapped from area
+  const [workerTypeOptions, setWorkerTypeOptions] = useState<{ id: string; name: string }[]>([]);
+  const [locationName, setLocationName] = useState<string>("");
+  const [allLocations, setAllLocations] = useState<{ id: number; name: string; area: string }[]>([]);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [deviceTypeOptions, setDeviceTypeOptions] = useState<{ id: number; name: string }[]>([]);
+  const [deviceTypeOpen, setDeviceTypeOpen] = useState(false);
+  const [community, setCommunity] = useState("");
+  const [snmpVersion, setSnmpVersion] = useState("2");
+  const [snmpAuthProtocol, setSnmpAuthProtocol] = useState("MD5");
+  const [snmpUsername, setSnmpUsername] = useState("");
+  const [snmpPassword, setSnmpPassword] = useState("");
+  const [snmpPrivProtocol, setSnmpPrivProtocol] = useState("DES");
+  const [snmpPrivPassword, setSnmpPrivPassword] = useState("");
+
+  useEffect(() => {
+    const fetchDeviceTypes = async () => {
+      try {
+        const types = await getDeviceTypes();
+        setDeviceTypeOptions(types);
+        if (types.length > 0 && !deviceType) {
+          setDeviceType(types[0].name);
+        }
+      } catch (error) {
+        console.error("Error fetching device types:", error);
+        setDeviceTypeOptions([]);
+      }
+    };
+    fetchDeviceTypes();
+  }, []);
+
+  useEffect(() => {
+    const fetchWorkersTypes = async () => {
+      try {
+        const types = await getWorkerTypes();
+        setWorkerTypeOptions(types);
+      } catch (error) {
+        console.error("Error fetching workers:", error);
+        setWorkerTypeOptions([]);
+      }
+    };
+    fetchWorkersTypes();
+  }, []);
+
+  // Unique, sorted area names pulled from existing locations.
+  const areaOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of allLocations) {
+      const a = (l.area || "").trim();
+      if (a) set.add(a);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [allLocations]);
+
+  // Each Area has exactly one Worker whose name == the area name. Derive the
+  // worker_id automatically from the selected Area.
+  useEffect(() => {
+    if (!area.trim()) {
+      setWorkerId("");
+      return;
+    }
+
+    const match = workerTypeOptions.find(
+      (w) => (w.name || "").trim().toLowerCase() === area.trim().toLowerCase()
+    );
+
+    if (!match) {
+      console.warn(
+        `[AddDeviceForm] No worker found for area "${area}". Available workers:`,
+        workerTypeOptions.map(w => w.name)
+      );
+    }
+
+    setWorkerId(match ? match.id : "");
+  }, [area, workerTypeOptions]);
+
+  // Location options are scoped to the chosen area.
+  const filteredLocationOptions = useMemo(() => {
+    if (!area.trim()) return [];
+    return allLocations
+      .filter((l) => (l.area || "").trim() === area.trim())
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+      .map((l) => l.name);
+  }, [allLocations, area]);
+
+  // Changing the area invalidates a location picked from a different area.
+  const handleAreaChange = (value: string) => {
+    setArea(value);
+    setLocationName("");
+  };
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const locations = await getLocations();
+        setAllLocations(locations);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+        setAllLocations([]);
+      }
+    };
+    fetchLocations();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStatus({ message: "Submitting...", type: "info" });
+    
+    if (!ipAddress || !deviceType || !area) {
+      setStatus({
+        message: "IP Address, Device Type, and Area are required.",
+        type: "error",
+      });
+      return;
+    }
+
+    const selectedDeviceType = deviceTypeOptions.find((t: any) => t.name === deviceType);
+    const deviceTypeId = selectedDeviceType ? selectedDeviceType.id : null;
+
+    if (!deviceTypeId) {
+      setStatus({
+        message: "Invalid device type selected.",
+        type: "error",
+      });
+      return;
+    }
+
+    if (!workerId) {
+      setStatus({
+        message: `No worker is mapped to area "${area}". Pick an area that has a worker. Available workers: ${workerTypeOptions.map(w => w.name).join(", ")}`,
+        type: "error",
+      });
+      return;
+    }
+
+    // Get location ID from selected location name (optional)
+    let locationId: number | undefined = undefined;
+    if (locationName.trim()) {
+      const selectedLocation = allLocations.find((l: any) => l.name === locationName);
+      locationId = selectedLocation ? selectedLocation.id : undefined;
+    }
+
+    try {
+      await addDevice({
+        protocol,
+        ipAddress,
+        deviceTypeId,
+        checkInterval: parseInt(checkInterval),
+        displayName,
+        username,
+        password,
+        location_id: locationId,
+        device,
+        workerId,
+        community,
+        snmpVersion,
+        snmpAuthProtocol,
+        snmpUsername,
+        snmpPassword,
+        snmpPrivProtocol,
+        snmpPrivPassword,
+      });
+      setStatus({ message: "Device added successfully!", type: "success" });
+    } catch (error: any) {
+      setStatus({
+        message: error.message || "Failed to add device.",
+        type: "error",
+      });
+      return;
+    }
+    
+    setTimeout(() => {
+      setOpen(false);
+      setTimeout(() => {
+        setProtocol("ICMP");
+        setIpAddress("");
+        setDeviceType("");
+        setCheckInterval("3600");
+        setDisplayName("");
+        setUsername("");
+        setPassword("");
+        setDevice("");
+        setArea("");
+        setLocationName("");
+        setCommunity("");
+        setSnmpVersion("2");
+        setSnmpAuthProtocol("MD5");
+        setSnmpUsername("");
+        setSnmpPassword("");
+        setSnmpPrivProtocol("DES");
+        setSnmpPrivPassword("");
+        setStatus(undefined);
+      }, 500);
+    }, 2000);
+  };
+
+  return (
+    <Form
+      title="Add : Device"
+      open={open}
+      setOpen={setOpen}
+      onSubmit={handleSubmit}
+      statusMessage={status}
+      trigger={<Button variant="outline">Add Device</Button>}
+    >
+      <InputField
+        label="Protocol"
+        placeholder="Select Protocol"
+        type="combobox"
+        comboboxOptions={["ICMP", "SNMP", "GPRS"]}
+        stateValue={protocol}
+        stateAction={setProtocol}
+        openState={protocolOpen}
+        openStateAction={setProtocolOpen}
+      />
+      <div className="flex gap-2">
+        <InputField
+          label="IP Address"
+          placeholder="Enter IP Address"
+          type="input"
+          stateValue={ipAddress}
+          stateAction={setIpAddress}
+        />
+        <InputField
+          label="Device Type"
+          placeholder="Select Type"
+          type="combobox"
+          comboboxOptions={deviceTypeOptions.map((t) => t.name)}
+          stateValue={deviceType}
+          stateAction={setDeviceType}
+          openState={deviceTypeOpen}
+          openStateAction={setDeviceTypeOpen}
+        />
+        <InputField
+          label="Check Interval"
+          placeholder="3600"
+          type="input"
+          stateValue={checkInterval}
+          stateAction={setCheckInterval}
+        />
+      </div>
+      <InputField
+        label="Display Name"
+        placeholder="Enter Display Name"
+        type="input"
+        stateValue={displayName}
+        stateAction={setDisplayName}
+      />
+      {protocol === "SNMP" && (
+        <>
+          <div className="flex gap-2">
+            <InputField
+              label="SNMP Community"
+              placeholder="Enter Community"
+              type="input"
+              stateValue={community}
+              stateAction={setCommunity}
+            />
+            <InputField
+              label="SNMP Version"
+              placeholder="2"
+              type="input"
+              stateValue={snmpVersion}
+              stateAction={setSnmpVersion}
+            />
+            <InputField
+              label="SNMP Auth Protocol"
+              placeholder="MD5"
+              type="input"
+              stateValue={snmpAuthProtocol}
+              stateAction={setSnmpAuthProtocol}
+            />
+          </div>
+          <div className="flex gap-2">
+            <InputField
+              label="SNMP Username"
+              placeholder="Enter SNMP Username"
+              type="input"
+              stateValue={snmpUsername}
+              stateAction={setSnmpUsername}
+            />
+            <InputField
+              label="SNMP Password"
+              placeholder="Enter SNMP Password"
+              type="password"
+              stateValue={snmpPassword}
+              stateAction={setSnmpPassword}
+            />
+          </div>
+          <div className="flex gap-2">
+            <InputField
+              label="SNMP Priv Protocol"
+              placeholder="DES"
+              type="input"
+              stateValue={snmpPrivProtocol}
+              stateAction={setSnmpPrivProtocol}
+            />
+            <InputField
+              label="SNMP Priv Password"
+              placeholder="Enter Priv Password"
+              type="password"
+              stateValue={snmpPrivPassword}
+              stateAction={setSnmpPrivPassword}
+            />
+          </div>
+        </>
+      )}
+      {protocol === "GPRS" && (
+        <div className="flex gap-2">
+          <InputField
+            label="IMEI"
+            placeholder="Enter Device Username"
+            type="input"
+            stateValue={username}
+            stateAction={setUsername}
+          />
+          <InputField
+            label="Port"
+            placeholder="Enter Device Password"
+            type="input"
+            stateValue={password}
+            stateAction={setPassword}
+          />
+        </div>
+      )}
+      {protocol !== "SNMP" && protocol !== "GPRS" && (
+        <div className="flex gap-2">
+          <InputField
+            label="Username"
+            placeholder="Enter Device Username"
+            type="input"
+            stateValue={username}
+            stateAction={setUsername}
+          />
+          <InputField
+            label="Password"
+            placeholder="Enter Device Password"
+            type="password"
+            stateValue={password}
+            stateAction={setPassword}
+          />
+        </div>
+      )}
+      <InputField
+        label="Area"
+        placeholder="Select Area"
+        type="combobox"
+        comboboxOptions={areaOptions}
+        stateValue={area}
+        stateAction={handleAreaChange}
+        openState={areaOpen}
+        openStateAction={setAreaOpen}
+      />
+      <InputField
+        label="Location"
+        placeholder={area ? "Select Location" : "Select an area first"}
+        type="combobox"
+        comboboxOptions={filteredLocationOptions}
+        stateValue={locationName}
+        stateAction={setLocationName}
+        openState={locationOpen}
+        openStateAction={setLocationOpen}
+      />
+      {/* Worker is derived from the Area (1 worker per area). */}
+      <div className="flex flex-col w-full gap-2">
+        <label className="text-(--contrast) text-[12px] text-left">Worker (auto from Area)</label>
+        <div
+          className="px-4 py-1 rounded-[4px] w-full text-sm bg-(--contrast)/40 text-(--base)/90"
+          style={{ minHeight: 28, lineHeight: "26px" }}
+        >
+          {!area
+            ? "Select an area first"
+            : workerTypeOptions.find((w) => w.id === workerId)?.name
+            ? workerTypeOptions.find((w) => w.id === workerId)?.name
+            : `No worker mapped for area "${area}". Available workers: ${workerTypeOptions.map(w => w.name).join(", ") || "None loaded"}`}
+        </div>
+      </div>
+      <InputField
+        label="Device"
+        placeholder="Enter Device for Device"
+        type="input"
+        stateValue={device}
+        stateAction={setDevice}
+      />
+    </Form>
+  );
+}

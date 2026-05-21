@@ -5,9 +5,10 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
  * "Bharat Coking Coal Limited" / Live status) and applied to every area.
  * Kept as a local string union so this module stays light (no jsPDF pull).
  */
-export type HistoryRange = '24h' | '1w' | '1m' | '3m';
+export type HistoryRange = '1h' | '24h' | '1w' | '1m' | '3m';
 
 export const HISTORY_RANGES: { key: HistoryRange; label: string }[] = [
+  { key: '1h', label: '1 Hour' },
   { key: '24h', label: '24 Hours' },
   { key: '1w', label: '1 Week' },
   { key: '1m', label: '1 Month' },
@@ -22,7 +23,7 @@ interface HistoryRangeCtx {
 const Ctx = createContext<HistoryRangeCtx | undefined>(undefined);
 
 export function HistoryRangeProvider({ children }: { children: ReactNode }) {
-  const [range, setRange] = useState<HistoryRange>('24h');
+  const [range, setRange] = useState<HistoryRange>('1h');
   return <Ctx.Provider value={{ range, setRange }}>{children}</Ctx.Provider>;
 }
 

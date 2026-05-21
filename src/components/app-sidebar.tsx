@@ -24,6 +24,7 @@ const baseNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, isActive: false },
   { title: "Reports",  url: "/history",  icon: HistoryIcon, isActive: false },
   { title: "Analytics",   url: "/metrics",   icon: BarChart3,  isActive: false },
+  {title:"Downtime", url:"/downtime", icon: HistoryIcon, isActive:false},
   // { title: "Areas",     url: "/areas",     icon: Users,      isActive: false },
   // {
   //   title: "Reports",
