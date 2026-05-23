@@ -15,7 +15,6 @@ export const EditLocationForm = ({
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
-  const { triggerRefresh } = useRefresh();
   const { locations, locationTypes } = useAppSelector((state) => state.locations);
   const location = locations.find((l) => l.id === locationId);
 
@@ -169,7 +168,6 @@ export const EditLocationForm = ({
         message: "Location updated successfully!",
         type: "success",
       });
-      triggerRefresh();
 
       setTimeout(() => {
         setOpen(false);

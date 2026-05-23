@@ -24,9 +24,9 @@ const FETCH_CONCURRENCY = 5;
 const RANGE_DISPLAY: Record<RangeKey, string> = {
   "1h":  "1 Hour",
   "24h": "24 Hours",
-  "7d":  "7 Days",
-  "30d": "30 Days",
-  "90d": "3 Months",
+  "1w":  "7 Days",
+  "1m": "30 Days",
+  "3m": "3 Months",
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -239,7 +239,6 @@ export default function DowntimePage() {
   );
 
   const caption    = view === "locations" ? "Locations" : "Devices";
-  const dtmetricLabel = "Avg Downtime %";
   const upmetricLabel = "Avg Uptime %";
 
   // ─── Toolbar (timeline + report) ──────────────────────────────────────────
@@ -447,7 +446,8 @@ export default function DowntimePage() {
         deviceTypes={deviceTypes as any[]}
         preselectedAreaId={areaId}
         preselectedDeviceId={deviceId}
-      />
+        currentRange={range}          // ← ADD THIS LINE
+        />
     </div>
   );
 }

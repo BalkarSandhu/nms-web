@@ -22,10 +22,9 @@ import {
 import { useHistoryView } from "@/contexts/HistoryViewContext";
 import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
 import {
-  ScopedDevicesTable, ScopedLocationsTable,
-  type ScopedDeviceRow, type ScopedLocationRow,
+  
   ScopedDevicesDowntimeTable, ScopedLocationsDowntimeTable,
-  type ScopedDeviceDowntimeRow, type ScopedLocationDowntimeRow,
+   type ScopedLocationDowntimeRow,
 } from "@/downtime/scoped-tables";
 import { type LocationDeviceDetail } from "@/downtime/DowntimeModal";
 
@@ -240,15 +239,9 @@ export default function ScopedReportDashboard({
     ];
   }, [availabilitySeries, range]);
 
-  const latencySeries = buckets.map((b) => ({
-    timeLabel: b.timeLabel,
-    latency: b.latencyCount ? +(b.latencySum / b.latencyCount).toFixed(2) : null,
-  }));
+  
 
-  const lossSeries = buckets.map((b) => ({
-    timeLabel: b.timeLabel,
-    loss: b.lossCount ? +(b.lossSum / b.lossCount).toFixed(2) : 0,
-  }));
+  
 
   const ranked = useMemo(() => [...perDevice].sort((a, b) => b.agg.uptimePct - a.agg.uptimePct), [perDevice]);
 
@@ -884,7 +877,7 @@ export default function ScopedReportDashboard({
           </Card>
 
           {/* Latency */}
-          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+          {/* <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
             <CardHeader className="pb-3">
               <CardTitle className="text-base text-white flex items-center gap-2">
                 <Clock className="h-5 w-5 text-cyan-400" />Average Latency
@@ -912,10 +905,10 @@ export default function ScopedReportDashboard({
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Packet loss */}
-          <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
+          {/* <Card className="shadow-lg border border-slate-700 bg-slate-800 text-slate-100">
             <CardHeader className="pb-3">
               <CardTitle className="text-base text-white flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-red-300" />Packet Loss
@@ -938,7 +931,7 @@ export default function ScopedReportDashboard({
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
         </>
       ) : (
         <>

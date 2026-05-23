@@ -1053,3 +1053,5 @@ function slug(s: string) {
 function uniqueCount<T>(arr: (T | undefined | null)[]) {
   return new Set(arr.filter(Boolean)).size;
 }
+
+export { buildAndExportReport, type RawReportInput } from "../downtime/report-generator-downtime";

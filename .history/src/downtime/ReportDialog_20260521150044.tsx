@@ -21,7 +21,7 @@ import {
   RANGE_OPTIONS,
   buildAndExportReport,
   type RangeKey,
-} from "@/downtime/report-generator-downtime";
+} from "@/lib/report-generator";
 
 // Bring in the telemetry hooks / types the caller has already loaded
 import { fetchDeviceHistory, mapLimit, type HistoryEntry } from "@/lib/useDeviceTelemetry";
@@ -62,7 +62,7 @@ export default function ReportDialog({
 }: ReportDialogProps) {
   const [mode,   setMode]   = useState<Mode>(() => preselectedDeviceId ? "single" : preselectedAreaId ? "area" : "single");
   const [format, setFormat] = useState<Format>("pdf");
-  const [range,  setRange]  = useState<RangeKey>(currentRange);
+  const [range,  setRange]  = useState<RangeKey>(currentRange as RangeKey);
 
   // Single
   const [singleDeviceId, setSingleDeviceId] = useState<string>(preselectedDeviceId);
@@ -82,7 +82,7 @@ export default function ReportDialog({
   const [done,     setDone]     = useState(false);
 
   // Sync range when parent toolbar changes
-  useEffect(() => { setRange(currentRange); }, [currentRange]);
+  useEffect(() => { setRange(currentRange as RangeKey); }, [currentRange]);
 
   useEffect(() => {
     if (!open) {
@@ -177,17 +177,13 @@ export default function ReportDialog({
 
       setProgress("Building report…");
 
-      // Filter locations to only include those for the scoped devices
-      const scopedLocationIds = new Set(scopedDevices.map((d: any) => d.location_id).filter(Boolean));
-      const scopedLocations = locations.filter((l: any) => scopedLocationIds.has(l.id));
-
       await buildAndExportReport(
         {
           title: reportTitle,
           subtitle: mode === "area" ? `Area: ${areaName(areaId) || areaId}` : undefined,
-          range: range,
+          range: range as RangeKey,
           devices: scopedDevices,
-          locations: scopedLocations,
+          locations,
           perDevice,
           format,
         },
@@ -352,7 +348,7 @@ export default function ReportDialog({
               {RANGE_OPTIONS.map((r) => {
                 const isSel = range === r.key;
                 return (
-                  <button key={r.key} type="button" onClick={() => setRange(r.key)}
+                  <button key={r.key} type="button" onClick={() => setRange(r.key as RangeKey)}
                     className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs border transition-colors ${
                       isSel
                         ? "bg-cyan-500/15 border-cyan-500 text-cyan-200 font-semibold"

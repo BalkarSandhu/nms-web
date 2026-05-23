@@ -123,7 +123,6 @@ export default function Dashboard() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 	const { mode } = useOverviewMode();
-	const { refreshVersion } = useRefresh();
 
 	const { locations: reduxLocations = [], loading } = useAppSelector(state => state.locations);
 	const { devices: reduxDevices = [] } = useAppSelector(state => state.devices);
@@ -133,7 +132,7 @@ export default function Dashboard() {
 		dispatch(fetchLocationsforMap());
 		dispatch(fetchLocationTypes());
 		dispatch(fetchAllDevices());
-	}, [dispatch, refreshVersion]);
+	}, [dispatch]);
 
 	const activeLocations = Array.isArray(reduxLocations) ? reduxLocations : [];
 	const activeDevices = Array.isArray(reduxDevices) ? reduxDevices : [];

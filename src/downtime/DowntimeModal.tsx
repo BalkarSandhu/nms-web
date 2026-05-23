@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { X, MapPin, Wifi, Clock, AlertTriangle } from "lucide-react";
+import { X, MapPin, Wifi, Clock } from "lucide-react";
 
 export interface DowntimeRecord {
   id?: string | number;
@@ -382,7 +382,6 @@ export function LocationDetailModal({
   locationName,
   area,
   avgDowntimePct,
-  totalOutageEvents,
   devices,
 }: LocationDetailModalProps) {
   if (!isOpen) return null;

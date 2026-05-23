@@ -169,7 +169,6 @@ export const EditLocationForm = ({
         message: "Location updated successfully!",
         type: "success",
       });
-      triggerRefresh();
 
       setTimeout(() => {
         setOpen(false);

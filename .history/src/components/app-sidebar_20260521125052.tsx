@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 import {
   Network,
   LayoutDashboard,
+  BarChart3,
   History as HistoryIcon,
 } from "lucide-react"
 
@@ -22,7 +23,22 @@ import {
 const baseNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, isActive: false },
   { title: "Reports",  url: "/history",  icon: HistoryIcon, isActive: false },
+  // { title: "Analytics",   url: "/metrics",   icon: BarChart3,  isActive: false },
   {title:"Downtime", url:"/downtime", icon: HistoryIcon, isActive:false},
+  // { title: "Areas",     url: "/areas",     icon: Users,      isActive: false },
+  // {
+  //   title: "Reports",
+  //   url: "/reports",
+  //   icon: NewspaperIcon,
+  //   isActive: false,
+  //   items: [
+  //     { title: "Device Reports",   url: "/reports/devices" },
+  //     { title: "Location Reports", url: "/reports/locations" },
+  //     { title: "Area Reports",     url: "/reports/workers" },
+  //   ],
+  // },
+  
+  // {title: "Services", url:"/services", icon: Network, isActive: false},
 ]
 
 const teams = [
@@ -59,8 +75,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter style={{ backgroundColor: 'transparent', color: 'var(--text-hi)' }}>
+        {/* Status line — only visible when the sidebar is expanded */}
+        
         <NavUser />
 
+        {/* Branding footer — the top border separates it from the nav above */}
         <div
           className="mt-1 pt-2 pb-1 border-t group-data-[collapsible=icon]:hidden"
           style={{ borderColor: 'var(--border-soft)' }}

@@ -177,17 +177,13 @@ export default function ReportDialog({
 
       setProgress("Building report…");
 
-      // Filter locations to only include those for the scoped devices
-      const scopedLocationIds = new Set(scopedDevices.map((d: any) => d.location_id).filter(Boolean));
-      const scopedLocations = locations.filter((l: any) => scopedLocationIds.has(l.id));
-
       await buildAndExportReport(
         {
           title: reportTitle,
           subtitle: mode === "area" ? `Area: ${areaName(areaId) || areaId}` : undefined,
           range: range,
           devices: scopedDevices,
-          locations: scopedLocations,
+          locations,
           perDevice,
           format,
         },

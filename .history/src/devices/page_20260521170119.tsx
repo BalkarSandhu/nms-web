@@ -20,7 +20,6 @@ export default function DevicesPage(
     { onBack, onShowTopology }: { onBack?: () => void; onShowTopology?: () => void } = {}
 ) {
     const dispatch = useAppDispatch();
-    const { refreshVersion } = useRefresh();
     const { loading, error, devices, lastFetched } = useAppSelector(state => state.devices);
     const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
     const [exportRows, setExportRows] = useState<readDeviceType[]>([]);
@@ -67,11 +66,12 @@ export default function DevicesPage(
     };
 
     useEffect(() => {
-        // Refetch when refreshVersion changes or on initial load/stale check
-        dispatch(fetchAllDevices());
-        dispatch(fetchAllLocationsPaginated());
-        dispatch(fetchDeviceTypes());
-    }, [dispatch, refreshVersion]);
+        if (isDataStale(lastFetched)) {
+            dispatch(fetchAllDevices());
+            dispatch(fetchAllLocationsPaginated());
+            dispatch(fetchDeviceTypes());
+        }
+    }, [dispatch, devices.length, lastFetched]);
 
     if (loading && devices.length === 0) {
         return <LoadingPage />;
