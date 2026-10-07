@@ -364,6 +364,7 @@ export interface LocationDeviceDetail {
   isOnline: boolean | null;
   downtimePct: number;
   offlineCount: number;
+  isPowerIssue?: boolean;
 }
 
 export interface LocationDetailModalProps {
@@ -477,9 +478,7 @@ export function LocationDetailModal({
                     }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-100 truncate">{d.name}</span>
-                    </div>
+                    <div className="text-sm font-semibold text-slate-100 truncate">{d.name}</div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span
                         className="text-xs font-mono px-1.5 py-0.5 rounded"

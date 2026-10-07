@@ -340,6 +340,11 @@ export function ScopedDevicesDowntimeTable({
                       <span className="text-sm font-semibold" style={{ color: "var(--text-hi)" }} title={d.deviceName}>
                         {d.deviceName}
                       </span>
+                      {d.isPowerIssue && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold" style={{ background: "rgba(139, 92, 246, 0.3)", color: "#C4B5FD", border: "1px solid #C4B5FD" }} title="Power Issue - treated as Online">
+                          P
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

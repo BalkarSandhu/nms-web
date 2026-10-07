@@ -65,8 +65,13 @@ export default function AreaDetailPage() {
 		[allDevices, area, areaLocIds]
 	);
 
+	const powerIssueDeviceIds = useMemo(
+		() => getPowerIssueDeviceIdsByArea(allDevices),
+		[allDevices]
+	);
+
 	const stats = useMemo(() => {
-		const onlineDev = areaDevices.filter(d => d.is_reachable).length;
+		const onlineDev = areaDevices.filter(d => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length;
 		const onlineLoc = areaLocations.filter(l => l.status === 'online').length;
 		const offlineLoc = areaLocations.filter(l => l.status === 'offline').length;
 		const totalDev = areaDevices.length;
@@ -79,7 +84,7 @@ export default function AreaDetailPage() {
 			offlineDevices: totalDev - onlineDev,
 			health: totalDev > 0 ? Math.round((onlineDev / totalDev) * 100) : 0,
 		};
-	}, [areaDevices, areaLocations]);
+	}, [areaDevices, areaLocations, powerIssueDeviceIds]);
 
 	const devicesByLoc = useMemo(() => {
 		const m = new Map<number, { total: number; online: number }>();
@@ -219,9 +224,7 @@ export default function AreaDetailPage() {
 							areaDevices.map(d => (
 								<Row
 									key={d.id}
-									title={
-										d.display || d.hostname
-									}
+									title={d.display || d.hostname}
 									subtitle={`${d.hostname} · ${d.device_type?.name ?? 'Unknown'}`}
 									status={d.is_reachable ? 'online' : 'offline'}
 									right={d.location?.name ?? ''}
@@ -260,7 +263,7 @@ function Section({
 
 function Row({
 	title, subtitle, status, right,
-}: { title: React.ReactNode; subtitle: string; status: string; right: string }) {
+}: { title: string; subtitle: string; status: string; right: string }) {
 	const c = statusColor(status);
 	return (
 		<div
@@ -272,11 +275,7 @@ function Row({
 				style={{ background: c, boxShadow: `0 0 6px ${c}` }}
 			/>
 			<div className="min-w-0 flex-1">
-				<div
-					className="text-sm font-semibold truncate"
-					style={{ color: 'var(--text-hi)' }}
-					title={typeof title === 'string' ? title : undefined}
-				>
+				<div className="text-sm font-semibold truncate" style={{ color: 'var(--text-hi)' }} title={title}>
 					{title}
 				</div>
 				<div className="text-[11px] truncate" style={{ color: 'var(--text-lo)' }}>

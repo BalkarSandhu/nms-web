@@ -22,6 +22,7 @@ import {
   buildAndExportReport,
   type RangeKey,
 } from "@/downtime/report-generator-downtime";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
 
 // Bring in the telemetry hooks / types the caller has already loaded
 import { fetchDeviceHistory, mapLimit, type HistoryEntry } from "@/lib/useDeviceTelemetry";
@@ -118,6 +119,8 @@ export default function ReportDialog({
 
   const areaDevices  = useMemo(() => !areaId ? [] : devices.filter((d: any) => String(d.worker_id ?? "") === areaId), [devices, areaId]);
   const sortedAreas  = useMemo(() => [...workers].sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")), [workers]);
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
+
   // ─── Scope devices for report ─────────────────────────────────────────────
   const scopedDevices = useMemo((): any[] => {
     if (mode === "single") return singleDeviceId ? devices.filter((d: any) => String(d.id) === singleDeviceId) : [];
@@ -330,7 +333,7 @@ export default function ReportDialog({
                 <div className="rounded-md border border-slate-700 p-3 bg-slate-800/50 text-xs grid grid-cols-3 gap-3 mt-1">
                   <Stat label="Devices"    value={String(areaDevices.length)} />
                   <Stat label="Locations"  value={String(new Set(areaDevices.map((d: any) => d.location_id)).size)} />
-                  <Stat label="Online now" value={String(areaDevices.filter((d: any) => d.is_reachable).length)} color="text-emerald-300" />
+                  <Stat label="Online now" value={String(areaDevices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length)} color="text-emerald-300" />
                 </div>
               )}
               {areaId && areaDevices.length === 0 && (

@@ -7,6 +7,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
+
 export type RangeKey = "1h" | "24h" | "1w" | "1m" | "3m";
 
 export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
@@ -66,6 +68,7 @@ export interface DeviceReportRow {
   downtimePct: number;
   outageEvents: number;
   avgLatencyMs: number;
+  isPowerIssue?: boolean;
   remarks?: string;
 }
 
@@ -728,6 +731,8 @@ export async function buildAndExportReport(
       const d           = p.device;
       const offlineCount = p.history.filter((h) => !h.is_reachable).length;
       const totalProbes  = p.history.length || 1;
+      const powerIssueIds = getPowerIssueDeviceIdsByArea(input.devices);
+      const isPowerIssue = powerIssueIds.has(d.id);
       return {
         rank: 0,
         deviceName:   d.display || d.hostname || `Device ${d.id}`,
@@ -740,6 +745,7 @@ export async function buildAndExportReport(
         downtimePct:  parseFloat(((offlineCount / totalProbes) * 100).toFixed(1)),
         outageEvents: offlineCount,
         avgLatencyMs: parseFloat((p.agg.avgLatency || 0).toFixed(1)),
+        isPowerIssue,
         remarks: "",
       };
     })
@@ -792,7 +798,8 @@ export async function buildAndExportReport(
   // Calculate totals from SCOPED data only
   const withData    = input.perDevice.filter((p) => p.agg.totalChecks > 0);
   const withLatency = input.perDevice.filter((p) => p.agg.avgLatency > 0);
-  const onlineNow = input.devices.filter((d: any) => d.is_reachable).length;
+  const powerIssueDeviceIds = getPowerIssueDeviceIdsByArea(input.devices);
+  const onlineNow = input.devices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length;
   const offlineNow = input.devices.length - onlineNow;
 
   const payload: DowntimeReportPayload = {

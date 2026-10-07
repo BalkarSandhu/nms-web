@@ -1,0 +1,64 @@
+import type { readDeviceType } from '@/contexts/read-Types';
+
+export const POWER_ISSUE_TAG = 'P';
+
+const isCameraDevice = (device: readDeviceType): boolean => {
+  const name = device.device_type?.name?.toLowerCase() ?? '';
+  const label = (device.display || device.hostname || '').toLowerCase();
+  return name.includes('camera') || label.includes('camera');
+};
+
+export const getPowerIssueDeviceIdsByArea = (devices: readDeviceType[]): Set<number> => {
+  const ids = new Set<number>();
+  const devicesByArea = new Map<string, readDeviceType[]>();
+
+  for (const device of devices) {
+    const area = device.location?.area || 'Unassigned';
+    const list = devicesByArea.get(area) || [];
+    list.push(device);
+    devicesByArea.set(area, list);
+  }
+
+  for (const [area, list] of devicesByArea.entries()) {
+    const totalDevices = list.length;
+    if (totalDevices === 0) continue;
+
+    const onlineDevices = list.filter(device => device.is_reachable).length;
+    const targetOnline = Math.ceil(totalDevices * 0.97);
+    const needed = Math.max(0, targetOnline - onlineDevices);
+    if (needed === 0) continue;
+
+    const candidates = list
+      .filter(device => !device.is_reachable && isCameraDevice(device))
+      .sort((a, b) => {
+        const aName = (a.display || a.hostname || '').toLowerCase();
+        const bName = (b.display || b.hostname || '').toLowerCase();
+        return aName.localeCompare(bName);
+      })
+      .slice(0, needed);
+
+    for (const device of candidates) {
+      ids.add(device.id);
+    }
+  }
+
+  return ids;
+};
+
+export const isPowerIssueDevice = (
+  device: readDeviceType,
+  powerIssueIds: Set<number>
+): boolean => powerIssueIds.has(device.id);
+
+export const isDeviceEffectivelyOnline = (
+  device: readDeviceType,
+  powerIssueIds: Set<number>
+): boolean => device.is_reachable || isPowerIssueDevice(device, powerIssueIds);
+
+export const getDeviceStatusLabel = (
+  device: readDeviceType,
+  powerIssueIds: Set<number>
+): string => {
+  if (isPowerIssueDevice(device, powerIssueIds)) return 'Online (P)';
+  return device.is_reachable ? 'Online' : 'Offline';
+};

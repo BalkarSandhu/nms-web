@@ -7,6 +7,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
+
 export type RangeKey = "1h" | "24h" | "1w" | "1m" | "3m";
 
 export const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
@@ -792,7 +794,8 @@ export async function buildAndExportReport(
   // Calculate totals from SCOPED data only
   const withData    = input.perDevice.filter((p) => p.agg.totalChecks > 0);
   const withLatency = input.perDevice.filter((p) => p.agg.avgLatency > 0);
-  const onlineNow = input.devices.filter((d: any) => d.is_reachable).length;
+  const powerIssueDeviceIds = getPowerIssueDeviceIdsByArea(input.devices);
+  const onlineNow = input.devices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length;
   const offlineNow = input.devices.length - onlineNow;
 
   const payload: DowntimeReportPayload = {

@@ -5,6 +5,7 @@ import {
 import {
   Smartphone, Layers, Users, Download, CheckCircle2, Loader2, Search, X,
 } from "lucide-react";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
 import {
   RANGE_OPTIONS,
   generateSingleDeviceReport,
@@ -124,6 +125,8 @@ export default function ReportDialog({
     () => [...workers].sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")),
     [workers],
   );
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
+
   // ─── Submit ───────────────────────────────────────────────────────────────
   const canGenerate =
     !busy && (

@@ -5,6 +5,7 @@ import {
 import {
   Smartphone, Layers, Users, Download, CheckCircle2, Loader2, Search, X,
 } from "lucide-react";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
 import {
   RANGE_OPTIONS,
   generateSingleDeviceReport,
@@ -124,6 +125,8 @@ export default function ReportDialog({
     () => [...workers].sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")),
     [workers],
   );
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
+
   // ─── Submit ───────────────────────────────────────────────────────────────
   const canGenerate =
     !busy && (
@@ -225,7 +228,7 @@ export default function ReportDialog({
                           isSel ? "bg-cyan-500/15 border-l-2 border-cyan-400" : "hover:bg-slate-800 border-l-2 border-transparent"
                         }`}
                       >
-                        <span className={`size-2 rounded-full shrink-0 ${d.is_reachable ? "bg-emerald-400" : "bg-red-400"}`} />
+                        <span className={`size-2 rounded-full shrink-0 ${isDeviceEffectivelyOnline(d, powerIssueDeviceIds) ? "bg-emerald-400" : "bg-red-400"}`} />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate text-slate-100">{d.display || d.hostname}</div>
                           <div className="text-[11px] text-slate-400 truncate">
@@ -281,7 +284,7 @@ export default function ReportDialog({
                           onChange={() => toggleMulti(idStr)}
                           className="accent-cyan-500"
                         />
-                        <span className={`size-2 rounded-full shrink-0 ${d.is_reachable ? "bg-emerald-400" : "bg-red-400"}`} />
+                        <span className={`size-2 rounded-full shrink-0 ${isDeviceEffectivelyOnline(d, powerIssueDeviceIds) ? "bg-emerald-400" : "bg-red-400"}`} />
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate text-slate-100">{d.display || d.hostname}</div>
                           <div className="text-[11px] text-slate-400 truncate">
@@ -324,7 +327,7 @@ export default function ReportDialog({
                   <div>
                     <div className="text-slate-400 uppercase tracking-[0.14em]">Online now</div>
                     <div className="text-emerald-300 text-base font-semibold tabular-nums">
-                      {areaDevices.filter((d: any) => d.is_reachable).length}
+                      {areaDevices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length}
                     </div>
                   </div>
                 </div>

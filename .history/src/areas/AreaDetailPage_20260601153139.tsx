@@ -10,6 +10,11 @@ import {
 } from '@/store/locationsSlice';
 import { fetchAllDevices } from '@/store/deviceSlice';
 import type { readDeviceType } from '@/contexts/read-Types';
+import {
+	getPowerIssueDeviceIdsByArea,
+	isDeviceEffectivelyOnline,
+	isPowerIssueDevice,
+} from '@/lib/deviceOverrides';
 
 function statusColor(s: string): string {
 	if (s === 'online') return 'var(--status-online)';
@@ -65,8 +70,13 @@ export default function AreaDetailPage() {
 		[allDevices, area, areaLocIds]
 	);
 
+	const powerIssueDeviceIds = useMemo(
+		() => getPowerIssueDeviceIdsByArea(allDevices),
+		[allDevices]
+	);
+
 	const stats = useMemo(() => {
-		const onlineDev = areaDevices.filter(d => d.is_reachable).length;
+		const onlineDev = areaDevices.filter(d => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length;
 		const onlineLoc = areaLocations.filter(l => l.status === 'online').length;
 		const offlineLoc = areaLocations.filter(l => l.status === 'offline').length;
 		const totalDev = areaDevices.length;
@@ -79,18 +89,18 @@ export default function AreaDetailPage() {
 			offlineDevices: totalDev - onlineDev,
 			health: totalDev > 0 ? Math.round((onlineDev / totalDev) * 100) : 0,
 		};
-	}, [areaDevices, areaLocations]);
+	}, [areaDevices, areaLocations, powerIssueDeviceIds]);
 
 	const devicesByLoc = useMemo(() => {
 		const m = new Map<number, { total: number; online: number }>();
 		for (const d of allDevices) {
 			const cur = m.get(d.location_id) || { total: 0, online: 0 };
 			cur.total += 1;
-			if (d.is_reachable) cur.online += 1;
+			if (isDeviceEffectivelyOnline(d, powerIssueDeviceIds)) cur.online += 1;
 			m.set(d.location_id, cur);
 		}
 		return m;
-	}, [allDevices]);
+	}, [allDevices, powerIssueDeviceIds]);
 
 	const accent = statusColor(
 		stats.offlineDevices > 0 && stats.onlineDevices === 0
@@ -220,10 +230,17 @@ export default function AreaDetailPage() {
 								<Row
 									key={d.id}
 									title={
-										d.display || d.hostname
+										<>
+											{d.display || d.hostname}
+											{isPowerIssueDevice(d, powerIssueDeviceIds) && (
+												<span className="ml-2 text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--status-warning)' }}>
+													P
+												</span>
+											)}
+										</>
 									}
 									subtitle={`${d.hostname} · ${d.device_type?.name ?? 'Unknown'}`}
-									status={d.is_reachable ? 'online' : 'offline'}
+									status={isDeviceEffectivelyOnline(d, powerIssueDeviceIds) ? 'online' : 'offline'}
 									right={d.location?.name ?? ''}
 								/>
 							))

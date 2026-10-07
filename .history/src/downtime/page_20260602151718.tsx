@@ -15,6 +15,7 @@ import { useHistoryNav } from "@/contexts/HistoryNavContext";
 import { useHistoryView } from "@/contexts/HistoryViewContext";
 import { fetchDeviceHistory, mapLimit } from "@/lib/useDeviceTelemetry";
 import { rangeToWindow } from "@/lib/telemetry-aggregate";
+import { getPowerIssueDeviceIdsByArea, getEffectiveDowntimePercent, isPowerIssueDevice } from "@/lib/deviceOverrides";
 import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
 import { RANGE_OPTIONS, type RangeKey } from "@/lib/report-generator";
 
@@ -148,9 +149,13 @@ export default function DowntimePage() {
   interface DowntimeData {
     id: number;
     downtimePct: number;
+    effectiveDowntimePct: number;
     offlineCount: number;
     onlineCount: number;
+    isPowerIssue: boolean;
   }
+
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
 
   const [downtimeState, setDowntimeState] = useState<Map<number | string, DowntimeData | null>>(new Map());
   const [histLoading, setHistLoading] = useState(false);
@@ -183,8 +188,10 @@ export default function DowntimePage() {
         const offlineCount = history.filter((h: any) => !h.is_reachable).length;
         const onlineCount  = history.filter((h: any) =>  h.is_reachable).length;
         const totalCount   = history.length || 1;
-        const downtimePct = Math.round((offlineCount / totalCount) * 100);
-        return { id: d.id, downtimePct, offlineCount, onlineCount };
+        const rawDowntimePct  = Math.round((offlineCount / totalCount) * 100);
+        const isPowerIssue = isPowerIssueDevice(d, powerIssueDeviceIds);
+        const effectiveDowntimePct = getEffectiveDowntimePercent(d, powerIssueDeviceIds, rawDowntimePct);
+        return { id: d.id, downtimePct: rawDowntimePct, effectiveDowntimePct, offlineCount, onlineCount, isPowerIssue };
       },
       (done, total) => { if (!cancelled) setHistProgress({ done, total }); },
     ).then((settled) => {
@@ -214,7 +221,7 @@ export default function DowntimePage() {
           const byLoc = new Map<any, { totalDowntime: number; count: number }>();
           for (const d of inArea) {
             const data    = downtimeState.get(d.id);
-            const downtime = data?.downtimePct ?? 0;
+            const downtime = data?.effectiveDowntimePct ?? 0;
             const loc      = d.location_id;
             if (!byLoc.has(loc)) byLoc.set(loc, { totalDowntime: 0, count: 0 });
             const current = byLoc.get(loc)!;
@@ -230,12 +237,12 @@ export default function DowntimePage() {
         let totalDowntime = 0, count = 0;
         for (const d of inArea) {
           const data = downtimeState.get(d.id);
-          if (data) { totalDowntime += data.downtimePct; count++; }
+          if (data) { totalDowntime += data.effectiveDowntimePct; count++; }
         }
         const avgDowntime = count > 0 ? Math.round(totalDowntime / count) : 0;
         return { id: String(w.id), name: w.name || `Area #${w.id}`, total: inArea.length, avgDowntime, hasData: count > 0 };
       }),
-    [areasSorted, devices, view, downtimeState],
+    [areasSorted, devices, view, downtimeState, powerIssueDeviceIds],
   );
 
   const caption    = view === "locations" ? "Locations" : "Devices";

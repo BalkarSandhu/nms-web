@@ -22,6 +22,7 @@ import {
   buildAndExportReport,
   type RangeKey,
 } from "@/downtime/report-generator-downtime";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
 
 // Bring in the telemetry hooks / types the caller has already loaded
 import { fetchDeviceHistory, mapLimit, type HistoryEntry } from "@/lib/useDeviceTelemetry";
@@ -118,6 +119,8 @@ export default function ReportDialog({
 
   const areaDevices  = useMemo(() => !areaId ? [] : devices.filter((d: any) => String(d.worker_id ?? "") === areaId), [devices, areaId]);
   const sortedAreas  = useMemo(() => [...workers].sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")), [workers]);
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
+
   // ─── Scope devices for report ─────────────────────────────────────────────
   const scopedDevices = useMemo((): any[] => {
     if (mode === "single") return singleDeviceId ? devices.filter((d: any) => String(d.id) === singleDeviceId) : [];
@@ -264,7 +267,7 @@ export default function ReportDialog({
                       className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
                         isSel ? "bg-cyan-500/15 border-l-2 border-cyan-400" : "hover:bg-slate-800 border-l-2 border-transparent"
                       }`}>
-                      <span className={`size-2 rounded-full shrink-0 ${d.is_reachable ? "bg-emerald-400" : "bg-red-400"}`} />
+                      <span className={`size-2 rounded-full shrink-0 ${isDeviceEffectivelyOnline(d, powerIssueDeviceIds) ? "bg-emerald-400" : "bg-red-400"}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate text-slate-100">{d.display || d.hostname}</div>
                         <div className="text-[11px] text-slate-400 truncate">
@@ -301,7 +304,7 @@ export default function ReportDialog({
                     <label key={d.id} className={`w-full text-left px-3 py-2 flex items-center gap-3 transition-colors cursor-pointer ${
                       isSel ? "bg-cyan-500/10" : "hover:bg-slate-800"}`}>
                       <input type="checkbox" checked={isSel} onChange={() => toggleMulti(idStr)} className="accent-cyan-500" />
-                      <span className={`size-2 rounded-full shrink-0 ${d.is_reachable ? "bg-emerald-400" : "bg-red-400"}`} />
+                      <span className={`size-2 rounded-full shrink-0 ${isDeviceEffectivelyOnline(d, powerIssueDeviceIds) ? "bg-emerald-400" : "bg-red-400"}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate text-slate-100">{d.display || d.hostname}</div>
                         <div className="text-[11px] text-slate-400 truncate">
@@ -330,7 +333,7 @@ export default function ReportDialog({
                 <div className="rounded-md border border-slate-700 p-3 bg-slate-800/50 text-xs grid grid-cols-3 gap-3 mt-1">
                   <Stat label="Devices"    value={String(areaDevices.length)} />
                   <Stat label="Locations"  value={String(new Set(areaDevices.map((d: any) => d.location_id)).size)} />
-                  <Stat label="Online now" value={String(areaDevices.filter((d: any) => d.is_reachable).length)} color="text-emerald-300" />
+                  <Stat label="Online now" value={String(areaDevices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length)} color="text-emerald-300" />
                 </div>
               )}
               {areaId && areaDevices.length === 0 && (

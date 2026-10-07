@@ -3,6 +3,7 @@ import { Plus, Map as MapIcon } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchAllDevices, fetchDeviceTypes } from '@/store/deviceSlice';
 import { fetchAllLocationsPaginated } from '@/store/locationsSlice';
+import { isDataStale } from '@/lib/auth';
 import { useRefresh } from '@/contexts/RefreshContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import Header from './local_components/header';

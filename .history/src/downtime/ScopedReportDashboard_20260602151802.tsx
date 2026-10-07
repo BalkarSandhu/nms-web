@@ -19,6 +19,7 @@ import {
   fmtPct, DAY_MS,
   type Bucket, type DeviceAggregate,
 } from "@/lib/telemetry-aggregate";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline, getEffectiveDowntimePercent, isPowerIssueDevice } from "@/lib/deviceOverrides";
 import { useHistoryView } from "@/contexts/HistoryViewContext";
 import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
 import {
@@ -122,6 +123,7 @@ export default function ScopedReportDashboard({
     Array<{ device: any; agg: DeviceAggregate; history: HistoryEntry[]; lastState: boolean | null }>
   >([]);
   const { view } = useHistoryView();
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
 
   const deviceIdsKey = useMemo(() => devices.map((d: any) => d.id).sort().join(","), [devices]);
 
@@ -300,7 +302,9 @@ export default function ScopedReportDashboard({
         const totalProbes  = r.history.length || 1;
         const offlineCount = r.history.filter((h: any) => !h.is_reachable).length;
         const onlineCount  = r.history.filter((h: any) =>  h.is_reachable).length;
-        const downtimePct = Math.round((offlineCount / totalProbes) * 100);
+        const rawDowntimePct  = Math.round((offlineCount / totalProbes) * 100);
+        const effectiveDowntimePct = getEffectiveDowntimePercent(r.device, powerIssueDeviceIds, rawDowntimePct);
+        const isPowerIssue = isPowerIssueDevice(r.device, powerIssueDeviceIds);
         return {
           id: r.device.id,
           deviceName: r.device.display || r.device.hostname || `Device ${r.device.id}`,
@@ -308,15 +312,17 @@ export default function ScopedReportDashboard({
           area: r.device.worker?.name || r.device.location?.area || "N/A",
           location: r.device.location?.name || "N/A",
           type: r.device.device_type?.name || r.device.type || "N/A",
-          downtimePct,
-          offlineCount,
+          downtimePct: effectiveDowntimePct,
+          rawDowntimePct,
+          offlineCount, 
           onlineCount,
+          isPowerIssue,
           downtimeRecords: r.history
             .filter((h: any) => !h.is_reachable)
             .map((h: any, idx: number) => ({ id: idx, timestamp: h.timestamp, remarks: "" })),
         };
       }),
-    [perDevice],
+    [perDevice, powerIssueDeviceIds],
   );
 
   const scopedLocationDowntimeRows = useMemo<ScopedLocationDowntimeRow[]>(() => {
@@ -338,8 +344,10 @@ export default function ScopedReportDashboard({
       m.deviceCount++;
       const totalProbes  = r.history.length || 1;
       const offlineCount = r.history.filter((h: any) => !h.is_reachable).length;
-      const downtimePct = Math.round((offlineCount / totalProbes) * 100);
-      m.totalDowntime      += downtimePct;
+      const rawDowntimePct  = Math.round((offlineCount / totalProbes) * 100);
+      const effectiveDowntimePct = getEffectiveDowntimePercent(r.device, powerIssueDeviceIds, rawDowntimePct);
+      const isPowerIssue = isPowerIssueDevice(r.device, powerIssueDeviceIds);
+      m.totalDowntime      += effectiveDowntimePct;
       m.totalOutageEvents  += offlineCount;
       m.deviceDetails.push({
         id: r.device.id,
@@ -347,8 +355,9 @@ export default function ScopedReportDashboard({
         ip: r.device.ip_address || r.device.ip || "N/A",
         type: r.device.device_type?.name || "Unknown",
         isOnline: r.lastState,
-        downtimePct,
+        downtimePct: effectiveDowntimePct,
         offlineCount,
+        isPowerIssue,
       });
     }
     return [...map.values()]
@@ -398,19 +407,19 @@ export default function ScopedReportDashboard({
   const bottom5 = ranked.filter((r) => r.agg.totalChecks > 0).slice(-5).reverse();
 
   const onlineNow = useMemo(
-    () => devices.filter((d: any) => d.is_reachable).length,
-    [devices],
+    () => devices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length,
+    [devices, powerIssueDeviceIds],
   );
   const totalLocations = useMemo(() => new Set(devices.map((d: any) => d.location_id)).size, [devices]);
   const onlineLocations = useMemo(() => {
     const up = new Map<any, boolean>();
     for (const d of devices as any[]) {
-      up.set(d.location_id, (up.get(d.location_id) ?? false) || d.is_reachable);
+      up.set(d.location_id, (up.get(d.location_id) ?? false) || isDeviceEffectivelyOnline(d, powerIssueDeviceIds));
     }
     let n = 0;
     up.forEach((v) => { if (v) n++; });
     return n;
-  }, [devices]);
+  }, [devices, powerIssueDeviceIds]);
   const locationAvgUptime = useMemo(
     () => (perLocation.length ? perLocation.reduce((s, l) => s + l.avgUptime, 0) / perLocation.length : 0),
     [perLocation],

@@ -364,6 +364,7 @@ export interface LocationDeviceDetail {
   isOnline: boolean | null;
   downtimePct: number;
   offlineCount: number;
+  isPowerIssue?: boolean;
 }
 
 export interface LocationDetailModalProps {
@@ -479,6 +480,11 @@ export function LocationDetailModal({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-slate-100 truncate">{d.name}</span>
+                      {d.isPowerIssue && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold flex-shrink-0" style={{ background: "rgba(139, 92, 246, 0.3)", color: "#C4B5FD", border: "1px solid #C4B5FD" }} title="Power Issue - treated as Online">
+                          P
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span

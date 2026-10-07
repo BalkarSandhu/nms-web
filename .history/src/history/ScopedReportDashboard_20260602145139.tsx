@@ -19,6 +19,7 @@ import {
   fmtPct, DAY_MS,
   type Bucket, type DeviceAggregate,
 } from "@/lib/telemetry-aggregate";
+import { getPowerIssueDeviceIdsByArea, isDeviceEffectivelyOnline } from "@/lib/deviceOverrides";
 import { useHistoryView } from "@/contexts/HistoryViewContext";
 import TelemetryProgressDialog from "@/components/telemetry-progress-dialog";
 import {
@@ -112,6 +113,7 @@ export default function ScopedReportDashboard({
   // Devices ⇄ Locations toggle — now driven by the global top-bar toggle so
   // it sits just before Logout (mirroring the Dashboard's mode toggle).
   const { view } = useHistoryView();
+  const powerIssueDeviceIds = useMemo(() => getPowerIssueDeviceIdsByArea(devices), [devices]);
 
   const deviceIdsKey = useMemo(() => devices.map((d: any) => d.id).sort().join(","), [devices]);
 
@@ -367,8 +369,8 @@ export default function ScopedReportDashboard({
 
   // ── Summary metrics for the first row ──
   const onlineNow = useMemo(
-    () => devices.filter((d: any) => d.is_reachable).length,
-    [devices],
+    () => devices.filter((d: any) => isDeviceEffectivelyOnline(d, powerIssueDeviceIds)).length,
+    [devices, powerIssueDeviceIds],
   );
   const totalLocations = useMemo(
     () => new Set(devices.map((d: any) => d.location_id)).size,
@@ -381,13 +383,13 @@ export default function ScopedReportDashboard({
     for (const d of devices as any[]) {
       up.set(
         d.location_id,
-        (up.get(d.location_id) ?? false) || d.is_reachable,
+        (up.get(d.location_id) ?? false) || isDeviceEffectivelyOnline(d, powerIssueDeviceIds),
       );
     }
     let n = 0;
     up.forEach((v) => { if (v) n++; });
     return n;
-  }, [devices]);
+  }, [devices, powerIssueDeviceIds]);
   const locationAvgUptime = useMemo(
     () => (perLocation.length
       ? perLocation.reduce((s, l) => s + l.avgUptime, 0) / perLocation.length
