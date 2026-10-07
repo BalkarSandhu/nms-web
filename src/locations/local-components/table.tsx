@@ -190,6 +190,16 @@ export default function LocationsTable({
         });
     }, [pagedLocations, locationTypes, workers, devices]);
 
+    const areaLocationSearchOptions = useMemo(
+        () => areaScoped
+            ? enrichedLocations
+                .filter(location => location.area?.trim() === filters.area.trim())
+                .map(location => ({ label: location.name, value: String(location.id) }))
+                .sort((a, b) => a.label.localeCompare(b.label))
+            : undefined,
+        [areaScoped, enrichedLocations, filters.area],
+    );
+
     // ─── Client-side filter (on current page only) ────────────────────────────
     const filteredLocations = useMemo(() => {
         return enrichedLocations.filter(loc => {
@@ -198,6 +208,10 @@ export default function LocationsTable({
             if (filters.project && loc.project?.trim() !== filters.project.trim()) return false;
             if (filters.area    && loc.area?.trim() !== filters.area.trim()) return false;
             if (filters.search) {
+                if (filters.searchSelection) {
+                    if (String(loc.id) !== filters.searchSelection) return false;
+                    return true;
+                }
                 const q = filters.search.toLowerCase();
                 const hit =
                     (loc.name || '').toLowerCase().includes(q) ||
@@ -227,7 +241,9 @@ export default function LocationsTable({
         const uniq = <T,>(arr: T[]) => [...new Set(arr)].sort() as T[];
         return {
             types:    uniq(enrichedLocations.map(l => l.type_name)).map(v => ({ label: v, value: v })),
-            statuses: uniq(enrichedLocations.map(l => l.status)).map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
+            statuses: uniq(enrichedLocations.map(l => l.status))
+                .filter(status => status.trim().toLowerCase() !== 'unknown')
+                .map(v => ({ label: v.charAt(0).toUpperCase() + v.slice(1), value: v })),
             projects: uniq(enrichedLocations.map(l => l.project).filter((p): p is string => p != null)).map(v => ({ label: v, value: v })),
             areas:    uniq(enrichedLocations.map(l => l.area).filter((a): a is string => a != null)).map(v => ({ label: v, value: v })),
         };
@@ -289,7 +305,8 @@ export default function LocationsTable({
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
                 initialFilters={filters}
-                searchPlaceholder="Search locations…"
+                searchOptions={areaLocationSearchOptions}
+                searchPlaceholder={areaScoped ? "Search locations in this area…" : "Search locations…"}
                 trailing={filterActions}
             />
 

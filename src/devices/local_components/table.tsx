@@ -118,6 +118,18 @@ export default function DevicesTable({
     }, [devices]);
 
     const areaScoped = !!(filters.locationArea && filters.locationArea.trim());
+    const areaDeviceSearchOptions = useMemo(
+        () => areaScoped
+            ? devices
+                .filter(device => device.location?.area?.trim() === filters.locationArea.trim())
+                .map(device => ({
+                    label: device.display || device.hostname,
+                    value: String(device.id),
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label))
+            : undefined,
+        [devices, areaScoped, filters.locationArea],
+    );
 
     const filterConfigs: FilterConfig[] = [
         { label: "Type",     key: "type",         options: filterOptions.types },
@@ -134,6 +146,10 @@ export default function DevicesTable({
             if (filters.protocol     && device.protocol.toUpperCase() !== filters.protocol) return false;
             if (filters.locationArea && device.location?.area !== filters.locationArea) return false;
             if (filters.search) {
+                if (filters.searchSelection) {
+                    if (String(device.id) !== filters.searchSelection) return false;
+                    return true;
+                }
                 const q = filters.search.toLowerCase();
                 const hit =
                     (device.display        || '').toLowerCase().includes(q) ||
@@ -173,6 +189,8 @@ export default function DevicesTable({
                 filterConfigs={filterConfigs}
                 onFiltersChange={setFilters}
                 initialFilters={filters}
+                searchOptions={areaDeviceSearchOptions}
+                searchPlaceholder={areaScoped ? "Search devices in this area…" : undefined}
                 trailing={filterActions}   // ← restored
             />
 

@@ -225,6 +225,7 @@ function HeaderBar({ pageName }: { pageName: string }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const { back } = useHistoryNav()
   const isOverview = pathname === '/'
   const isHistory = pathname.startsWith('/history')
   const isDowntime = pathname.startsWith('/downtime')
@@ -253,12 +254,52 @@ function HeaderBar({ pageName }: { pageName: string }) {
           className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)]"
         />
 
+        {back && (
+          <button
+            type="button"
+            onClick={back}
+            title="Back to areas"
+            aria-label="Back to areas"
+            className="inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)] text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors shrink-0"
+            style={{ width: 30, height: 30, cursor: 'pointer' }}
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+        )}
+
         {/* Page name — left corner */}
-        <span className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-hi)]">
+        <span className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--text-hi)] shrink-0">
           {pageName}
+        </span>
+        <Separator
+          orientation="vertical"
+          className="data-[orientation=vertical]:h-5 bg-[var(--border-soft)] hidden md:block"
+        />
+        <span className="hidden md:block text-sm font-semibold tracking-tight text-[var(--text-mid)] truncate max-w-[220px] xl:max-w-none">
+          Bharat Coking Coal Limited
         </span>
 
         <div className="flex-1" />
+
+        <span
+          className="hidden lg:inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] shrink-0"
+          style={{
+            background: 'color-mix(in oklab, var(--status-online) 12%, transparent)',
+            color: 'var(--status-online)',
+            border: '1px solid color-mix(in oklab, var(--status-online) 32%, transparent)',
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{
+              background: 'var(--status-online)',
+              boxShadow: '0 0 6px var(--status-online)',
+            }}
+          />
+          Live status
+        </span>
+
+        {isHistory && <HistoryControls />}
 
         {/* Devices / Links radios — overview page only, just before Logout */}
         {isOverview && (
@@ -520,55 +561,6 @@ function HistoryControls() {
      downloads that area's PDF. Shown only on the Downtime page. */
 
 
-/* ── Second top bar: company name (left) · Live status · (History timeline) ── */
-function SubHeaderBar() {
-  const { pathname } = useLocation()
-  const isHistory = pathname.startsWith('/history')
-  const { back } = useHistoryNav()
-  return (
-    <div
-      className="shrink-0 w-full border-b border-[var(--border-soft)] flex items-center gap-3 px-4 h-11"
-      style={{ backgroundColor: 'rgba(11,18,32,0.6)' }}
-    >
-      {back && (
-        <button
-          type="button"
-          onClick={back}
-          title="Back to areas"
-          aria-label="Back to areas"
-          className="inline-flex items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--bg-panel)] text-[var(--text-mid)] hover:text-[var(--text-hi)] hover:border-[var(--border-brand)] transition-colors shrink-0"
-          style={{ width: 30, height: 30, cursor: 'pointer' }}
-        >
-          <ArrowLeft className="size-4" />
-        </button>
-      )}
-      <span className="text-sm md:text-base font-bold tracking-tight text-[var(--text-hi)] truncate">
-        Bharat Coking Coal Limited
-      </span>
-      <span
-        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em]"
-        style={{
-          background: 'color-mix(in oklab, var(--status-online) 12%, transparent)',
-          color: 'var(--status-online)',
-          border: '1px solid color-mix(in oklab, var(--status-online) 32%, transparent)',
-        }}
-      >
-        <span
-          className="w-1.5 h-1.5 rounded-full animate-pulse"
-          style={{
-            background: 'var(--status-online)',
-            boxShadow: '0 0 6px var(--status-online)',
-          }}
-        />
-        Live status
-      </span>
-
-      <div className="flex-1" />
-      {isHistory && <HistoryControls />}
-    </div>
-  )
-}
-
 function AppRoutes() {
   return (
     <Routes>
@@ -808,7 +800,6 @@ function App() {
         <SidebarInset className="p-0 m-0 flex-1 min-w-0 overflow-hidden" style={{ backgroundColor: 'transparent' }}>
           <div className="flex h-full w-full flex-col overflow-hidden">
             <HeaderBar pageName={pageName} />
-            <SubHeaderBar />
             <div className="flex-1 min-w-0 overflow-x-auto">
               <AppRoutes />
             </div>
